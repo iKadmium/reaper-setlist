@@ -8,11 +8,8 @@ on:
 env:
   IMAGE_NAME: reaper-setlist
 jobs:
-  test-frontend:
+  test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
     steps:
       - uses: actions/checkout@v4
       - name: Setup bun
