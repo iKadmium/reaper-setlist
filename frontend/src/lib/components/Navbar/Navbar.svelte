@@ -1,16 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
-
-	function isCurrentPage(url: string) {
-		return page.url.pathname === url;
-	}
 </script>
 
 <nav>
 	<ul class="nav">
-		<li><a href="/" class:active={isCurrentPage('/')}>Sets</a></li>
-		<li><a href="/song" class:active={isCurrentPage('/song')}>Songs</a></li>
-		<li><a href="/setup" class:active={isCurrentPage('/setup')}>Setup</a></li>
+		<li><a href="/" class:active={page.url.pathname === '/'}>Sets</a></li>
+		<li><a href="/song" class:active={page.url.pathname === '/song'}>Songs</a></li>
+		<li><a href="/setup" class:active={page.url.pathname === '/setup'}>Setup</a></li>
 	</ul>
 </nav>
 

@@ -1,5 +1,5 @@
 # Stage 1: Build the Svelte app
-FROM oven/bun:latest AS builder
+FROM oven/bun:latest AS frontend-builder
 
 # Set working directory
 WORKDIR /app
