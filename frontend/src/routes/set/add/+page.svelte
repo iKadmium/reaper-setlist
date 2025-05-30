@@ -8,6 +8,7 @@
 
 	let songs = $state<Database<Song>>({});
 	let set = $state<Setlist>({
+		id: crypto.randomUUID(),
 		venue: '',
 		date: new Date().toISOString(),
 		songs: []

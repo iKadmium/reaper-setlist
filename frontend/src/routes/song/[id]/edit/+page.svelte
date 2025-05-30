@@ -20,7 +20,7 @@
 	});
 
 	async function onSubmit(song: Song) {
-		const resp = await fetch(`/api/songs/${song.name}`, {
+		const resp = await fetch(`/api/songs/${song.id}`, {
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json'
@@ -28,7 +28,7 @@
 			body: JSON.stringify(song)
 		});
 		if (resp.ok) {
-			await goto(`/song/${song.name}`);
+			await goto(`/song/${song.id}`);
 		} else {
 			const error = await resp.json();
 			alert(`Failed to update song: ${error.error || 'Unknown error'}`);

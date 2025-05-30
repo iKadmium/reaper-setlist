@@ -22,12 +22,11 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
-		"@sveltejs/adapter-auto": "^4.0.0",
+		"@sveltejs/adapter-static": "^3.0.8",
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@testing-library/jest-dom": "^6.6.3",
 		"@testing-library/svelte": "^5.2.4",
-		"drizzle-kit": "^0.30.2",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",
@@ -36,7 +35,6 @@
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"svelte": "^5.0.0",
-		"svelte-adapter-bun": "^0.5.2",
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.20.0",
@@ -46,8 +44,6 @@
 	},
 	"dependencies": {
 		"@iconify-json/line-md": "^1.2.5",
-		"@iconify-json/mdi": "^1.2.3",
-		"@libsql/client": "^0.14.0",
-		"drizzle-orm": "^0.40.0"
+		"@iconify-json/mdi": "^1.2.3"
 	}
 }

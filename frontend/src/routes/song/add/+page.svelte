@@ -3,6 +3,7 @@
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
 	import type { Song } from '$lib/models/song';
 	let song: Song = {
+		id: crypto.randomUUID(),
 		length: 0,
 		name: ''
 	};

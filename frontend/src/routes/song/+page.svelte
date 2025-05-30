@@ -35,14 +35,23 @@
 
 	async function handleDeleteClick(song: Song) {
 		if (confirm('Are you sure you want to delete this song?')) {
-			const result = await fetch(`/api/songs/${song.name}`, { method: 'DELETE' });
+			const result = await fetch(`/api/songs/${song.id}`, { method: 'DELETE' });
 			if (result.ok) {
-				delete songs[song.name];
+				delete songs[song.id];
 			} else {
 				const error = await result.json();
 				error.error ? alert(`Failed to delete song: ${error.error}`) : alert('Failed to delete song.');
 			}
 		}
+	}
+
+	function sortFunction(a: Song, b: Song) {
+		return a.name.localeCompare(b.name);
+	}
+
+	function getName(song: Song) {
+		const displayString = `${song.name} (${song.length})`;
+		return displayString;
 	}
 </script>
 
@@ -52,7 +61,7 @@
 
 <h1>Songs</h1>
 
-<ItemGrid items={Object.values(songs)} getName={(song) => song.name}>
+<ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
 	{#snippet actions(item)}
 		<Button elementType="a" color="edit" href={`/song/${item.name}/edit`}><EditIcon /></Button>
 		<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>

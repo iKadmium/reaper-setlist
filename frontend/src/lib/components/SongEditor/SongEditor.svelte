@@ -4,10 +4,11 @@
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
 	import GetDurationIcon from 'virtual:icons/mdi/timer-refresh-outline';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
+	import type { Song } from '$lib/models/song';
 
 	export interface SongEditorProps {
-		song: SongInsert | Song;
-		onSubmit: (song: SongInsert | Song) => void;
+		song: Song;
+		onSubmit: (song: Song) => void;
 	}
 </script>
 
@@ -42,13 +43,12 @@
 				'Content-Type': 'application/json'
 			}
 		});
-		const data = (await response.json()) as GetDurationResponseBody;
-		if (data.error) {
-			console.error(data.error);
+		if (!response.ok) {
+			console.error('Failed to get duration:', response.text());
 			return;
-		} else if (data.duration) {
-			song.length = data.duration;
 		}
+		const data = (await response.json()) as number;
+		song.length = data;
 	}
 
 	async function handleLoadClick() {
@@ -58,12 +58,9 @@
 				'Content-Type': 'application/json'
 			}
 		});
-		const data = (await response.json()) as GetDurationResponseBody;
-		if (data.error) {
-			console.error(data.error);
+		if (!response.ok) {
+			console.error('Failed to load song:', response.statusText);
 			return;
-		} else if (data.duration) {
-			song.length = data.duration;
 		}
 	}
 </script>

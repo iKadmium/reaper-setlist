@@ -25,8 +25,8 @@
 	let setlist = $state({ ...initialSetlist });
 	let newSongId = $state<string | null>(Object.keys(songs)[0] || null);
 
-	let remainingSongs = $derived(Object.values(songs).filter((s) => !setlist.songs.includes(s.name)));
-	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (Object.values(songs).find((s) => s.name === songId)?.length ?? 0) || 0, 0));
+	let remainingSongs = $derived(Object.values(songs).filter((s) => !setlist.songs.includes(s.id)));
+	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (songs[songId]?.length ?? 0) || 0, 0));
 
 	let draggingIndex: number | undefined = $state(undefined);
 	let draggingTargetIndex: number | undefined = $state(undefined);
@@ -36,8 +36,8 @@
 		if (!newSongId || !songs[newSongId]) return;
 		const song = songs[newSongId];
 		if (song) {
-			setlist.songs.push(song.name);
-			newSongId = remainingSongs[0]?.name || null;
+			setlist.songs.push(song.id);
+			newSongId = remainingSongs[0]?.id || null;
 		}
 	}
 
@@ -117,7 +117,7 @@
 	<div class="add-song-container">
 		<select bind:value={newSongId}>
 			{#each remainingSongs as song}
-				<option value={song.name}>{song.name}</option>
+				<option value={song.id}>{song.name}</option>
 			{/each}
 		</select>
 	</div>

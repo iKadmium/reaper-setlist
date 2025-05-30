@@ -10,8 +10,11 @@
 	import AddIcon from 'virtual:icons/mdi/plus';
 	import type { Setlist } from '$lib/models/setlist';
 	import type { Database } from '$lib/models/database';
+	import type { Song } from '$lib/models/song';
+	import { formatDuration } from '$lib/util';
 
-	let sets = $state<Database<Setlist>>({}); // Initialize as empty
+	let sets = $state<Database<Setlist>>({});
+	let songs = $state<Database<Song>>({});
 	let isLoading = $state(true);
 	let errorMessage = $state<string | null>(null);
 
@@ -19,12 +22,19 @@
 		try {
 			isLoading = true;
 			errorMessage = null;
-			const response = await fetch('/api/sets');
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `Failed to fetch sets: ${response.status}`);
+			const setResponse = await fetch('/api/sets');
+			if (!setResponse.ok) {
+				const errorData = await setResponse.json();
+				throw new Error(errorData.error || `Failed to fetch sets: ${setResponse.status}`);
 			}
-			const fetchedSets: Database<Setlist> = await response.json();
+			const fetchedSets: Database<Setlist> = await setResponse.json();
+			const songResponse = await fetch('/api/songs');
+			if (!songResponse.ok) {
+				const errorData = await songResponse.json();
+				throw new Error(errorData.error || `Failed to fetch songs: ${songResponse.status}`);
+			}
+			const fetchedSongs: Database<Song> = await songResponse.json();
+			songs = fetchedSongs;
 			sets = fetchedSets;
 		} catch (err) {
 			console.error('Error fetching sets:', err);
@@ -36,7 +46,10 @@
 
 	function formatTitle(item: Setlist) {
 		const dateString = `${new Date(item.date).toLocaleDateString()}`;
-		return `${dateString} - ${item.venue}`;
+		const length = item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0);
+		const songCount = item.songs.length;
+		const songText = songCount > 0 ? ` (${songCount} song${songCount > 1 ? 's' : ''})` : '';
+		return `${dateString} - ${item.venue} - ${formatDuration(length)}${songText}`;
 	}
 
 	async function handleDeleteClick(item: Setlist) {
@@ -57,9 +70,9 @@
 	}
 
 	async function handleDuplicateClick(item: Setlist) {
-		const duplicated: Partial<Setlist> = { ...item, id: undefined, venue: `${item.venue} (copy)` };
+		const duplicated: Partial<Setlist> = { ...item, id: crypto.randomUUID(), venue: `${item.venue} (copy)` };
 		// Update this URL to point to your new external backend
-		const result = await fetch(`/api/set`, {
+		const result = await fetch('/api/sets', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(duplicated)
@@ -71,6 +84,16 @@
 			const error = await result.json();
 			alert(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set.');
 		}
+	}
+
+	function sortFunction(a: Setlist, b: Setlist) {
+		if (a.date !== b.date) {
+			return new Date(b.date).getTime() - new Date(a.date).getTime();
+		}
+		if (a.venue !== b.venue) {
+			return a.venue.localeCompare(b.venue);
+		}
+		return a.id.localeCompare(b.id);
 	}
 </script>
 
@@ -85,7 +108,7 @@
 {:else if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else}
-	<ItemGrid items={Object.values(sets)} getName={formatTitle}>
+	<ItemGrid items={Object.values(sets).toSorted(sortFunction)} getName={formatTitle}>
 		{#snippet actions(item)}
 			<Button elementType="a" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
 			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>

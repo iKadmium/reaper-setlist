@@ -1,27 +1,33 @@
 use crate::models::database::Database;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, io::Result};
-use tokio::{
-    fs::{File, try_exists},
-    io::AsyncWriteExt,
-};
 
-use super::json_file::get_json;
+use super::json_file::{get_json, save_json};
 
 async fn get_db<T: for<'de> Deserialize<'de>>(file: &str) -> Result<Database<T>> {
-    let exists = try_exists(file).await?;
-    if !exists {
-        return Ok(Database::new());
+    // let exists = try_exists(file).await?;
+    // if !exists {
+    //     return Ok(Database::new());
+    // }
+    let result = get_json(file).await;
+    match result {
+        Ok(contents) => {
+            let db: HashMap<String, T> = serde_json::from_str(&contents)?;
+            Ok(db)
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                Ok(Database::new())
+            } else {
+                Err(e)
+            }
+        }
     }
-    let contents = get_json(file).await?;
-    let db: HashMap<String, T> = serde_json::from_str(&contents)?;
-    Ok(db)
 }
 
 async fn save_db<T: Serialize>(file: &str, db: &Database<T>) -> Result<()> {
     let contents = serde_json::to_string(db)?;
-    let mut file = File::create(file).await?;
-    file.write_all(contents.as_bytes()).await?;
+    save_json(file, contents.as_str()).await?;
     Ok(())
 }
 
