@@ -3,14 +3,14 @@ use reqwest::Error as ReqwestError;
 
 #[derive(Debug)]
 pub enum ReaperError {
-    HttpError(ReqwestError),
-    CommandError(String),
-    ParseError(String),
+    Http(ReqwestError),
+    Command(String),
+    Parse(String),
 }
 
 impl From<ReqwestError> for ReaperError {
     fn from(err: ReqwestError) -> ReaperError {
-        ReaperError::HttpError(err)
+        ReaperError::Http(err)
     }
 }
 
@@ -44,10 +44,10 @@ impl ReaperClient {
     pub async fn new(settings: &Settings) -> Result<Self, ReaperError> {
         // In a real application, you would load settings from a config file or environment variables
         // For now, we'll use a placeholder. You'll need to integrate your Settings model here.
-        let reaper_url = settings.reaper_path.clone();
+        let reaper_url = settings.reaper_url.clone();
 
         if reaper_url.is_empty() {
-            return Err(ReaperError::CommandError(
+            return Err(ReaperError::Command(
                 "Reaper URL is not configured".to_string(),
             ));
         }
@@ -67,7 +67,7 @@ impl ReaperClient {
         if response.status().is_success() {
             Ok(response.text().await?)
         } else {
-            Err(ReaperError::CommandError(format!(
+            Err(ReaperError::Command(format!(
                 "Command '{}' failed with status: {}",
                 command_str, // Use the string representation for the error message
                 response.status()
@@ -90,10 +90,10 @@ impl ReaperClient {
         let parts: Vec<&str> = transport_string.split('\t').collect();
         if parts.len() > 2 {
             parts[2].parse::<u64>().map_err(|e| {
-                ReaperError::ParseError(format!("Failed to parse transport seconds: {}", e))
+                ReaperError::Parse(format!("Failed to parse transport seconds: {}", e))
             })
         } else {
-            Err(ReaperError::ParseError(
+            Err(ReaperError::Parse(
                 "Transport string format unexpected".to_string(),
             ))
         }

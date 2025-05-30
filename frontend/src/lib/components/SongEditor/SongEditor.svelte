@@ -1,8 +1,5 @@
 <script lang="ts" module>
-	import type { Song, SongInsert } from '$lib/server/db/schema';
 	import Button from '$lib/components/Button/Button.svelte';
-	import type { GetDurationResponseBody } from '../../../routes/api/reaper-project/current/get-duration/+server';
-
 	import BrowseIcon from 'virtual:icons/mdi/folder-open';
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
 	import GetDurationIcon from 'virtual:icons/mdi/timer-refresh-outline';
@@ -16,7 +13,7 @@
 
 <script lang="ts">
 	let { song: originalSong, onSubmit }: SongEditorProps = $props();
-	const song = $state(originalSong);
+	const song = $state({ ...originalSong });
 	const duration = $derived(getDuration(song.length));
 
 	function getDuration(length: number) {

@@ -15,6 +15,14 @@ use tokio::sync::RwLock; // Added import for RwLock
 
 #[tokio::main]
 async fn main() {
+    // Initialize tracing for logging
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
     // Load settings
     let initial_settings = match Settings::load().await {
         Ok(s) => s,
@@ -41,5 +49,6 @@ async fn main() {
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await.unwrap();
+    tracing::info!(addr = %listener.local_addr().unwrap(), "Server running");
     axum::serve(listener, app).await.unwrap();
 }

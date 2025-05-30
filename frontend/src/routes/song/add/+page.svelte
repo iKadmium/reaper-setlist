@@ -1,21 +1,23 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
-	import { type SongInsert } from '$lib/server/db/schema';
-	let song: SongInsert = {
+	import type { Song } from '$lib/models/song';
+	let song: Song = {
 		length: 0,
 		name: ''
 	};
 
-	async function onSubmit(song: SongInsert) {
-		await fetch('/api/song', {
+	async function onSubmit(song: Song) {
+		const resp = await fetch('/api/songs', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify(song)
 		});
-		await goto('/song');
+		if (resp.ok) {
+			await goto('/song');
+		}
 	}
 </script>
 

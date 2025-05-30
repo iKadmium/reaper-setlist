@@ -1,4 +1,6 @@
 <script lang="ts">
+	const ssr = false;
+
 	import type { Snippet } from 'svelte';
 	import '$lib/global.css';
 	import Navbar from '$lib/components/Navbar/Navbar.svelte';

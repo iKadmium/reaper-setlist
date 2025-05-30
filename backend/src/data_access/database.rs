@@ -37,12 +37,10 @@ where
         let db = get_db::<Self>(Self::FILENAME).await?;
         match db.get(id) {
             Some(item) => Ok(item.clone()),
-            None => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Item with id {} not found", id),
-                ));
-            }
+            None => Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Item with id {} not found", id),
+            )),
         }
     }
 

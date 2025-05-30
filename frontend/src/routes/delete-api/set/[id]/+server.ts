@@ -1,10 +1,10 @@
 import { db } from '$lib/server/db';
-import { setlists, setlist_songs, type SetlistDenormalized } from '$lib/server/db/schema';
+import { setlists, setlist_songs, type Setlist } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function PUT({ request, params }) {
 	try {
-		const body = (await request.json()) as SetlistDenormalized;
+		const body = (await request.json()) as Setlist;
 		const setlistId = parseInt(params.id, 10);
 		if (body.id !== setlistId) {
 			return new Response('ID in URL does not match ID in body', { status: 400 });

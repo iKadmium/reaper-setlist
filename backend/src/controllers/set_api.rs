@@ -1,16 +1,19 @@
 use axum::{
-    Json,
-    Router, // Added Json
+    Json, Router,
     extract::Path,
-    http::StatusCode, // Added StatusCode
+    http::StatusCode,
+    response::IntoResponse,
     routing::{delete, get, post, put},
 };
+use axum_extra::extract::WithRejection;
 use tracing::instrument; // Added instrument
 
 use crate::{
     data_access::database::StoredInDb,              // Added StoredInDb
     models::{database::Database, setlist::SetList}, // Added Database and SetList
 };
+
+use super::error::JsonError;
 
 pub fn set_api_controller() -> Router {
     Router::new()
@@ -33,7 +36,9 @@ async fn get_all_sets() -> Result<Json<Database<SetList>>, StatusCode> {
 }
 
 #[instrument]
-async fn create_set(Json(setlist): Json<SetList>) -> Result<Json<SetList>, StatusCode> {
+async fn create_set(
+    WithRejection(Json(setlist), _): WithRejection<Json<SetList>, JsonError>,
+) -> impl IntoResponse {
     match setlist.save().await {
         Ok(()) => Ok(Json(setlist)),
         Err(e) => {

@@ -14,7 +14,7 @@ pub fn reaper_script_api_controller() -> Router {
 async fn handle_reaper_script() -> Result<String, StatusCode> {
     let settings = Settings::load().await;
     match settings {
-        Ok(settings) => Ok(ReaperClient::get_script(&settings.reaper_project_path)),
+        Ok(settings) => Ok(ReaperClient::get_script(&settings.folder_path)),
         Err(e) => {
             tracing::error!(err = %e, "Failed to get settings");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);

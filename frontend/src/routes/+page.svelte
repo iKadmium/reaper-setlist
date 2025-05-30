@@ -2,19 +2,16 @@
 	import { onMount } from 'svelte';
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
-	// This type import might need to change if your backend types are managed elsewhere now
-	import type { SetlistDenormalized } from '$lib/server/db/schema';
-	// PageProps from './$types' will likely change or be removed if the corresponding load function is removed.
 
 	import CopyIcon from 'virtual:icons/mdi/content-copy';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import AddIcon from 'virtual:icons/mdi/plus';
+	import type { Setlist } from '$lib/models/setlist';
+	import type { Database } from '$lib/models/database';
 
-	// Remove: let { data }: PageProps = $props();
-
-	let sets = $state<SetlistDenormalized[]>([]); // Initialize as empty
+	let sets = $state<Database<Setlist>>({}); // Initialize as empty
 	let isLoading = $state(true);
 	let errorMessage = $state<string | null>(null);
 
@@ -27,7 +24,7 @@
 				const errorData = await response.json();
 				throw new Error(errorData.error || `Failed to fetch sets: ${response.status}`);
 			}
-			const fetchedSets: SetlistDenormalized[] = await response.json();
+			const fetchedSets: Database<Setlist> = await response.json();
 			sets = fetchedSets;
 		} catch (err) {
 			console.error('Error fetching sets:', err);
@@ -37,18 +34,21 @@
 		}
 	});
 
-	function formatTitle(item: SetlistDenormalized) {
+	function formatTitle(item: Setlist) {
 		const dateString = `${new Date(item.date).toLocaleDateString()}`;
 		return `${dateString} - ${item.venue}`;
 	}
 
-	async function handleDeleteClick(item: SetlistDenormalized) {
+	async function handleDeleteClick(item: Setlist) {
+		if (!item.id) {
+			alert('Cannot delete a set without an ID.');
+			return;
+		}
 		if (confirm('Are you sure you want to delete this set?')) {
 			// Update this URL to point to your new external backend
-			const result = await fetch(`api/set/${item.id}`, { method: 'DELETE' });
+			const result = await fetch(`api/sets/${item.id}`, { method: 'DELETE' });
 			if (result.ok) {
-				const index = sets.findIndex((x) => x.id === item.id);
-				if (index > -1) sets.splice(index, 1);
+				delete sets[item.id];
 			} else {
 				const error = await result.json();
 				alert(error.error ? `Failed to delete set: ${error.error}` : 'Failed to delete set.');
@@ -56,8 +56,8 @@
 		}
 	}
 
-	async function handleDuplicateClick(item: SetlistDenormalized) {
-		const duplicated: Partial<SetlistDenormalized> = { ...item, id: undefined, venue: `${item.venue} (copy)` };
+	async function handleDuplicateClick(item: Setlist) {
+		const duplicated: Partial<Setlist> = { ...item, id: undefined, venue: `${item.venue} (copy)` };
 		// Update this URL to point to your new external backend
 		const result = await fetch(`/api/set`, {
 			method: 'POST',
@@ -66,7 +66,7 @@
 		});
 		if (result.ok) {
 			const newSet = await result.json();
-			sets.push(newSet); // Or sets = [...sets, newSet] with Svelte 5 runes
+			sets[newSet.id] = newSet; // Or sets = [...sets, newSet] with Svelte 5 runes
 		} else {
 			const error = await result.json();
 			alert(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set.');
@@ -85,7 +85,7 @@
 {:else if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else}
-	<ItemGrid items={sets} getName={formatTitle}>
+	<ItemGrid items={Object.values(sets)} getName={formatTitle}>
 		{#snippet actions(item)}
 			<Button elementType="a" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
 			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>

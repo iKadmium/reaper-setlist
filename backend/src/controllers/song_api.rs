@@ -68,7 +68,7 @@ async fn edit_song_by_id(
     extract::Path(id): extract::Path<String>,
     extract::Json(song): extract::Json<Song>,
 ) -> Result<Json<Song>, StatusCode> {
-    if song.id != id {
+    if song.name != id {
         return Err(StatusCode::BAD_REQUEST);
     }
     let result = song.save().await;
@@ -91,7 +91,7 @@ async fn delete_song_by_id(
             let mut db = Song::get_all()
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            db.remove(&song.id);
+            db.remove(&song.name);
             song.save()
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

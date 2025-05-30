@@ -17,15 +17,15 @@ use crate::{
 // Helper function to map ReaperError to an appropriate HTTP response
 fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
     match err {
-        ReaperError::HttpError(e) => (
+        ReaperError::Http(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Reaper HTTP error: {}", e),
         ),
-        ReaperError::CommandError(e) => (
+        ReaperError::Command(e) => (
             StatusCode::BAD_GATEWAY,
             format!("Reaper command error: {}", e),
         ),
-        ReaperError::ParseError(e) => (
+        ReaperError::Parse(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Reaper response parse error: {}", e),
         ),

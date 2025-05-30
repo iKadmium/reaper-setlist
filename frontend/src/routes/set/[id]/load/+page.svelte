@@ -1,10 +1,17 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import Button from '$lib/components/Button/Button.svelte';
-	import type { PageProps } from './$types';
-
+	import type { Database } from '$lib/models/database';
+	import type { Setlist } from '$lib/models/setlist';
+	import type { Song } from '$lib/models/song';
+	import { onMount } from 'svelte';
 	import LoadIcon from 'virtual:icons/mdi/playlist-play';
 
-	let { data }: PageProps = $props();
+	let log = $state<LogItem[]>([]);
+	let working = $state<boolean>(false);
+	let set = $state<Setlist | undefined>(undefined);
+	let songs = $state<Database<Song>>({});
+	let loading = $state<boolean>(true);
 
 	interface LogItem {
 		time: Date;
@@ -12,10 +19,21 @@
 		message: string;
 	}
 
-	let log: LogItem[] = $state<LogItem[]>([]);
-	let working = $state(false);
+	onMount(async () => {
+		try {
+			const id = page.params.id;
+			const setRes = await fetch(`/api/sets/${id}`);
+			if (!setRes.ok) throw new Error('Failed to fetch set');
+			set = await setRes.json();
+			const songsRes = await fetch('/api/songs');
+			if (!songsRes.ok) throw new Error('Failed to fetch songs');
+			songs = await songsRes.json();
+		} finally {
+			loading = false;
+		}
+	});
 
-	async function loadSong(songId: number, name: string): Promise<LogItem> {
+	async function loadSong(songId: string, name: string): Promise<LogItem> {
 		const res = await fetch(`/api/reaper-project/${name}/load`, { method: 'POST' });
 		await res.json(); // wait for the operation to complete
 		return { time: new Date(), message: res.ok ? 'OK' : 'Failed', color: res.ok ? 'green' : 'red' };
@@ -34,13 +52,14 @@
 	}
 
 	async function loadSet() {
+		if (!set || working) return;
 		working = true;
 		log.splice(0, log.length);
 		try {
-			for (const index in data.set.songs) {
-				const songId = data.set.songs[index];
+			for (const index in set.songs) {
+				const songId = set.songs[index];
 
-				const name = data.songs.find((s) => s.id === songId)?.name;
+				const name = songs[songId]?.name;
 				if (!name) {
 					log.push({ time: new Date(), message: `Song ID ${songId} not found`, color: 'red' });
 					continue;
@@ -76,7 +95,9 @@
 
 <Button onclick={loadSet} disabled={working}><LoadIcon /></Button>
 
-{#if log.length > 0}
+{#if loading}
+	<p>Loading...</p>
+{:else if log.length > 0}
 	<ul class="list-group">
 		{#each log as item}
 			<li class="list-item" style={`background-color: var(--${item.color})`}>

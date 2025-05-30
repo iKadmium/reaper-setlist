@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db';
-import { setlists, setlist_songs, type SetlistDenormalized } from '$lib/server/db/schema';
+import { setlists, setlist_songs, type Setlist } from '$lib/server/db/schema';
 
 export async function POST({ request }) {
 	try {
-		const body = (await request.json()) as SetlistDenormalized;
+		const body = (await request.json()) as Setlist;
 
 		// Use a transaction to ensure atomicity
 		const setlist = await db.transaction(async (trx) => {

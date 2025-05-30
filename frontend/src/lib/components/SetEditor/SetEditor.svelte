@@ -1,13 +1,12 @@
 <script lang="ts" module>
 	export interface SetEditorProps {
-		setlist: SetlistDenormalized;
-		songs: Song[];
-		onSubmit: (setlist: SetlistDenormalized) => void;
+		setlist: Setlist;
+		songs: Database<Song>;
+		onSubmit: (setlist: Setlist) => void;
 	}
 </script>
 
 <script lang="ts">
-	import type { SetlistDenormalized, Song } from '$lib/server/db/schema';
 	import { flip } from 'svelte/animate';
 	import Button from '../Button/Button.svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -17,24 +16,28 @@
 	import AddIcon from 'virtual:icons/mdi/plus';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
 	import { formatDuration } from '$lib/util';
+	import type { Setlist } from '$lib/models/setlist';
+	import type { Database } from '$lib/models/database';
+	import type { Song } from '$lib/models/song';
 
 	let { setlist: initialSetlist, songs, onSubmit }: SetEditorProps = $props();
 
-	let setlist = $state(initialSetlist);
-	let newSongId = $state<number | null>(songs[0]?.id || null);
+	let setlist = $state({ ...initialSetlist });
+	let newSongId = $state<string | null>(Object.keys(songs)[0] || null);
 
-	let remainingSongs = $derived(songs.filter((s) => !setlist.songs.includes(s.id)));
-	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (songs.find((s) => s.id === songId)?.length ?? 0) || 0, 0));
+	let remainingSongs = $derived(Object.values(songs).filter((s) => !setlist.songs.includes(s.name)));
+	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (Object.values(songs).find((s) => s.name === songId)?.length ?? 0) || 0, 0));
 
 	let draggingIndex: number | undefined = $state(undefined);
 	let draggingTargetIndex: number | undefined = $state(undefined);
 	let itemsRef: HTMLDivElement | undefined = $state(undefined);
 
 	function addSongToSetlist() {
-		const song = songs.find((s) => s.id === newSongId);
+		if (!newSongId || !songs[newSongId]) return;
+		const song = songs[newSongId];
 		if (song) {
-			setlist.songs.push(song.id);
-			newSongId = remainingSongs[0]?.id || null;
+			setlist.songs.push(song.name);
+			newSongId = remainingSongs[0]?.name || null;
 		}
 	}
 
@@ -80,7 +83,7 @@
 		<input
 			type="date"
 			value={new Date(setlist.date).toISOString().split('T')[0]}
-			onchange={({ currentTarget: { value: v } }) => (setlist.date = v ? new Date(v).getTime() : new Date().getTime())}
+			onchange={({ currentTarget: { value: v } }) => (setlist.date = v ? new Date(v).toISOString() : new Date().toISOString())}
 		/>
 	</label>
 </div>
@@ -99,7 +102,7 @@
 				{/if}
 				<div class="list-item" class:dragging={draggingIndex === i}>
 					<Draggable onmove={(y) => onDragMove(y, i)} onstart={() => onDragStart(i)} onend={(y) => onDragEnd(y)} />
-					<span class="song-name">{songs.find((s) => s.id === songId)?.name}</span>
+					<span class="song-name">{songs[songId]?.name}</span>
 					<Button color="delete" onclick={() => setlist.songs.splice(i, 1)}><DeleteIcon /></Button>
 				</div>
 			</div>
@@ -114,7 +117,7 @@
 	<div class="add-song-container">
 		<select bind:value={newSongId}>
 			{#each remainingSongs as song}
-				<option value={song.id}>{song.name}</option>
+				<option value={song.name}>{song.name}</option>
 			{/each}
 		</select>
 	</div>

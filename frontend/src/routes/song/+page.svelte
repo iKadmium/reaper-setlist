@@ -1,16 +1,30 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
-	import type { Song } from '$lib/server/db/schema';
-	import type { PageProps } from './$types';
+	import type { Database } from '$lib/models/database';
+	import type { Song } from '$lib/models/song';
+	import { onMount } from 'svelte';
 
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import AddIcon from 'virtual:icons/mdi/plus';
 
-	let { data }: PageProps = $props();
-	let songs = $state(data.songs);
+	let songs = $state<Database<Song>>({});
+	let loading = $state<boolean>(true);
+	let error = $state<string | null>(null);
+
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/songs');
+			if (!res.ok) throw new Error('Failed to fetch songs');
+			songs = await res.json();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Unknown error';
+		} finally {
+			loading = false;
+		}
+	});
 
 	async function handleLoadClick(song: Song) {
 		const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
@@ -21,12 +35,12 @@
 
 	async function handleDeleteClick(song: Song) {
 		if (confirm('Are you sure you want to delete this song?')) {
-			const result = await fetch(`/api/song/${song.id}`, { method: 'DELETE' });
+			const result = await fetch(`/api/songs/${song.name}`, { method: 'DELETE' });
 			if (result.ok) {
-				data.songs.splice(data.songs.indexOf(song), 1);
+				delete songs[song.name];
 			} else {
 				const error = await result.json();
-				error.error ? alert(`Failed to delete song: ${error.error}`) : 'Failed to delete song.';
+				error.error ? alert(`Failed to delete song: ${error.error}`) : alert('Failed to delete song.');
 			}
 		}
 	}
@@ -38,11 +52,11 @@
 
 <h1>Songs</h1>
 
-<ItemGrid items={songs} getName={(song) => song.name}>
+<ItemGrid items={Object.values(songs)} getName={(song) => song.name}>
 	{#snippet actions(item)}
-		<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
+		<Button elementType="a" color="edit" href={`/song/${item.name}/edit`}><EditIcon /></Button>
 		<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-		<Button color="primary" elementType="a" href={`/set/${item.id}/load`}><PlayIcon /></Button>
+		<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
 	{/snippet}
 </ItemGrid>
 
