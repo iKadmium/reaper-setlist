@@ -1,0 +1,21 @@
+use axum::{Router, http::StatusCode, routing::get};
+
+use crate::{
+    data_access::{json_file::StoredInJsonFile, reaper_client::ReaperClient},
+    models::settings::Settings,
+};
+
+pub fn reaper_script_api_controller() -> Router {
+    Router::new().route("/", get(handle_reaper_script))
+}
+
+async fn handle_reaper_script() -> Result<String, StatusCode> {
+    let settings = Settings::load().await;
+    match settings {
+        Ok(settings) => Ok(ReaperClient::get_script(&settings.folder_path)),
+        Err(e) => {
+            tracing::error!(err = %e, "Failed to get settings");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}

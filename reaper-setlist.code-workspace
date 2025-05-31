@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"name": "Frontend",
+			"path": "frontend",
+		},
+		{
+			"name": "Backend",
+			"path": "backend"
+		},
+		{
+			"name": "Root",
+			"path": "."
+		}
+	],
+	"settings": {
+		"rust-analyzer.linkedProjects": [
+			"backend/Cargo.toml",
+		]
+	}
+}
