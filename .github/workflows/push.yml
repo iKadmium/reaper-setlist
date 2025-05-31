@@ -28,10 +28,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
       - name: Install dependencies
-        run: cargo install --locked
+        run: cargo install --locked --path ./backend
       - name: Lint
         run: cargo clippy --locked --all-features -- -D warnings
       - name: Test
