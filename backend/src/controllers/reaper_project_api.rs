@@ -7,7 +7,6 @@ use axum::{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock; // Added import for RwLock
-use tracing::instrument;
 
 use crate::{
     data_access::reaper_client::{ReaperClient, ReaperError},
@@ -33,7 +32,6 @@ fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
     }
 }
 
-#[instrument]
 pub fn reaper_project_api_controller(settings: Arc<RwLock<Settings>>) -> Router {
     Router::new()
         .route("/current/get-duration", post(get_current_project_duration))
@@ -44,7 +42,6 @@ pub fn reaper_project_api_controller(settings: Arc<RwLock<Settings>>) -> Router 
         .with_state(settings)
 }
 
-#[instrument(skip(settings_state))]
 async fn get_current_project_duration(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Changed to Arc<RwLock<Settings>>
 ) -> Result<Json<u64>, impl IntoResponse> {
@@ -59,7 +56,6 @@ async fn get_current_project_duration(
     }
 }
 
-#[instrument(skip(settings_state))]
 async fn new_project_tab(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Changed to Arc<RwLock<Settings>>
 ) -> Result<StatusCode, impl IntoResponse> {
@@ -74,7 +70,6 @@ async fn new_project_tab(
     }
 }
 
-#[instrument(skip(settings_state))]
 async fn load_project_by_name(
     Path(name): Path<String>,
     State(settings_state): State<Arc<RwLock<Settings>>>, // Changed to Arc<RwLock<Settings>>
@@ -90,7 +85,6 @@ async fn load_project_by_name(
     }
 }
 
-#[instrument(skip(settings_state))]
 async fn current_project_go_to_start(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Changed to Arc<RwLock<Settings>>
 ) -> Result<StatusCode, impl IntoResponse> {
@@ -105,7 +99,6 @@ async fn current_project_go_to_start(
     }
 }
 
-#[instrument(skip(settings_state))]
 async fn current_project_go_to_end(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Changed to Arc<RwLock<Settings>>
 ) -> Result<StatusCode, impl IntoResponse> {

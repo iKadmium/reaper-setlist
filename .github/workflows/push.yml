@@ -2,14 +2,17 @@ name: Docker Image CI
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
   pull_request:
-    branches: ['main']
+    branches: ["main"]
 env:
   IMAGE_NAME: reaper-setlist
 jobs:
-  test:
+  test-frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - name: Setup bun
@@ -18,6 +21,21 @@ jobs:
         run: bun install
       - name: Test
         run: bun test
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: cargo install --locked
+      - name: Lint
+        run: cargo clippy --locked --all-features -- -D warnings
+      - name: Test
+        run: cargo test --locked --all-features
   build:
     runs-on: ubuntu-latest
     steps:

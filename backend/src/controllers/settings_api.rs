@@ -1,7 +1,6 @@
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use std::sync::Arc;
-use tokio::sync::RwLock; // Added import for RwLock
-use tracing::instrument;
+use tokio::sync::RwLock;
 
 use crate::data_access::json_file::StoredInJsonFile;
 use crate::models::settings::Settings;
@@ -13,14 +12,12 @@ pub fn settings_api_controller(settings_state: Arc<RwLock<Settings>>) -> Router 
         .with_state(settings_state)
 }
 
-#[instrument(skip(settings_state))]
 async fn get_settings(State(settings_state): State<Arc<RwLock<Settings>>>) -> Json<Settings> {
     // Changed to Arc<RwLock<Settings>>
     let settings_read_guard = settings_state.read().await;
     Json(settings_read_guard.clone())
 }
 
-#[instrument(skip(settings_state, new_settings))]
 async fn update_settings(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Added State extractor for settings_state
     Json(new_settings): Json<Settings>,

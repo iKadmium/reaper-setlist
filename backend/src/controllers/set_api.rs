@@ -5,15 +5,11 @@ use axum::{
     response::IntoResponse,
     routing::{delete, get, post, put},
 };
-use axum_extra::extract::WithRejection;
-use tracing::instrument; // Added instrument
 
 use crate::{
     data_access::database::StoredInDb,              // Added StoredInDb
     models::{database::Database, setlist::SetList}, // Added Database and SetList
 };
-
-use super::error::JsonError;
 
 pub fn set_api_controller() -> Router {
     Router::new()
@@ -24,7 +20,6 @@ pub fn set_api_controller() -> Router {
         .route("/{id}", delete(delete_set_by_id))
 }
 
-#[instrument]
 async fn get_all_sets() -> Result<Json<Database<SetList>>, StatusCode> {
     match SetList::get_all().await {
         Ok(db) => Ok(Json(db)),
@@ -35,10 +30,7 @@ async fn get_all_sets() -> Result<Json<Database<SetList>>, StatusCode> {
     }
 }
 
-#[instrument]
-async fn create_set(
-    WithRejection(Json(setlist), _): WithRejection<Json<SetList>, JsonError>,
-) -> impl IntoResponse {
+async fn create_set(Json(setlist): Json<SetList>) -> impl IntoResponse {
     match setlist.save().await {
         Ok(()) => Ok(Json(setlist)),
         Err(e) => {
@@ -48,7 +40,6 @@ async fn create_set(
     }
 }
 
-#[instrument]
 async fn get_set_by_id(Path(id): Path<String>) -> Result<Json<SetList>, StatusCode> {
     match SetList::get_by_id(&id).await {
         Ok(setlist) => Ok(Json(setlist)),
@@ -59,7 +50,6 @@ async fn get_set_by_id(Path(id): Path<String>) -> Result<Json<SetList>, StatusCo
     }
 }
 
-#[instrument]
 async fn update_set_by_id(
     Path(id): Path<String>,
     Json(setlist): Json<SetList>,
@@ -81,7 +71,6 @@ async fn update_set_by_id(
     }
 }
 
-#[instrument]
 async fn delete_set_by_id(Path(id): Path<String>) -> Result<StatusCode, StatusCode> {
     match SetList::get_by_id(&id).await {
         Ok(setlist) => match setlist.delete().await {

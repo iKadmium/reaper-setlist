@@ -7,7 +7,6 @@ use axum::{
     routing::{delete, get, post, put},
 };
 use tokio::sync::RwLock;
-use tracing::instrument;
 
 use crate::{
     data_access::{database::StoredInDb, reaper_client::ReaperClient},
@@ -25,7 +24,6 @@ pub fn song_api_controller(settings_state: Arc<RwLock<Settings>>) -> Router {
         .with_state(settings_state)
 }
 
-#[instrument]
 async fn get_all_songs() -> Result<Json<Database<Song>>, StatusCode> {
     let result = Song::get_all().await;
     match result {
@@ -37,7 +35,6 @@ async fn get_all_songs() -> Result<Json<Database<Song>>, StatusCode> {
     }
 }
 
-#[instrument]
 async fn add_song(extract::Json(song): extract::Json<Song>) -> Result<Json<Song>, StatusCode> {
     let result = song.save().await;
     match result {
@@ -49,7 +46,6 @@ async fn add_song(extract::Json(song): extract::Json<Song>) -> Result<Json<Song>
     }
 }
 
-#[instrument]
 async fn get_song_by_id(
     extract::Path(id): extract::Path<String>,
 ) -> Result<Json<Song>, StatusCode> {
@@ -63,7 +59,6 @@ async fn get_song_by_id(
     }
 }
 
-#[instrument]
 async fn edit_song_by_id(
     extract::Path(id): extract::Path<String>,
     extract::Json(song): extract::Json<Song>,
@@ -81,7 +76,6 @@ async fn edit_song_by_id(
     }
 }
 
-#[instrument]
 async fn delete_song_by_id(
     extract::Path(id): extract::Path<String>,
 ) -> Result<StatusCode, StatusCode> {
@@ -104,7 +98,6 @@ async fn delete_song_by_id(
     }
 }
 
-#[instrument]
 async fn load_song_by_id(
     State(settings_state): State<Arc<RwLock<Settings>>>,
     extract::Path(id): extract::Path<String>,

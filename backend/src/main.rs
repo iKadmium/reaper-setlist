@@ -13,7 +13,13 @@ use data_access::json_file::StoredInJsonFile;
 use models::settings::Settings;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tower_http::services::{ServeDir, ServeFile}; // Import ServeFile
+use tower_http::{
+    services::{ServeDir, ServeFile},
+    trace::{DefaultMakeSpan, DefaultOnRequest, TraceLayer},
+};
+use tracing::Level; // Import Level for setting trace level
+
+const SPA_DIR: &str = "assets";
 
 #[tokio::main]
 async fn main() {
@@ -35,16 +41,13 @@ async fn main() {
     };
     let settings_state = Arc::new(RwLock::new(initial_settings));
 
-    // build our application with a single route
-    let spa_dir = "/workspaces/reaper-setlist/frontend/build";
-
     // Create a service to serve the index.html file
-    let index_html_service = ServeFile::new(format!("{}/index.html", spa_dir));
+    let index_html_service = ServeFile::new(format!("{}/index.html", SPA_DIR));
 
     // Create the static file service with a fallback to index.html
-    let static_service = ServeDir::new(spa_dir).fallback(index_html_service);
+    let static_service = get_service(ServeDir::new(SPA_DIR).fallback(index_html_service));
 
-    let app = Router::new()
+    let api_router = Router::new()
         .nest(
             "/api/reaper-project",
             reaper_project_api_controller(settings_state.clone()),
@@ -56,10 +59,24 @@ async fn main() {
             "/api/settings",
             settings_api_controller(settings_state.clone()),
         )
-        .fallback(get_service(static_service)); // Wrap in get_service when used as fallback
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new())
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(|response: &axum::http::Response<_>, latency: std::time::Duration, _span: &tracing::Span| {
+                    let status = response.status();
+                    if status.is_client_error() || status.is_server_error() {
+                        tracing::warn!(latency = ?latency, status = %status, "response finished");
+                    } else {
+                        tracing::info!(latency = ?latency, status = %status, "response finished");
+                    }
+                })
+        );
+
+    let app = Router::new().merge(api_router).fallback(static_service);
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!(addr = %listener.local_addr().unwrap(), "Server running");
     axum::serve(listener, app).await.unwrap();
 }

@@ -95,7 +95,7 @@ impl ReaperClient {
         if parts.len() > 2 {
             parts[2]
                 .parse::<f64>()
-                .map(|seconds| Duration::from_secs_f64(seconds))
+                .map(Duration::from_secs_f64)
                 .map_err(|e| {
                     ReaperError::Parse(format!("Failed to parse transport seconds: {}", e))
                 })

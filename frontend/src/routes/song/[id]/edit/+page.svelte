@@ -28,7 +28,7 @@
 			body: JSON.stringify(song)
 		});
 		if (resp.ok) {
-			await goto(`/song/${song.id}`);
+			await goto('/song');
 		} else {
 			const error = await resp.json();
 			alert(`Failed to update song: ${error.error || 'Unknown error'}`);

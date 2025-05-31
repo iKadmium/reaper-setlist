@@ -65,7 +65,7 @@
 
 <ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
 	{#snippet actions(item: Song)}
-		<Button elementType="a" color="edit" href={`/song/${item.name}/edit`}><EditIcon /></Button>
+		<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
 		<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
 		<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
 	{/snippet}
