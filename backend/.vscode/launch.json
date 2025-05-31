@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'reaper_setlist_backend'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=reaper_setlist_backend",
+                    "--package=reaper_setlist_backend"
+                ],
+                "filter": {
+                    "name": "reaper_setlist_backend",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'reaper_setlist_backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=reaper_setlist_backend",
+                    "--package=reaper_setlist_backend"
+                ],
+                "filter": {
+                    "name": "reaper_setlist_backend",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

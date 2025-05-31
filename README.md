@@ -1,38 +1,12 @@
-# sv
+# Reaper Setlist
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A modern setlist management application for the REAPER DAW, built with Svelte frontend and Rust backend. It has very low resource requirements and file size, and can be run on older / more constrained hardware, such as a Raspberry Pi 3.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- 🎵 Manage setlists and songs
+- 🔧 Integration with REAPER
 
-```bash
-# create a new project in the current directory
-npx sv create
+## Usage
 
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Download the binary for your hardware and OS from the [releases section](https://github.com/iKadmium/reaper-setlist/releases) on the right if you'd like to run directly, or if you'd like to use Docker, run `docker run -p 3000:3000 -v reaper-setlist-data:/app/data ghcr.io/ikadmium/reaper-setlist:latest`. Then, open a web browser to http://localhost:3000. Remember to start by going to the setup section.
