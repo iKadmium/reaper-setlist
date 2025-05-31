@@ -1,4 +1,4 @@
-use axum::{Router, http::StatusCode, routing::post};
+use axum::{Router, http::StatusCode, routing::get};
 use tracing::instrument;
 
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn reaper_script_api_controller() -> Router {
-    Router::new().route("/", post(handle_reaper_script))
+    Router::new().route("/", get(handle_reaper_script))
 }
 
 #[instrument]

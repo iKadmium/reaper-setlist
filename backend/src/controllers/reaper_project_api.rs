@@ -16,6 +16,7 @@ use crate::{
 
 // Helper function to map ReaperError to an appropriate HTTP response
 fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
+    tracing::error!("Reaper error: {:?}", err);
     match err {
         ReaperError::Http(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -32,6 +33,7 @@ fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
     }
 }
 
+#[instrument]
 pub fn reaper_project_api_controller(settings: Arc<RwLock<Settings>>) -> Router {
     Router::new()
         .route("/current/get-duration", post(get_current_project_duration))
@@ -49,8 +51,8 @@ async fn get_current_project_duration(
     let settings_read_guard = settings_state.read().await; // Acquire read lock
     match ReaperClient::new(&settings_read_guard).await {
         // Pass reference to Settings inside guard
-        Ok(client) => match client.get_transport_seconds().await {
-            Ok(duration) => Ok(Json(duration)),
+        Ok(client) => match client.get_duration().await {
+            Ok(duration) => Ok(Json(duration.as_secs())),
             Err(e) => Err(map_reaper_error(e)),
         },
         Err(e) => Err(map_reaper_error(e)),

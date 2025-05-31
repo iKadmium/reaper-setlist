@@ -4,7 +4,7 @@
 	export interface ItemGridProps<T> {
 		items: T[];
 		getName: (item: T) => string;
-		actions: (item: T) => Snippet;
+		actions: Snippet<[T]>; // Changed type
 	}
 </script>
 

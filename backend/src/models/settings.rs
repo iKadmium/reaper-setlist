@@ -7,6 +7,8 @@ use crate::data_access::json_file::StoredInJsonFile;
 pub struct Settings {
     pub(crate) folder_path: String,
     pub(crate) reaper_url: String,
+    pub(crate) reaper_username: Option<String>,
+    pub(crate) reaper_password: Option<String>,
 }
 
 impl StoredInJsonFile for Settings {

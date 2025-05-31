@@ -3,6 +3,7 @@
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
+	import { formatDuration } from '$lib/util';
 	import { onMount } from 'svelte';
 
 	import DeleteIcon from 'virtual:icons/mdi/delete';
@@ -50,7 +51,8 @@
 	}
 
 	function getName(song: Song) {
-		const displayString = `${song.name} (${song.length})`;
+		const displayLength = formatDuration(song.length);
+		const displayString = `${song.name} (${displayLength})`;
 		return displayString;
 	}
 </script>
@@ -62,7 +64,7 @@
 <h1>Songs</h1>
 
 <ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
-	{#snippet actions(item)}
+	{#snippet actions(item: Song)}
 		<Button elementType="a" color="edit" href={`/song/${item.name}/edit`}><EditIcon /></Button>
 		<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
 		<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>

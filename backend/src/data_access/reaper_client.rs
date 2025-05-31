@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::models::settings::Settings;
 use reqwest::Error as ReqwestError;
 
@@ -85,13 +87,18 @@ impl ReaperClient {
         Ok(())
     }
 
-    pub async fn get_transport_seconds(&self) -> Result<u64, ReaperError> {
+    pub async fn get_duration(&self) -> Result<Duration, ReaperError> {
+        // go to the end of the project to get the duration
+        self.go_to_end().await?;
         let transport_string = self.run_command(&ReaperCommand::GetTransport).await?;
         let parts: Vec<&str> = transport_string.split('\t').collect();
         if parts.len() > 2 {
-            parts[2].parse::<u64>().map_err(|e| {
-                ReaperError::Parse(format!("Failed to parse transport seconds: {}", e))
-            })
+            parts[2]
+                .parse::<f64>()
+                .map(|seconds| Duration::from_secs_f64(seconds))
+                .map_err(|e| {
+                    ReaperError::Parse(format!("Failed to parse transport seconds: {}", e))
+                })
         } else {
             Err(ReaperError::Parse(
                 "Transport string format unexpected".to_string(),
@@ -114,6 +121,11 @@ impl ReaperClient {
     // it might be better as async if folder_path also comes from async Settings.
     // For now, keeping it synchronous as per the TS example, assuming folder_path is readily available.
     pub fn get_script(folder_path: &str) -> String {
+        let escaped_folder_path = folder_path
+            .replace('\\', "\\\\") // Escape backslashes
+            .replace("'", "\\'") // Escape single quotes
+            .replace("\"", "\\\""); // Escape double quotes
+
         format!(
             r#"local is_new_value,filename,sectionID,cmdID,mode,resolution,val,contextstr = reaper.get_action_context()
 if contextstr == "" then
@@ -126,7 +138,7 @@ else
     reaper.Main_openProject(x)
   end
 end"#,
-            folder_path
+            escaped_folder_path
         )
     }
 }

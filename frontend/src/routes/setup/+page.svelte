@@ -2,9 +2,12 @@
 	import Button from '$lib/components/Button/Button.svelte';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
 	import { onMount } from 'svelte';
+	import type { ReaperSettings } from '$lib/models/reaper-settings';
 
 	let folderPath = $state<string>('');
 	let reaperUrl = $state<string>('');
+	let username = $state<string>('');
+	let password = $state<string>('');
 	let form = $state<{ success?: boolean; message?: string }>({});
 	let loading = $state<boolean>(true);
 
@@ -12,9 +15,11 @@
 		try {
 			const res = await fetch('/api/settings');
 			if (!res.ok) throw new Error('Failed to fetch settings');
-			const settings = await res.json();
+			const settings = (await res.json()) as ReaperSettings;
 			folderPath = settings.folderPath;
 			reaperUrl = settings.reaperUrl;
+			username = settings.reaperUsername ?? '';
+			password = settings.reaperPassword ?? '';
 		} catch (e) {
 			form.message = e instanceof Error ? e.message : 'Unknown error';
 		} finally {
@@ -25,12 +30,24 @@
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
-		const reaperUrlValue = formData.get('reaper-url');
-		const folderPathValue = formData.get('backing-tracks-folder');
+		const reaperUrlValue = formData.get('reaper-url') || '';
+		const folderPathValue = formData.get('backing-tracks-folder') || '';
+		const usernameValue = formData.get('reaper-username');
+		const passwordValue = formData.get('reaper-password');
+		const body: ReaperSettings = {
+			reaperUrl: reaperUrlValue ? (reaperUrlValue as string) : '',
+			folderPath: folderPathValue ? (folderPathValue as string) : ''
+		};
+		if (usernameValue && typeof usernameValue === 'string' && usernameValue.trim() !== '') {
+			body.reaperUsername = usernameValue;
+		}
+		if (passwordValue && typeof passwordValue === 'string' && passwordValue.trim() !== '') {
+			body.reaperPassword = passwordValue;
+		}
 		const res = await fetch('/api/settings', {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ reaperUrl: reaperUrlValue, folderPath: folderPathValue })
+			body: JSON.stringify(body)
 		});
 		if (!res.ok) {
 			form.message = 'Failed to save settings';
@@ -61,6 +78,16 @@
 	<div>
 		<label for="reaper-url">Reaper URL:</label>
 		<input bind:value={reaperUrl} type="text" id="reaper-url" name="reaper-url" placeholder="Enter Reaper URL" />
+	</div>
+
+	<div>
+		<label for="reaper-username">Reaper Username:</label>
+		<input bind:value={username} type="text" id="reaper-username" name="reaper-username" placeholder="Enter Reaper Username" />
+	</div>
+
+	<div>
+		<label for="reaper-password">Reaper Password:</label>
+		<input bind:value={password} type="password" id="reaper-password" name="reaper-password" placeholder="Enter Reaper Password" />
 	</div>
 
 	<Button elementType="submit" color="primary"><SaveIcon /></Button>

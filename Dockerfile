@@ -5,22 +5,22 @@ FROM oven/bun:latest AS frontend-builder
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package.json bun.lock ./
+COPY frontend/package.json bun.lock ./
 RUN bun install
 
 # Copy the rest of the application files and build
-COPY . .
+COPY frontend .
 RUN bun run build
 
 
 # Stage 2: Run the app with Bun
-FROM builder
+FROM frontend-builder
 
 # Set working directory
 WORKDIR /app
 
 # Copy built files from the builder stage
-COPY --from=builder /app/build /app
+COPY --from=frontend-builder /app/build /app/frontend
 
 # Install dependencies
 RUN bun install
