@@ -5,7 +5,7 @@ FROM oven/bun:alpine as frontend_builder
 
 WORKDIR /app/frontend
 
-COPY frontend/package.json frontend/bun.lockb ./
+COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile # Install dependencies
 
 COPY frontend/. .
