@@ -21,15 +21,12 @@ FROM --platform=$BUILDPLATFORM clux/muslrust:latest AS backend_builder
 ARG TARGETPLATFORM
 
 # Explicitly set the shell for RUN commands in this stage to /bin/sh.
-# BusyBox sh in Alpine didn't support pipefail, but Ubuntu's /bin/sh (dash) does support -e, -u, -x.
-# For apt-get, using /bin/sh -c is fine.
 SHELL ["/bin/sh", "-eux", "-c"]
 
 WORKDIR /app/backend
 
-# Install musl-compatible OpenSSL development headers for Ubuntu (apt-get)
-# Ensure apt-get update is run first.
-RUN apt-get update && apt-get install -y libssl-dev ca-certificates
+# Install musl-compatible OpenSSL development headers, ca-certificates, and pkg-config for Ubuntu (apt-get)
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates pkg-config
 
 # Determine the Rust target triple based on TARGETPLATFORM.
 # This variable will be set as a shell variable for this RUN command
@@ -76,7 +73,6 @@ COPY --from=backend_builder /app/backend/target/${FINAL_BUILD_TRIPLE}/release/re
 COPY --from=frontend_builder /app/frontend/build /assets
 
 # Add CA certificates (important for HTTPS calls if needed by backend)
-# This was already being copied, but it's good to ensure it's installed in the builder too for compilation.
 COPY --from=backend_builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Optional: Create a non-root user (specify UID/GID as scratch has no user management tools)
