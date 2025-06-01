@@ -9,9 +9,8 @@ on:
 
 env:
   APP_NAME: reaper-setlist # Your application's base name, e.g., "my-axum-app"
-  # Construct the full image ID for GitHub Container Registry (GHCR).
-  # github.repository_owner and github.event.repository.name are already lowercase.
-  IMAGE_ID_BASE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+  # Define the raw image ID base. This will be lowercased in a subsequent step.
+  IMAGE_ID_RAW: ghcr.io/${{ github.repository }}
 
 jobs:
   # Job to run frontend tests
@@ -66,6 +65,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Step to define the fully lowercased IMAGE_ID for consistent use
+      - name: Set lowercase IMAGE_ID for GHCR
+        id: set_image_id
+        run: |
+          # Use 'tr' to convert the full raw image ID to lowercase
+          # The resulting lowercase ID is then set as a global environment variable for subsequent steps
+          IMAGE_ID_LOWER=$(echo "${{ env.IMAGE_ID_RAW }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_ID=${IMAGE_ID_LOWER}" >> $GITHUB_ENV
+
       - name: Set up QEMU
         # Required for Docker Buildx to emulate foreign architectures (e.g., to run the final scratch image steps,
         # though minimal for scratch, or for any RUN commands in foreign arch layers).
@@ -91,7 +99,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_ID_BASE }} # Uses the base image ID defined in env
+          # Use the now lowercased IMAGE_ID from the environment for generating tags
+          images: ${{ env.IMAGE_ID }}
           tags: |
             type=raw,value=${{ env.APP_NAME }}-${{ github.sha }} # Tag with app name and commit SHA
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},value=latest # 'main' branch gets 'latest' tag
@@ -112,6 +121,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }} # Use the generated labels
           # Docker Buildx caching: Crucial for faster subsequent builds.
           # It pulls cache layers from the registry and pushes new ones back.
-          cache-from: type=registry,ref=${{ env.IMAGE_ID_BASE }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_ID_BASE }}:buildcache,mode=max
+          # Use the lowercased IMAGE_ID here to satisfy GHCR's requirements.
+          cache-from: type=registry,ref=${{ env.IMAGE_ID }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_ID }}:buildcache,mode=max
           target: final_image # Instructs Buildx to build the 'final_image' stage from your Dockerfile
