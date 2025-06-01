@@ -59,7 +59,7 @@ jobs:
           targets: x86_64-unknown-linux-musl # Install the musl target for cargo cross to use
 
       - name: Install cross
-        run: cargo install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Login to GHCR (if pulling private images or pushing)
         uses: docker/login-action@v3
