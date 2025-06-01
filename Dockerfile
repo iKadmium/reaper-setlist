@@ -21,6 +21,7 @@ FROM --platform=$BUILDPLATFORM clux/muslrust:stable AS backend_builder
 ARG TARGETPLATFORM
 
 WORKDIR /app/backend
+RUN apk add --no-cache openssl-dev
 
 # Determine the Rust target triple based on TARGETPLATFORM.
 # We set this as a shell variable and use it within the same RUN command.
