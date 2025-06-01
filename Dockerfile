@@ -25,7 +25,7 @@ WORKDIR /app/backend
 # Determine the Rust target triple based on TARGETPLATFORM.
 # We set this as a shell variable and use it within the same RUN command.
 # For subsequent RUN commands, we create a script to re-export it.
-ENV RUST_TARGET_TRIPLE="" # Initialize ENV variable for clarity, will be set in RUN
+ENV RUST_TARGET_TRIPLE=""
 RUN case ${TARGETPLATFORM} in \
       "linux/amd64") RUST_TARGET_TRIPLE="x86_64-unknown-linux-musl" ;; \
       "linux/arm64") RUST_TARGET_TRIPLE="aarch64-unknown-linux-musl" ;; \
@@ -57,12 +57,12 @@ RUN . /usr/local/bin/set_rust_target_env.sh && \
 # Strip the binary to further reduce its size.
 # Source the script again to get RUST_TARGET_TRIPLE.
 RUN . /usr/local/bin/set_rust_target_env.sh && \
-    strip target/"${RUST_TARGET_TRIPLE}"/release/your_app_name
+    strip target/"${RUST_TARGET_TRIPLE}"/release/reaper_setlist_backend
 
 
 # Stage 2: Final Image
 FROM scratch AS final_image
-ARG TARGETPLATFORM # Inherit TARGETPLATFORM for multi-platform manifest
+ARG TARGETPLATFORM 
 
 # IMPORTANT: You cannot have RUN commands in a scratch image.
 # We will derive the path directly here for the COPY instruction.
@@ -96,17 +96,17 @@ ARG TARGETPLATFORM # Inherit TARGETPLATFORM for multi-platform manifest
 # This requires a corresponding `build-args` in the GHA.
 
 FROM scratch AS final_image
-ARG FINAL_BUILD_TRIPLE # This ARG will be set by the GHA `build-args`
+ARG FINAL_BUILD_TRIPLE
 
 # Copy the compiled binary from the backend builder.
 # The path depends on the `FINAL_BUILD_TRIPLE` ARG.
-COPY --from=backend_builder /app/backend/target/${FINAL_BUILD_TRIPLE}/release/your_app_name /your_app_name
+COPY --from=backend_builder /app/backend/target/${FINAL_BUILD_TRIPLE}/release/reaper_setlist_backend /reaper_setlist_backend
 
 # Copy frontend assets from the frontend builder
-COPY --from=frontend_builder /app/frontend/dist /app/frontend/dist
+COPY --from=frontend_builder /app/frontend/build /app/assets
 
 # Add CA certificates (important for HTTPS calls if needed by backend)
 COPY --from=backend_builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 EXPOSE 8080
-ENTRYPOINT ["/your_app_name"]
+ENTRYPOINT ["/reaper_setlist_backend"]
