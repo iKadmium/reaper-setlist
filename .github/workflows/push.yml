@@ -68,6 +68,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Build and Push Docker Image (using cross to build backend)
         run: |
           # Build frontend in a temp directory
