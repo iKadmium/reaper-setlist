@@ -9,7 +9,7 @@ on:
 env:
   IMAGE_NAME: reaper-setlist # Your app's base image name (e.g., "my-axum-app")
   # Define IMAGE_ID here for easier reuse and adherence to GHCR naming conventions
-  IMAGE_ID: ghcr.io/${{ github.repository | lowercase }}
+  IMAGE_ID: ghcr.io/${{ github.repository }}
 
 jobs:
   # Optional: Frontend tests (runs concurrently with backend tests)
