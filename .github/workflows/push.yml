@@ -68,15 +68,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
       - name: Build and Push Docker Image (using cross to build backend)
         run: |
-          # Build frontend in a temp directory
-          bun install --prefix frontend
-          bun run build --prefix frontend
-
           # Use 'cross' to build the backend for the target architecture
           # 'cross' will automatically use the ghcr.io/cross-rs/x86_64-unknown-linux-musl image
           # This command builds the binary in target/x86_64-unknown-linux-musl/release/
