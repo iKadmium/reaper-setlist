@@ -44,7 +44,9 @@ jobs:
       - name: Run backend tests
         run: cargo test --locked --all-features
 
-      steps:
+  build:
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
