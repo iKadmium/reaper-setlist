@@ -1,7 +1,7 @@
 # Dockerfile
 
 # Stage 0: Frontend Builder (Platform-independent)
-FROM oven/bun:1.1.18-alpine as frontend_builder # Adjust Bun version as needed
+FROM oven/bun:alpine as frontend_builder 
 
 WORKDIR /app/frontend
 
@@ -15,7 +15,7 @@ RUN bun run build # Run your frontend build command (e.g., creates 'dist' folder
 # Stage 1: Unified Rust Backend Builder
 # BUILDPLATFORM is the architecture of the machine building the image (e.g., linux/amd64 on GitHub Actions)
 # TARGETPLATFORM is the architecture of the image being built (e.g., linux/amd64, linux/arm64)
-FROM --platform=$BUILDPLATFORM clux/muslrust:1.70.0-stable AS backend_builder
+FROM --platform=$BUILDPLATFORM clux/muslrust:stable AS backend_builder
 ARG TARGETPLATFORM
 
 WORKDIR /app/backend
