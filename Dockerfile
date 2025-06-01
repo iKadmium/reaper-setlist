@@ -1,8 +1,8 @@
 # Dockerfile
 
 # Stage 0: Frontend Builder (Platform-independent)
-# Adjust Bun version as needed
-FROM oven/bun:latest-alpine as frontend_builder
+# Using 'latest' for Bun, which is typically Debian-based.
+FROM oven/bun:latest as frontend_builder
 
 WORKDIR /app/frontend
 
@@ -31,7 +31,7 @@ RUN apk add --no-cache openssl-dev
 # Determine the Rust target triple based on TARGETPLATFORM.
 # This variable will be set as a shell variable for this RUN command
 # and then exported to a script for subsequent RUN commands.
-ENV RUST_TARGET_TRIPLE="" 
+ENV RUST_TARGET_TRIPLE=""
 RUN case ${TARGETPLATFORM} in \
       "linux/amd64") RUST_TARGET_TRIPLE="x86_64-unknown-linux-musl" ;; \
       "linux/arm64") RUST_TARGET_TRIPLE="aarch64-unknown-linux-musl" ;; \
