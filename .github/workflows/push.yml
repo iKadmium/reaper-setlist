@@ -97,7 +97,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64 # We are explicitly targeting x86_64 for the backend binary
           build-args: |
-            TARGETPLATFORM=linux/amd64 # Pass the target platform to the Dockerfile
-            RUST_TARGET_TRIPLE_ARG=x86_64-unknown-linux-musl # Pass the Rust target triple
+            TARGETPLATFORM=linux/amd64 
+            RUST_TARGET_TRIPLE_ARG=x86_64-unknown-linux-musl
           cache-from: type=gha,scope=backend-build-cache-${{ github.sha }}
           cache-to: type=gha,mode=max,scope=backend-build-cache-${{ github.sha }}
