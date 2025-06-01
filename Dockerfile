@@ -21,7 +21,8 @@ FROM --platform=$BUILDPLATFORM clux/muslrust:latest AS backend_builder
 ARG TARGETPLATFORM
 
 # Explicitly set the shell for RUN commands in this stage to /bin/sh.
-SHELL ["/bin/sh", "-eux", "-o", "pipefail", "-c"]
+# Removed -o pipefail as it's not supported by Alpine's /bin/sh.
+SHELL ["/bin/sh", "-eux", "-c"]
 
 WORKDIR /app/backend
 
