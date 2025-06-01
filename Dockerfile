@@ -23,7 +23,7 @@ WORKDIR /app/backend
 # Determine the Rust target triple based on TARGETPLATFORM.
 # We set this as a shell variable and use it within the same RUN command.
 # For subsequent RUN commands, we re-derive it or source a script (as shown below).
-ENV RUST_TARGET="" # Initialize ENV variable for clarity, will be set in RUN
+ENV RUST_TARGET="" 
 RUN case ${TARGETPLATFORM} in \
       "linux/amd64") RUST_TARGET="x86_64-unknown-linux-musl" ;; \
       "linux/arm64") RUST_TARGET="aarch64-unknown-linux-musl" ;; \
