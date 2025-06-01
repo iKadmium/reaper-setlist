@@ -5,14 +5,19 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+
 env:
-  IMAGE_NAME: reaper-setlist
+  IMAGE_NAME: reaper-setlist # Your app's base image name (e.g., "my-axum-app")
+  # Define IMAGE_ID here for easier reuse and adherence to GHCR naming conventions
+  IMAGE_ID: ghcr.io/${{ github.repository | lowercase }}
+
 jobs:
+  # Optional: Frontend tests (runs concurrently with backend tests)
   test-frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: frontend # Assuming frontend code is in a 'frontend' directory
     steps:
       - uses: actions/checkout@v4
       - name: Setup bun
@@ -21,48 +26,85 @@ jobs:
         run: bun install
       - name: Test
         run: bun test
+
+  # Optional: Backend tests and linting
   test-backend:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: backend # Assuming backend code is in a 'backend' directory
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
+      # Install a consistent Rust toolchain version
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies (and build binary for tests)
+        # Using `cargo install --locked --path .` often implies building the final binary
+        # For just testing, `cargo test --no-run` or `cargo check` might be faster initially
         run: cargo install --locked --path .
       - name: Lint
         run: cargo clippy --locked --all-features -- -D warnings
       - name: Test
         run: cargo test --locked --all-features
+
+  # Build and Push Multi-Architecture Docker Image
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # This runner will be x86_64, performing native cross-compilation
+    needs: [test-frontend, test-backend] # Ensure tests pass before building and deploying
     steps:
       - uses: actions/checkout@v4
+
+      # Set up QEMU for Docker Buildx. This is still needed for *emulating* the final scratch image
+      # if it contains any RUN commands or for running architecture-specific tests *after* compilation.
+      # For the 'native cross-compilation' approach, its impact on compilation speed is minimal.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all # Supports all common platforms
+
+      # Set up Docker Buildx for multi-architecture builds and caching
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Log in to registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Push image
-        run: |
+        uses: docker/setup-buildx-action@v3
+        # Optional: Use a dedicated builder instance for better isolation and caching.
+        # This can sometimes improve performance compared to the default "container" driver.
+        # driver: docker
+        # driver-opts: |
+        #   network=host
+        #   buildkitd-flags="--debug" # For verbose Buildkit logs if troubleshooting
+
+      # Log in to GitHub Container Registry (GHCR)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate Docker image tags and labels based on Git references
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_ID }}
+          tags: |
+            type=raw,value=${{ env.IMAGE_NAME }}-${{ github.sha }} # Unique tag for each commit
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},value=latest # `main` branch -> `latest` tag
+            type=ref,event=pr,suffix=-pr{{ github.event.pull_request.number }} # PR tag (e.g., -pr123)
+            # type=semver,pattern={{version}} # Uncomment if you use semver tags (e.g., v1.0.0)
+
+      # Build and Push the Multi-Architecture Container Image
       - name: Build and push container image
-        run: |
-          IMAGE_ID=$(echo ghcr.io/${{ github.repository }} | tr '[A-Z]' '[a-z]')
-
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-          # when the branch is main, replace main with latest
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-
-          # Build and Publish container image
-          docker buildx build --push \
-          --tag $IMAGE_ID:$VERSION \
-          --platform linux/amd64,linux/arm64 .
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Assumes your Dockerfile is in the root of the repository
+          platforms: linux/amd64,linux/arm64 # Build for both architectures
+          push: true # Push the multi-arch manifest list and images to the registry
+          tags: ${{ steps.meta.outputs.tags }} # Use tags generated by metadata action
+          labels: ${{ steps.meta.outputs.labels }} # Use labels generated by metadata action
+          # Docker Buildx caching: Pull cache from and push cache to GHCR
+          # This is CRUCIAL for faster subsequent builds.
+          cache-from: type=registry,ref=${{ env.IMAGE_ID }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_ID }}:buildcache,mode=max
+          # Specify the final stage to build (important when using multiple final stages or an `AS final_image` pattern)
+          target: final_image
