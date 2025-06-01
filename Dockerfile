@@ -2,13 +2,13 @@
 
 # Stage 0: Frontend Builder (Platform-independent)
 # Adjust Bun version as needed
-FROM oven/bun:latest-alpine as frontend_builder # Unpinned Bun version
+FROM oven/bun:latest-alpine as frontend_builder
 
 WORKDIR /app/frontend
 
 # Use the correct Bun lock file name: bun.lock
 COPY frontend/package.json frontend/bun.lock ./
-RUN bun install --frozen-lockfile # Install dependencies
+RUN bun install --frozen-lockfile
 
 COPY frontend/. .
 RUN bun run build # Run your frontend build command (outputs to 'build' folder)
@@ -17,7 +17,7 @@ RUN bun run build # Run your frontend build command (outputs to 'build' folder)
 # Stage 1: Unified Rust Backend Builder
 # BUILDPLATFORM is the architecture of the machine building the image (e.g., linux/amd64 on GitHub Actions)
 # TARGETPLATFORM is the architecture of the image being built (e.g., linux/amd64, linux/arm64)
-FROM --platform=$BUILDPLATFORM clux/muslrust:latest AS backend_builder # Unpinned muslrust version
+FROM --platform=$BUILDPLATFORM clux/muslrust:latest AS backend_builder
 ARG TARGETPLATFORM
 
 # Explicitly set the shell for RUN commands in this stage to /bin/sh.
