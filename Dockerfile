@@ -25,8 +25,9 @@ SHELL ["/bin/sh", "-eux", "-c"]
 
 WORKDIR /app/backend
 
-# Install musl-compatible OpenSSL development headers, ca-certificates, and pkg-config for Ubuntu (apt-get)
-RUN apt-get update && apt-get install -y libssl-dev ca-certificates pkg-config
+# Install ca-certificates (for the builder itself to fetch crates via HTTPS, etc.)
+# libssl-dev and pkg-config are no longer needed if using rustls for reqwest.
+RUN apt-get update && apt-get install -y ca-certificates
 
 # Determine the Rust target triple based on TARGETPLATFORM.
 # This variable will be set as a shell variable for this RUN command
@@ -72,7 +73,8 @@ COPY --from=backend_builder /app/backend/target/${FINAL_BUILD_TRIPLE}/release/re
 # Copy frontend assets from the frontend builder to the backend's expected 'assets' directory.
 COPY --from=frontend_builder /app/frontend/build /assets
 
-# Add CA certificates (important for HTTPS calls if needed by backend)
+# Add CA certificates (important for HTTPS calls if needed by backend for external requests)
+# Even with rustls, it's good to include if your backend makes external HTTPS calls for other reasons.
 COPY --from=backend_builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Optional: Create a non-root user (specify UID/GID as scratch has no user management tools)
