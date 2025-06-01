@@ -1,7 +1,7 @@
 # Stage 0: Frontend Builder (Platform-independent)
 FROM oven/bun:1.1.18-alpine as frontend_builder
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/bun.lockb ./
+COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY frontend/. .
 RUN bun run build
