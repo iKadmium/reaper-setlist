@@ -117,8 +117,8 @@ jobs:
       - name: Build and push Docker image for ${{ matrix.platform }}
         run: |
           docker buildx build \
-            --platform ${{ matrix.platform }} \
             --build-arg RUSTARCH=${{ matrix.rustarch }} \
+            --build-arg TARGETARCH=${{ matrix.tagarch }} \
             -t ghcr.io/$REPO:${{ matrix.tagarch }} . \
             --push
 
@@ -138,9 +138,27 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create and push multi-arch manifest
+      - name: Install manifest-tool
         run: |
-          docker manifest create ghcr.io/$REPO:latest \
-            --amend ghcr.io/$REPO:amd64 \
-            --amend ghcr.io/$REPO:arm64
-          docker manifest push ghcr.io/$REPO:latest
+          curl -LO https://github.com/estesp/manifest-tool/releases/download/v2.0.8/manifest-tool-linux-amd64
+          chmod +x manifest-tool-linux-amd64
+          sudo mv manifest-tool-linux-amd64 /usr/local/bin/manifest-tool
+
+      - name: Create manifest.yaml
+        run: |
+          cat <<EOF > manifest.yaml
+          image: ghcr.io/$REPO:latest
+          manifests:
+            - image: ghcr.io/$REPO:amd64
+              platform:
+                architecture: amd64
+                os: linux
+            - image: ghcr.io/$REPO:arm64
+              platform:
+                architecture: arm64
+                os: linux
+          EOF
+
+      - name: Create and push multi-arch manifest with manifest-tool
+        run: |
+          manifest-tool push from-spec manifest.yaml
