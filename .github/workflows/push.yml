@@ -140,8 +140,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install manifest-tool
         run: |
-          curl -LO https://github.com/estesp/manifest-tool/releases/download/v2.0.8/manifest-tool-linux-amd64
-          chmod +x manifest-tool-linux-amd64
+          curl -LO https://github.com/estesp/manifest-tool/releases/download/v2.2.0/binaries-manifest-tool-2.2.0.tar.gz
+          tar -xzf binaries-manifest-tool-2.2.0.tar.gz
           sudo mv manifest-tool-linux-amd64 /usr/local/bin/manifest-tool
 
       - name: Create manifest.yaml
