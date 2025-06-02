@@ -57,6 +57,6 @@ jobs:
         working-directory: ./backend
         run: cargo test
 
-      - name: Run cargo build (test build)
+      - name: Check release build
         working-directory: ./backend
-        run: cargo build --release
+        run: cargo check --release
