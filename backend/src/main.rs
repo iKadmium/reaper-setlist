@@ -12,7 +12,7 @@ use controllers::song_api::song_api_controller;
 use data_access::json_file::StoredInJsonFile;
 use models::settings::Settings;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::{signal, sync::RwLock};
 use tower_http::{
     services::{ServeDir, ServeFile},
     trace::{DefaultMakeSpan, DefaultOnRequest, TraceLayer},
@@ -78,5 +78,18 @@ async fn main() {
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!(addr = %listener.local_addr().unwrap(), "Server running");
-    axum::serve(listener, app).await.unwrap();
+
+    // This is the key change for graceful shutdown:
+    // `axum::serve` now includes a `with_graceful_shutdown` future that awaits Ctrl+C.
+    let server = axum::serve(listener, app).with_graceful_shutdown(async {
+        // Await the Ctrl+C signal. This future completes when Ctrl+C is pressed.
+        signal::ctrl_c()
+            .await
+            .expect("Failed to listen for Ctrl+C signal");
+        tracing::info!("Received Ctrl+C, initiating graceful shutdown...");
+    });
+
+    // Await the server. It will run until the graceful_shutdown future completes.
+    server.await.unwrap();
+    tracing::info!("Server shut down gracefully.");
 }
