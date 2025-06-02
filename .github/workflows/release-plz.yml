@@ -28,7 +28,7 @@ jobs:
         uses: release-plz/action@v0.5
         with:
           command: release
-          project-manifest: backend/Cargo.toml
+          manifest_path: backend/Cargo.toml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           #CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -54,7 +54,7 @@ jobs:
         uses: release-plz/action@v0.5
         with:
           command: release-pr
-          manifest-path: backend/Cargo.toml
+          manifest_path: backend/Cargo.toml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           #CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
