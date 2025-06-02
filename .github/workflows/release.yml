@@ -196,6 +196,10 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "REPO=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
         with:
@@ -204,8 +208,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ steps.repo.outputs.REPO }}:latest
+            ghcr.io/${{ steps.repo.outputs.REPO }}:${{ steps.version.outputs.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-contexts: |
@@ -239,6 +243,10 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "REPO=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -267,12 +275,12 @@ jobs:
             - `reaper-setlist-backend-windows-arm64.exe.zip` - Windows ARM64
 
             **Docker Images:**
-            - `ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}` - Multi-arch (AMD64/ARM64)
-            - `ghcr.io/${{ github.repository }}:latest` - Multi-arch (AMD64/ARM64)
+            - `ghcr.io/${{ steps.repo.outputs.REPO }}:${{ steps.version.outputs.VERSION }}` - Multi-arch (AMD64/ARM64)
+            - `ghcr.io/${{ steps.repo.outputs.REPO }}:latest` - Multi-arch (AMD64/ARM64)
 
             Each archive contains the backend binary and frontend assets.
 
             ### Docker Usage
             ```bash
-            docker run -p 3000:3000 ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            docker run -p 3000:3000 ghcr.io/${{ steps.repo.outputs.REPO }}:${{ steps.version.outputs.VERSION }}
             ```
