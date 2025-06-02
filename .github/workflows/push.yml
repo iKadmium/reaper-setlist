@@ -116,7 +116,7 @@ jobs:
 
       - name: Build and push Docker image for ${{ matrix.platform }}
         run: |
-          docker build build \
+          docker build \
             --platform ${{ matrix.platform }} \
             --build-arg RUSTARCH=${{ matrix.rustarch }} \
             --build-arg TARGETARCH=${{ matrix.tagarch }} \
