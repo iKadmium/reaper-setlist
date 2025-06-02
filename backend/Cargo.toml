@@ -2,6 +2,7 @@
 name = "reaper_setlist_backend"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/iKadmium/reaper-setlist"
 
 [dependencies]
 axum = { version = "0.8.4", features = ["macros"] }
@@ -26,3 +27,8 @@ path = "src/main.rs"
 
 [profile.release]
 strip = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

@@ -1,0 +1,71 @@
+name: Lint PR
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check-pr-title:
+    runs-on: ubuntu-latest
+    name: Validate PR title
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate PR title with Conventional Commits
+        uses: amannn/action-semantic-pull-request@v5
+        id: lint_pr_title
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        with:
+          # Define your allowed commit types and scopes here
+          # By default, it checks against common Conventional Commit types (feat, fix, docs, chore, etc.)
+          # You can customize it further if needed.
+          # Example:
+          types: |
+            feat
+            fix
+            docs
+            chore
+            refactor
+            perf
+            style
+            test
+            build
+            ci
+            revert
+          # scopes: |
+          #   api
+          #   ui
+          #   database
+          #   auth
+          #   docs
+          #   # etc.
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        # When the previous steps fails, the workflow would stop. By adding this
+        # condition you can continue the execution with the populated error message.
+        if: always() && (steps.lint_pr_title.outputs.error_message != null)
+        with:
+          header: pr-title-lint-error
+          message: |
+            Hey there and thank you for opening this pull request! 👋🏼
+
+            We require pull request titles to follow the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) and it looks like your proposed title needs to be adjusted.
+
+            Details:
+
+            ```
+            ${{ steps.lint_pr_title.outputs.error_message }}
+            ```
+
+      # Delete a previous comment when the issue has been resolved
+      - if: ${{ steps.lint_pr_title.outputs.error_message == null }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-title-lint-error
+          delete: true

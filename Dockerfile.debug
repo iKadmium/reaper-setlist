@@ -1,3 +1,5 @@
+# Debug Dockerfile with basic base image
+
 # Stage 1: Build Frontend
 FROM oven/bun:1 AS frontend-builder
 
@@ -45,19 +47,19 @@ RUN cargo build --target $(cat /tmp/rust-target) --release
 # Copy the binary to a consistent location regardless of target
 RUN cp target/$(cat /tmp/rust-target)/release/reaper_setlist_backend /app/reaper_setlist_backend
 
-# Stage 3: Final Production Image
-FROM gcr.io/distroless/static-debian12
+# Stage 3: Final Production Image - using debian:bookworm-slim for debugging
+FROM debian:bookworm-slim
+
+# Install CA certificates for debugging
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy CA certificates for HTTPS requests
-COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
 # Copy the statically linked binary
 COPY --from=backend-builder /app/reaper_setlist_backend /app/reaper_setlist_backend
 
-# Copy frontend assets to the assets subdirectory that the backend expects
+# Copy frontend assets
 COPY --from=backend-builder /app/backend/assets/ /app/assets/
 
 # Expose port

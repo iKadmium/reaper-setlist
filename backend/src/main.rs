@@ -81,8 +81,23 @@ async fn main() {
     let app = Router::new().merge(api_router).fallback(static_service);
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    tracing::info!(addr = %listener.local_addr().unwrap(), "Server running");
+    let listener = match tokio::net::TcpListener::bind("0.0.0.0:3000").await {
+        Ok(listener) => listener,
+        Err(e) => {
+            eprintln!("Failed to bind to port 3000: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let addr = match listener.local_addr() {
+        Ok(addr) => addr,
+        Err(e) => {
+            eprintln!("Failed to get local address: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    tracing::info!(addr = %addr, "Server running");
 
     // This is the key change for graceful shutdown:
     // `axum::serve` now includes a `with_graceful_shutdown` future that awaits Ctrl+C.
