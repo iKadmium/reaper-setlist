@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -10,8 +10,8 @@ on:
 
 jobs:
   # Job to build and test the SvelteKit Frontend
-  frontend_build_test:
-    name: Frontend Build and Test
+  frontend:
+    name: Frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -36,8 +36,8 @@ jobs:
         run: bun run build
 
   # Job to build and test the Rust Backend
-  backend_build_test:
-    name: Backend Build and Test
+  backend:
+    name: Backend
     runs-on: ubuntu-latest
 
     steps:

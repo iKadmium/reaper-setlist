@@ -1,0 +1,51 @@
+name: Dependabot Auto-Approve
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependabot-auto-approve:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Wait for Frontend CI
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-frontend
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: "Frontend"
+          ref: ${{ github.event.pull_request.head.sha }}
+          timeoutSeconds: 1800
+
+      - name: Wait for Backend CI
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-backend
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: "Backend"
+          ref: ${{ github.event.pull_request.head.sha }}
+          timeoutSeconds: 1800
+
+      - name: Auto-approve and merge patch and minor updates
+        if: |
+          steps.wait-for-frontend.outputs.conclusion == 'success' && 
+          steps.wait-for-backend.outputs.conclusion == 'success' && 
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' || 
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
