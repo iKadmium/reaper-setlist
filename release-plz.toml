@@ -27,6 +27,6 @@ publish = false
 semver_check = true
 
 # You can also configure specific packages within a workspace:
-# [[package]]
-# name = "your-package-name"
-# changelog_update = false # Disable changelog for this specific package
+[[package]]
+name = "reaper_setlist_backend"
+path = "backend"
