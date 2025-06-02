@@ -3,7 +3,7 @@
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import type { Setlist } from '$lib/models/setlist';
+	import { isNewSetlist, type NewSetlist, type Setlist } from '$lib/models/setlist';
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 

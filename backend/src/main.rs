@@ -15,9 +15,8 @@ use std::sync::Arc;
 use tokio::{signal, sync::RwLock};
 use tower_http::{
     services::{ServeDir, ServeFile},
-    trace::{DefaultMakeSpan, DefaultOnRequest, TraceLayer},
+    trace::TraceLayer,
 };
-use tracing::Level; // Import Level for setting trace level
 
 const SPA_DIR: &str = "assets";
 
@@ -61,12 +60,18 @@ async fn main() {
         )
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new())
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .make_span_with(|request: &axum::http::Request<_>| {
+                    let method = request.method().clone();
+                    let uri = request.uri().clone();
+                    tracing::info_span!("http_request", method = %method, uri = %uri)
+                })
+                .on_request(|_request: &axum::http::Request<_>, _span: &tracing::Span| {
+                    tracing::info!("started processing request");
+                })
                 .on_response(|response: &axum::http::Response<_>, latency: std::time::Duration, _span: &tracing::Span| {
                     let status = response.status();
                     if status.is_client_error() || status.is_server_error() {
-                        tracing::warn!(latency = ?latency, status = %status, "response finished");
+                        tracing::error!(latency = ?latency, status = %status, "response finished");
                     } else {
                         tracing::info!(latency = ?latency, status = %status, "response finished");
                     }
