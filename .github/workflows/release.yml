@@ -178,19 +178,26 @@ jobs:
           name: build-aarch64-unknown-linux-musl
           path: linux-arm64/
 
-      - name: Extract binaries from archives
+      - name: Prepare Docker build context
         run: |
-          # Extract AMD64 binary
+          # Create build context directory
+          mkdir -p build-context/linux/amd64
+          mkdir -p build-context/linux/arm64
+
+          # Extract and copy AMD64 binary
           cd linux-amd64
           tar -xzf reaper-setlist-backend-linux-x64.tar.gz
-          mkdir -p ../binaries/amd64
-          cp reaper_setlist_backend ../binaries/amd64/
+          cp reaper_setlist_backend ../build-context/linux/amd64/
+          cd ..
 
-          # Extract ARM64 binary
-          cd ../linux-arm64
+          # Extract and copy ARM64 binary
+          cd linux-arm64
           tar -xzf reaper-setlist-backend-linux-arm64.tar.gz
-          mkdir -p ../binaries/arm64
-          cp reaper_setlist_backend ../binaries/arm64/
+          cp reaper_setlist_backend ../build-context/linux/arm64/
+          cd ..
+
+          # Copy frontend assets
+          cp -r frontend-assets build-context/assets
 
       - name: Extract version from tag
         id: version
@@ -203,7 +210,7 @@ jobs:
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: build-context
           file: ./Dockerfile.release
           platforms: linux/amd64,linux/arm64
           push: true
@@ -212,10 +219,6 @@ jobs:
             ghcr.io/${{ steps.repo.outputs.REPO }}:${{ steps.version.outputs.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-contexts: |
-            amd64-binary=binaries/amd64
-            arm64-binary=binaries/arm64
-            frontend-assets=frontend-assets
 
   # Create GitHub release
   release:

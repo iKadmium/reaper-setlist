@@ -1,16 +1,39 @@
-FROM gcr.io/distroless/static-debian12
+# syntax=docker/dockerfile:1
+
+# Multi-stage build for minimal scratch image
+FROM --platform=$BUILDPLATFORM alpine:latest AS builder
+
+# Install ca-certificates for HTTPS support
+RUN apk --no-cache add ca-certificates
+
+# Create a non-root user for the final image
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Final stage - scratch image
+FROM scratch
+
+# Copy ca-certificates from builder
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy user/group info from builder
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
 
 # Set working directory
 WORKDIR /app
 
-# Copy CA certificates for HTTPS requests
-COPY ca-certificates.crt /etc/ssl/certs/
-
-# Copy the binary
-COPY reaper_setlist_backend /app/reaper_setlist_backend
+# Copy the binary based on target platform
+ARG TARGETPLATFORM
+COPY --chmod=755 --chown=1001:1001 \
+  ${TARGETPLATFORM}/reaper_setlist_backend \
+  /app/reaper_setlist_backend
 
 # Copy frontend assets
-COPY assets/ /app/assets/
+COPY --chown=1001:1001 assets/ /app/assets/
+
+# Switch to non-root user
+USER 1001:1001
 
 # Expose port
 EXPOSE 3000
