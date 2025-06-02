@@ -79,6 +79,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set repo name (lowercase)
+        id: repo
+        run: echo "REPO=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Download frontend build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -99,17 +103,17 @@ jobs:
 
       - name: Build Docker image for amd64
         run: |
-          docker build --build-arg BIN_ARCH=x86_64 -t ghcr.io/${{ github.repository }}:amd64 .
-          docker push ghcr.io/${{ github.repository }}:amd64
+          docker build --build-arg BIN_ARCH=x86_64 -t ghcr.io/$REPO:amd64 .
+          docker push ghcr.io/$REPO:amd64
 
       - name: Build Docker image for arm64
         run: |
-          docker build --build-arg BIN_ARCH=aarch64 -t ghcr.io/${{ github.repository }}:arm64 .
-          docker push ghcr.io/${{ github.repository }}:arm64
+          docker build --build-arg BIN_ARCH=aarch64 -t ghcr.io/$REPO:arm64 .
+          docker push ghcr.io/$REPO:arm64
 
       - name: Create and push multi-arch manifest
         run: |
-          docker manifest create ghcr.io/${{ github.repository }}:latest \
-            --amend ghcr.io/${{ github.repository }}:amd64 \
-            --amend ghcr.io/${{ github.repository }}:arm64
-          docker manifest push ghcr.io/${{ github.repository }}:latest
+          docker manifest create ghcr.io/$REPO:latest \
+            --amend ghcr.io/$REPO:amd64 \
+            --amend ghcr.io/$REPO:arm64
+          docker manifest push ghcr.io/$REPO:latest
