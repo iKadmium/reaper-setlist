@@ -178,11 +178,18 @@ jobs:
           name: build-aarch64-unknown-linux-musl
           path: linux-arm64/
 
+      - name: Download Linux ARMv7 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: build-armv7-unknown-linux-musleabihf
+          path: linux-armv7/
+
       - name: Prepare Docker build context
         run: |
           # Create build context directory
           mkdir -p build-context/linux/amd64
           mkdir -p build-context/linux/arm64
+          mkdir -p build-context/linux/arm/v7
 
           # Extract and copy AMD64 binary
           cd linux-amd64
@@ -194,6 +201,12 @@ jobs:
           cd linux-arm64
           tar -xzf reaper-setlist-backend-linux-arm64.tar.gz
           cp reaper_setlist_backend ../build-context/linux/arm64/
+          cd ..
+
+          # Extract and copy ARMv7 binary
+          cd linux-armv7
+          tar -xzf reaper-setlist-backend-linux-armv7.tar.gz
+          cp reaper_setlist_backend ../build-context/linux/arm/v7/
           cd ..
 
           # Copy frontend assets
@@ -212,7 +225,7 @@ jobs:
         with:
           context: build-context
           file: ./Dockerfile.release
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
             ghcr.io/${{ steps.repo.outputs.REPO }}:latest
