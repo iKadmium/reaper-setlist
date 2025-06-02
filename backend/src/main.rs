@@ -12,12 +12,11 @@ use controllers::song_api::song_api_controller;
 use data_access::json_file::StoredInJsonFile;
 use models::settings::Settings;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::{signal, sync::RwLock};
 use tower_http::{
     services::{ServeDir, ServeFile},
-    trace::{DefaultMakeSpan, DefaultOnRequest, TraceLayer},
+    trace::TraceLayer,
 };
-use tracing::Level; // Import Level for setting trace level
 
 const SPA_DIR: &str = "assets";
 
@@ -61,12 +60,18 @@ async fn main() {
         )
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new())
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .make_span_with(|request: &axum::http::Request<_>| {
+                    let method = request.method().clone();
+                    let uri = request.uri().clone();
+                    tracing::info_span!("http_request", method = %method, uri = %uri)
+                })
+                .on_request(|_request: &axum::http::Request<_>, _span: &tracing::Span| {
+                    tracing::trace!("started processing request");
+                })
                 .on_response(|response: &axum::http::Response<_>, latency: std::time::Duration, _span: &tracing::Span| {
                     let status = response.status();
                     if status.is_client_error() || status.is_server_error() {
-                        tracing::warn!(latency = ?latency, status = %status, "response finished");
+                        tracing::error!(latency = ?latency, status = %status, "response finished");
                     } else {
                         tracing::info!(latency = ?latency, status = %status, "response finished");
                     }
@@ -78,5 +83,18 @@ async fn main() {
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!(addr = %listener.local_addr().unwrap(), "Server running");
-    axum::serve(listener, app).await.unwrap();
+
+    // This is the key change for graceful shutdown:
+    // `axum::serve` now includes a `with_graceful_shutdown` future that awaits Ctrl+C.
+    let server = axum::serve(listener, app).with_graceful_shutdown(async {
+        // Await the Ctrl+C signal. This future completes when Ctrl+C is pressed.
+        signal::ctrl_c()
+            .await
+            .expect("Failed to listen for Ctrl+C signal");
+        tracing::info!("Received Ctrl+C, initiating graceful shutdown...");
+    });
+
+    // Await the server. It will run until the graceful_shutdown future completes.
+    server.await.unwrap();
+    tracing::info!("Server shut down gracefully.");
 }

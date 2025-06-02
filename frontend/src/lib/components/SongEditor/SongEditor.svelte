@@ -1,19 +1,22 @@
 <script lang="ts" module>
+	type SongLike = Song | NewSong;
+
 	import Button from '$lib/components/Button/Button.svelte';
 	import BrowseIcon from 'virtual:icons/mdi/folder-open';
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
 	import GetDurationIcon from 'virtual:icons/mdi/timer-refresh-outline';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
-	import type { Song } from '$lib/models/song';
+	import type { NewSong, Song } from '$lib/models/song';
 
-	export interface SongEditorProps {
-		song: Song;
-		onSubmit: (song: Song) => void;
+	export interface SongEditorProps<T extends SongLike> {
+		song: T;
+		onSubmit: (song: T) => void;
 	}
 </script>
 
 <script lang="ts">
-	let { song: originalSong, onSubmit }: SongEditorProps = $props();
+	type T = $$Generic<SongLike>;
+	let { song: originalSong, onSubmit }: SongEditorProps<T> = $props();
 	const song = $state({ ...originalSong });
 	const duration = $derived(getDuration(song.length));
 
