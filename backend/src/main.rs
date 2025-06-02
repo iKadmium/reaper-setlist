@@ -66,7 +66,7 @@ async fn main() {
                     tracing::info_span!("http_request", method = %method, uri = %uri)
                 })
                 .on_request(|_request: &axum::http::Request<_>, _span: &tracing::Span| {
-                    tracing::info!("started processing request");
+                    tracing::trace!("started processing request");
                 })
                 .on_response(|response: &axum::http::Response<_>, latency: std::time::Duration, _span: &tracing::Span| {
                     let status = response.status();

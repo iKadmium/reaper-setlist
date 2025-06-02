@@ -9,7 +9,7 @@ axum-extra = "0.10.1"
 chrono = { version = "0.4.41", features = ["serde"] }
 reqwest = { version = "0.12", features = [
     "json",
-    "rustls-tls-webpki-roots",
+    "rustls-tls-webpki-roots-no-provider",
 ], default-features = false }
 serde = { version = "1.0.219", features = ["serde_derive"] }
 serde_json = "1.0.140"
