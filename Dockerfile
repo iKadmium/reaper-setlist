@@ -1,44 +1,17 @@
-# Stage 1: Build the Rust Backend
-# Inherit from a Rust image based on Alpine for musl support out of the box.
-FROM clux/muslrust:stable AS backend-builder
+ARG TARGETARCH
+# X86_64: x86_64-unknown-linux-musl -> amd64
+# AARCH64: aarch64-unknown-linux-musl -> arm64
 
-# Install build essentials and musl cross toolchains for both arches
-# Alpine uses 'apk' for package management.
-RUN apt-get update && \
-    apt-get install -y musl-tools gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu curl || true && \
-    ARCH=$(uname -m) && \
-    if [ "$ARCH" = "aarch64" ]; then \
-        if ! command -v x86_64-linux-musl-gcc >/dev/null 2>&1; then \
-            curl -LO https://musl.cc/x86_64-linux-musl-cross.tgz && \
-            tar -xzf x86_64-linux-musl-cross.tgz -C /opt && \
-            ln -s /opt/x86_64-linux-musl-cross/bin/x86_64-linux-musl-gcc /usr/local/bin/x86_64-linux-musl-gcc; \
-        fi \
-    elif [ "$ARCH" = "x86_64" ]; then \
-        if ! command -v aarch64-linux-musl-gcc >/dev/null 2>&1; then \
-            curl -LO https://musl.cc/aarch64-linux-musl-cross.tgz && \
-            tar -xzf aarch64-linux-musl-cross.tgz -C /opt && \
-            ln -s /opt/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc /usr/local/bin/aarch64-linux-musl-gcc; \
-        fi \
-    fi
-
-# Add musl targets for cross-compilation
-# This ensures cargo knows about and can build for these targets.
-RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
-
-# Set the default target for static linking
-ENV RUSTFLAGS="-C target-feature=+crt-static"
+FROM ghcr.io/rust-cross/rust-musl-cross:${TARGETARCH}-musl AS backend-builder
+ARG TARGETARCH
 
 WORKDIR /app
-
-# Copy backend source code
-COPY ./backend ./backend
-
-# Set the working directory for the backend
-WORKDIR /app/backend
-
-# Build the Rust backend for the current architecture only
-ARG TARGETARCH
-RUN cargo build --release --target ${TARGETARCH}-unknown-linux-musl
+COPY ./backend/Cargo.toml ./backend/Cargo.lock ./
+RUN mkdir src
+RUN echo 'fn main() {}' > src/main.rs
+RUN cargo build --target ${TARGETARCH}-unknown-linux-musl --release
+COPY ./backend/ ./
+RUN cargo build --target ${TARGETARCH}-unknown-linux-musl --release
 
 # Move the compiled binary to a generic, architecture-agnostic path
 RUN cp ./target/${TARGETARCH}-unknown-linux-musl/release/reaper_setlist_backend /app/reaper_setlist_backend_final

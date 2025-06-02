@@ -103,12 +103,12 @@ jobs:
 
       - name: Build Docker image for amd64
         run: |
-          docker build --build-arg BIN_ARCH=x86_64 -t ghcr.io/$REPO:amd64 .
+          docker build --build-arg TARGETARCH=x86_64 -t ghcr.io/$REPO:amd64 .
           docker push ghcr.io/$REPO:amd64
 
       - name: Build Docker image for arm64
         run: |
-          docker build --build-arg BIN_ARCH=aarch64 -t ghcr.io/$REPO:arm64 .
+          docker build --build-arg TARGETARCH=aarch64 -t ghcr.io/$REPO:arm64 .
           docker push ghcr.io/$REPO:arm64
 
       - name: Create and push multi-arch manifest
