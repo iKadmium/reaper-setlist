@@ -116,7 +116,8 @@ jobs:
 
       - name: Build and push Docker image for ${{ matrix.platform }}
         run: |
-          docker buildx build \
+          docker build build \
+            --platform ${{ matrix.platform }} \
             --build-arg RUSTARCH=${{ matrix.rustarch }} \
             --build-arg TARGETARCH=${{ matrix.tagarch }} \
             -t ghcr.io/$REPO:${{ matrix.tagarch }} . \
