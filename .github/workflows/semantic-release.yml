@@ -1,0 +1,94 @@
+name: Semantic Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+  packages: write
+
+jobs:
+  semantic-release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.repository_owner == github.actor) || 
+      github.event_name == 'workflow_dispatch'
+    outputs:
+      new-release: ${{ steps.semantic.outputs.new_release_published }}
+      release-tag: ${{ steps.semantic.outputs.new_release_git_tag }}
+      release-version: ${{ steps.semantic.outputs.new_release_version }}
+      release-notes: ${{ steps.semantic.outputs.new_release_notes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for Frontend CI
+        if: github.event_name == 'push'
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-frontend
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: "Frontend"
+          ref: ${{ github.event.after || github.sha }}
+          timeoutSeconds: 1800
+
+      - name: Wait for Backend CI
+        if: github.event_name == 'push'
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-backend
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: "Backend"
+          ref: ${{ github.event.after || github.sha }}
+          timeoutSeconds: 1800
+
+      - name: Check CI Results
+        if: github.event_name == 'push'
+        run: |
+          echo "Frontend check result: ${{ steps.wait-for-frontend.outputs.conclusion || 'skipped' }}"
+          echo "Backend check result: ${{ steps.wait-for-backend.outputs.conclusion || 'skipped' }}"
+
+          if [[ "${{ steps.wait-for-frontend.outputs.conclusion }}" == "failure" ]] || [[ "${{ steps.wait-for-backend.outputs.conclusion }}" == "failure" ]]; then
+            echo "CI checks failed!"
+            exit 1
+          fi
+
+          echo "CI checks passed or were skipped (no changes)"
+
+      - name: Semantic Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          dry_run: true
+
+      - name: Create Git Tag
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.semantic.outputs.new_release_git_tag }}
+          git push origin ${{ steps.semantic.outputs.new_release_git_tag }}
+
+  trigger-release:
+    name: Trigger Release Build
+    needs: semantic-release
+    if: needs.semantic-release.outputs.new-release == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag_name: ${{ needs.semantic-release.outputs.release-tag }}
+      version: ${{ needs.semantic-release.outputs.release-version }}
+      release_notes: ${{ needs.semantic-release.outputs.release-notes }}

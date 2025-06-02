@@ -1,7 +1,7 @@
 {
 	"name": "reaper-setlist",
 	"private": true,
-	"version": "0.0.1",
+	"version": "1.3.1",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev --host",
@@ -29,18 +29,18 @@
 		"@testing-library/svelte": "^5.2.8",
 		"eslint": "^9.28.0",
 		"eslint-config-prettier": "^10.1.5",
-		"eslint-plugin-svelte": "^3.9.0",
+		"eslint-plugin-svelte": "^3.9.1",
 		"globals": "^16.2.0",
 		"jsdom": "^26.1.0",
 		"prettier": "^3.5.3",
 		"prettier-plugin-svelte": "^3.4.0",
-		"svelte": "^5.33.10",
+		"svelte": "^5.33.14",
 		"svelte-check": "^4.2.1",
 		"typescript": "^5.8.3",
-		"typescript-eslint": "^8.33.0",
+		"typescript-eslint": "^8.33.1",
 		"unplugin-icons": "^22.1.0",
 		"vite": "^6.3.5",
-		"vitest": "^3.1.4"
+		"vitest": "^3.2.0"
 	},
 	"dependencies": {
 		"@iconify-json/line-md": "^1.2.8",

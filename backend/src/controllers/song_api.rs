@@ -10,7 +10,11 @@ use tokio::sync::RwLock;
 
 use crate::{
     data_access::{database::StoredInDb, reaper_client::ReaperClient},
-    models::{database::Database, settings::Settings, song::Song},
+    models::{
+        database::Database,
+        settings::Settings,
+        song::{NewSong, Song},
+    },
 };
 
 pub fn song_api_controller(settings_state: Arc<RwLock<Settings>>) -> Router {
@@ -35,10 +39,11 @@ async fn get_all_songs() -> Result<Json<Database<Song>>, StatusCode> {
     }
 }
 
-async fn add_song(extract::Json(song): extract::Json<Song>) -> Result<Json<Song>, StatusCode> {
-    let result = song.save().await;
+async fn add_song(extract::Json(song): extract::Json<NewSong>) -> Result<Json<Song>, StatusCode> {
+    let real_song = Song::from_new_song(song);
+    let result = real_song.save().await;
     match result {
-        Ok(()) => Ok(Json(song)),
+        Ok(()) => Ok(Json(real_song)),
         Err(e) => {
             tracing::error!(error = %e, "Failed to add song");
             Err(StatusCode::INTERNAL_SERVER_ERROR)

@@ -2,13 +2,12 @@
 	import { goto } from '$app/navigation';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
 	import type { Database } from '$lib/models/database';
-	import type { Setlist } from '$lib/models/setlist';
+	import { isNewSetlist, type NewSetlist, type Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
 	import { onMount } from 'svelte';
 
 	let songs = $state<Database<Song>>({});
-	let set = $state<Setlist>({
-		id: crypto.randomUUID(),
+	let set = $state<NewSetlist>({
 		venue: '',
 		date: new Date().toISOString(),
 		songs: []
@@ -25,7 +24,7 @@
 		}
 	});
 
-	async function onSubmit(set: Setlist) {
+	async function onSubmit(set: NewSetlist) {
 		const response = await fetch('/api/sets', {
 			method: 'POST',
 			headers: {

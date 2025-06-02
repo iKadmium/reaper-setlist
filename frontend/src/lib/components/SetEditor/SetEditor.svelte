@@ -1,8 +1,10 @@
 <script lang="ts" module>
-	export interface SetEditorProps {
-		setlist: Setlist;
+	type SetlistLike = Setlist | NewSetlist;
+
+	export interface SetEditorProps<T extends SetlistLike> {
+		setlist: T;
 		songs: Database<Song>;
-		onSubmit: (setlist: Setlist) => void;
+		onSubmit: (setlist: T) => void;
 	}
 </script>
 
@@ -16,11 +18,13 @@
 	import AddIcon from 'virtual:icons/mdi/plus';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
 	import { formatDuration } from '$lib/util';
-	import type { Setlist } from '$lib/models/setlist';
+	import type { NewSetlist, Setlist } from '$lib/models/setlist';
 	import type { Database } from '$lib/models/database';
-	import type { Song } from '$lib/models/song';
+	import type { NewSong, Song } from '$lib/models/song';
 
-	let { setlist: initialSetlist, songs, onSubmit }: SetEditorProps = $props();
+	type T = $$Generic<SetlistLike>;
+
+	let { setlist: initialSetlist, songs, onSubmit }: SetEditorProps<T> = $props();
 
 	let setlist = $state({ ...initialSetlist });
 	let newSongId = $state<string | null>(Object.keys(songs)[0] || null);
