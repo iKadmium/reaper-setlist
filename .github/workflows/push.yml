@@ -114,12 +114,21 @@ jobs:
           username: ${{ github.actor }} # Uses the GitHub user triggering the workflow
           password: ${{ secrets.GITHUB_TOKEN }} # Built-in token with permissions
 
+      - name: Get backend version from Cargo.toml
+        id: cargo_version
+        run: |
+          VERSION=$(grep '^version' backend/Cargo.toml | head -n1 | cut -d '"' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Build and push Docker image for ${{ matrix.platform }}
         run: |
           docker buildx build \
             --build-arg RUSTARCH=${{ matrix.rustarch }} \
             --build-arg TARGETARCH=${{ matrix.tagarch }} \
-            -t ghcr.io/$REPO:${{ matrix.tagarch }} . \
+            -t ghcr.io/$REPO:${{ matrix.tagarch }} \
+            -t ghcr.io/$REPO:${{ matrix.tagarch }}-$VERSION \
+            -t ghcr.io/$REPO:$VERSION \
+            . \
             --push
 
   # Manifest job to combine images
@@ -143,18 +152,24 @@ jobs:
           docker manifest create ghcr.io/$REPO:latest \
             ghcr.io/$REPO:amd64 \
             ghcr.io/$REPO:arm64
+          docker manifest create ghcr.io/$REPO:$VERSION \
+            ghcr.io/$REPO:amd64-$VERSION \
+            ghcr.io/$REPO:arm64-$VERSION
 
       - name: Annotate amd64 image
         run: |
           docker manifest annotate ghcr.io/$REPO:latest ghcr.io/$REPO:amd64 --arch amd64 --os linux
+          docker manifest annotate ghcr.io/$REPO:$VERSION ghcr.io/$REPO:amd64-$VERSION --arch amd64 --os linux
 
       - name: Annotate arm64 image
         run: |
           docker manifest annotate ghcr.io/$REPO:latest ghcr.io/$REPO:arm64 --arch arm64 --os linux
+          docker manifest annotate ghcr.io/$REPO:$VERSION ghcr.io/$REPO:arm64-$VERSION --arch arm64 --os linux
 
       - name: Push multi-arch manifest
         run: |
           docker manifest push ghcr.io/$REPO:latest
+          docker manifest push ghcr.io/$REPO:$VERSION
 
       - name: Delete arch-specific images from GitHub Container Registry
         env:
