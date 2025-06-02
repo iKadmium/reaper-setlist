@@ -13,23 +13,6 @@ permissions:
 jobs:
   # Build frontend assets once
   build-frontend:
-          - name: Extract binaries from archives
-        run: |
-          # Extract AMD64 binary
-          cd linux-amd64
-          tar -xzf reaper-setlist-backend-linux-x64.tar.gz
-          mkdir -p ../binaries/amd64
-          cp reaper_setlist_backend ../binaries/amd64/
-
-          # Extract ARM64 binary
-          cd ../linux-arm64
-          tar -xzf reaper-setlist-backend-linux-arm64.tar.gz
-          mkdir -p ../binaries/arm64
-          cp reaper_setlist_backend ../binaries/arm64/
-
-          # Copy CA certificates from the host system
-          cd ..
-          cp /etc/ssl/certs/ca-certificates.crt .rontend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
