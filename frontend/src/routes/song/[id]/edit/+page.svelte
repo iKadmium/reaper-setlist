@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
-	import type { Song } from '$lib/models/song';
+	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
 	import { onMount } from 'svelte';
 
 	let song = $state<Song | undefined>(undefined);

@@ -7,8 +7,11 @@ use axum::{
 };
 
 use crate::{
-    data_access::database::StoredInDb,              // Added StoredInDb
-    models::{database::Database, setlist::SetList}, // Added Database and SetList
+    data_access::database::StoredInDb, // Added StoredInDb
+    models::{
+        database::Database,
+        setlist::{NewSetList, SetList},
+    }, // Added Database and SetList
 };
 
 pub fn set_api_controller() -> Router {
@@ -30,9 +33,10 @@ async fn get_all_sets() -> Result<Json<Database<SetList>>, StatusCode> {
     }
 }
 
-async fn create_set(Json(setlist): Json<SetList>) -> impl IntoResponse {
-    match setlist.save().await {
-        Ok(()) => Ok(Json(setlist)),
+async fn create_set(Json(setlist): Json<NewSetList>) -> impl IntoResponse {
+    let real_setlist = SetList::from_new_setlist(setlist);
+    match real_setlist.save().await {
+        Ok(()) => Ok(Json(real_setlist)),
         Err(e) => {
             tracing::error!(error = %e, "Failed to create setlist");
             Err(StatusCode::INTERNAL_SERVER_ERROR)

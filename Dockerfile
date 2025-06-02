@@ -1,39 +1,67 @@
-# Stage 1: Build the Svelte app
-FROM oven/bun:latest AS frontend-builder
+# Stage 1: Build Frontend
+FROM oven/bun:1 AS frontend-builder
+
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/bun.lock ./
+RUN bun install
+
+COPY frontend/ ./
+RUN bun run build
+
+# Stage 2: Build Backend
+FROM rust:slim AS backend-builder
+
+# Install musl tools for static linking
+RUN apt-get update && apt-get install -y \
+    musl-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Determine the target architecture based on the build platform
+ARG TARGETPLATFORM
+RUN case "$TARGETPLATFORM" in \
+    "linux/amd64") echo "x86_64-unknown-linux-musl" > /tmp/rust-target ;; \
+    "linux/arm64") echo "aarch64-unknown-linux-musl" > /tmp/rust-target ;; \
+    *) echo "x86_64-unknown-linux-musl" > /tmp/rust-target ;; \
+    esac
+
+# Add the appropriate musl target
+RUN rustup target add $(cat /tmp/rust-target)
+
+WORKDIR /app/backend
+
+# Copy and build dependencies first (for better caching)
+COPY backend/Cargo.toml backend/Cargo.lock ./
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
+RUN cargo build --target $(cat /tmp/rust-target) --release
+RUN rm -rf src
+
+# Copy source and build the actual application
+COPY backend/ ./
+# Copy frontend assets into backend assets directory
+COPY --from=frontend-builder /app/frontend/build ./assets/
+
+RUN cargo build --target $(cat /tmp/rust-target) --release
+
+# Copy the binary to a consistent location regardless of target
+RUN cp target/$(cat /tmp/rust-target)/release/reaper_setlist_backend /app/reaper_setlist_backend
+
+# Stage 3: Final Production Image
+FROM gcr.io/distroless/static-debian12
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY frontend/package.json frontend/bun.lock ./
-RUN bun install
+# Copy CA certificates for HTTPS requests
+COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Copy the rest of the application files and build
-COPY frontend ./
-RUN bun run build
+# Copy the statically linked binary
+COPY --from=backend-builder /app/reaper_setlist_backend /app/reaper_setlist_backend
 
+# Copy frontend assets to the assets subdirectory that the backend expects
+COPY --from=backend-builder /app/backend/assets/ /app/assets/
 
-FROM rust:alpine AS backend-builder
-WORKDIR /app
-
-# Install build dependencies for static OpenSSL
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static
-
-COPY backend/Cargo.toml backend/Cargo.lock ./
-RUN cargo fetch
-COPY backend/src ./src
-RUN cargo build --release
-
-# Stage 2: Run the app with Bun
-FROM alpine:latest
-WORKDIR /app
-
-# Copy built files from the builder stage
-COPY --from=frontend-builder /app/build ./assets
-COPY --from=backend-builder /app/target/release/reaper_setlist_backend ./
-RUN apk add --update --no-cache openssl gcompat
-
-
-# Expose port and run the app
+# Expose port
 EXPOSE 3000
-ENTRYPOINT ["./reaper_setlist_backend"]
+
+# Set the entrypoint
+ENTRYPOINT ["/app/reaper_setlist_backend"]

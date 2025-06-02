@@ -70,7 +70,7 @@
 	}
 
 	async function handleDuplicateClick(item: Setlist) {
-		const duplicated: Partial<Setlist> = { ...item, id: crypto.randomUUID(), venue: `${item.venue} (copy)` };
+		const duplicated: Partial<Setlist> = { ...item, id: undefined, venue: `${item.venue} (copy)` };
 		// Update this URL to point to your new external backend
 		const result = await fetch('/api/sets', {
 			method: 'POST',

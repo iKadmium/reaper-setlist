@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
-	import type { Song } from '$lib/models/song';
-	let song: Song = {
-		id: crypto.randomUUID(),
+	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
+	let song: NewSong = {
 		length: 0,
 		name: ''
 	};
 
-	async function onSubmit(song: Song) {
+	async function onSubmit(song: NewSong) {
 		const resp = await fetch('/api/songs', {
 			method: 'POST',
 			headers: {
