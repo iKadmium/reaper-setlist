@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   # Job to build and test the SvelteKit Frontend
   frontend_build_test:
