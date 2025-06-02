@@ -116,8 +116,7 @@ jobs:
 
       - name: Build and push Docker image for ${{ matrix.platform }}
         run: |
-          docker build \
-            --platform ${{ matrix.platform }} \
+          docker buildx build \
             --build-arg RUSTARCH=${{ matrix.rustarch }} \
             --build-arg TARGETARCH=${{ matrix.tagarch }} \
             -t ghcr.io/$REPO:${{ matrix.tagarch }} . \
@@ -139,27 +138,36 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install manifest-tool
+      - name: Create multi-arch manifest
         run: |
-          curl -LO https://github.com/estesp/manifest-tool/releases/download/v2.2.0/binaries-manifest-tool-2.2.0.tar.gz
-          tar -xzf binaries-manifest-tool-2.2.0.tar.gz
-          sudo mv manifest-tool-linux-amd64 /usr/local/bin/manifest-tool
+          docker manifest create ghcr.io/$REPO:latest \
+            ghcr.io/$REPO:amd64 \
+            ghcr.io/$REPO:arm64
 
-      - name: Create manifest.yaml
+      - name: Annotate amd64 image
         run: |
-          cat <<EOF > manifest.yaml
-          image: ghcr.io/$REPO:latest
-          manifests:
-            - image: ghcr.io/$REPO:amd64
-              platform:
-                architecture: amd64
-                os: linux
-            - image: ghcr.io/$REPO:arm64
-              platform:
-                architecture: arm64
-                os: linux
-          EOF
+          docker manifest annotate ghcr.io/$REPO:latest ghcr.io/$REPO:amd64 --arch amd64 --os linux
 
-      - name: Create and push multi-arch manifest with manifest-tool
+      - name: Annotate arm64 image
         run: |
-          manifest-tool push from-spec manifest.yaml
+          docker manifest annotate ghcr.io/$REPO:latest ghcr.io/$REPO:arm64 --arch arm64 --os linux
+
+      - name: Push multi-arch manifest
+        run: |
+          docker manifest push ghcr.io/$REPO:latest
+
+      - name: Delete arch-specific images from GitHub Container Registry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          for tag in amd64 arm64; do
+            echo "Deleting tag: $tag"
+            version_id=$(gh api /orgs/${REPO%%/*}/packages/container/${REPO##*/}/versions --jq ".[] | select(.metadata.container.tags[] == \"$tag\") | .id" | head -n1)
+            if [ -n "$version_id" ]; then
+              gh api -X DELETE /orgs/${REPO%%/*}/packages/container/${REPO##*/}/versions/$version_id
+              echo "Deleted version $version_id for tag $tag"
+            else
+              echo "No version found for tag $tag"
+            fi
+          done
