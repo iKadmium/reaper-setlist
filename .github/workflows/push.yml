@@ -127,7 +127,6 @@ jobs:
             --build-arg TARGETARCH=${{ matrix.tagarch }} \
             -t ghcr.io/$REPO:${{ matrix.tagarch }} \
             -t ghcr.io/$REPO:${{ matrix.tagarch }}-$VERSION \
-            -t ghcr.io/$REPO:$VERSION \
             . \
             --push
 
