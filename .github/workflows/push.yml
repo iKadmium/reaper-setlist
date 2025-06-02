@@ -53,12 +53,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable # Recommended replacement
         with:
-          toolchain: stable
-          profile: minimal
           components: clippy
-          override: true
 
       - name: Run cargo clippy
         working-directory: ./backend
