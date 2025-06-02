@@ -79,6 +79,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [frontend_build_test, backend_build_test] # This job runs only after frontend and backend tests pass
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            rustarch: x86_64
+            tagarch: amd64
+          - platform: linux/arm64
+            rustarch: aarch64
+            tagarch: arm64
 
     steps:
       - name: Checkout repository
@@ -105,16 +114,30 @@ jobs:
           username: ${{ github.actor }} # Uses the GitHub user triggering the workflow
           password: ${{ secrets.GITHUB_TOKEN }} # Built-in token with permissions
 
-      - name: Build Docker image for amd64
+      - name: Build and push Docker image for ${{ matrix.platform }}
         run: |
-          docker build --build-arg TARGETARCH=x86_64 -t ghcr.io/$REPO:amd64 .
-          docker push ghcr.io/$REPO:amd64
+          docker buildx build \
+            --platform ${{ matrix.platform }} \
+            --build-arg RUSTARCH=${{ matrix.rustarch }} \
+            -t ghcr.io/$REPO:${{ matrix.tagarch }} . \
+            --push
 
-      - name: Build Docker image for arm64
-        run: |
-          docker build --build-arg TARGETARCH=aarch64 -t ghcr.io/$REPO:arm64 .
-          docker push ghcr.io/$REPO:arm64
-
+  # Manifest job to combine images
+  docker_manifest:
+    name: Create and Push Multi-Arch Manifest
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [docker_build_push]
+    steps:
+      - name: Set repo name (lowercase)
+        id: repo
+        run: echo "REPO=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Create and push multi-arch manifest
         run: |
           docker manifest create ghcr.io/$REPO:latest \
