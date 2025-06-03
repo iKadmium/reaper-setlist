@@ -28,6 +28,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Wait for Frontend CI
+        if: github.event_name == 'push'
         uses: fountainhead/action-wait-for-check@v1.2.0
         id: wait-for-frontend
         with:
@@ -37,6 +38,7 @@ jobs:
           timeoutSeconds: 1800
 
       - name: Wait for Backend CI
+        if: github.event_name == 'push'
         uses: fountainhead/action-wait-for-check@v1.2.0
         id: wait-for-backend
         with:
@@ -46,7 +48,7 @@ jobs:
           timeoutSeconds: 1800
 
       - name: Check CI Results
-        if: steps.wait-for-frontend.outputs.conclusion != 'success' || steps.wait-for-backend.outputs.conclusion != 'success'
+        if: github.event_name == 'push' && (steps.wait-for-frontend.outputs.conclusion != 'success' || steps.wait-for-backend.outputs.conclusion != 'success')
         run: |
           echo "CI checks failed:"
           echo "Frontend: ${{ steps.wait-for-frontend.outputs.conclusion }}"
