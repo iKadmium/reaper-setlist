@@ -22,8 +22,7 @@ jobs:
     name: Semantic Release
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'push' && (github.repository_owner == github.actor || github.event_name == 'workflow_dispatch')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
+      (github.event_name == 'push' && (github.repository_owner == github.actor || github.event_name == 'workflow_dispatch'))
     outputs:
       new-release: ${{ steps.semantic.outputs.new-release }}
     steps:
@@ -36,12 +35,16 @@ jobs:
       - name: Determine mode
         id: mode
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" && "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+          # Check if this push is from a merged release PR by looking for chore(release)
+          COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+          echo "Commit message: $COMMIT_MESSAGE"
+
+          if [[ "$COMMIT_MESSAGE" =~ ^chore\(release\) ]]; then
             echo "mode=release" >> $GITHUB_OUTPUT
-            echo "🚀 Release mode: Tag and release already created in PR"
+            echo "🚀 Release mode: chore(release) detected - triggering release"
           else
             echo "mode=pr" >> $GITHUB_OUTPUT
-            echo "📝 PR mode: Creating release PR with tags"
+            echo "📝 PR mode: Creating release PR"
           fi
 
       - name: Wait for Frontend CI
