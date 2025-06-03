@@ -113,10 +113,6 @@ jobs:
               echo "next-version=$VERSION" >> $GITHUB_OUTPUT
               echo "📋 Next release will be: $VERSION"
               
-              # Generate changelog using our prepare config (stay on main)
-              echo "📝 Generating changelog..."
-              semantic-release --config .releaserc.prepare.json --no-ci --dry-run || true
-              
               # Update package.json files with new version
               if [ -f "frontend/package.json" ]; then
                 echo "📦 Updating frontend package.json version to $VERSION"
