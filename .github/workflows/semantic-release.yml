@@ -25,6 +25,7 @@ jobs:
       (github.event_name == 'push' && (github.repository_owner == github.actor || github.event_name == 'workflow_dispatch'))
     outputs:
       new-release: ${{ steps.semantic.outputs.new-release }}
+      release-version: ${{ steps.semantic.outputs.release-version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -225,7 +226,16 @@ jobs:
 
           if [[ $EXIT_CODE -eq 0 ]] && (echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"); then
             echo "new-release=true" >> $GITHUB_OUTPUT
-            echo "✅ Release published successfully"
+            # Extract version from semantic-release output
+            VERSION=$(echo "$OUTPUT" | grep -oE "Created tag v[0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+")
+            if [[ -z "$VERSION" ]]; then
+              VERSION=$(echo "$OUTPUT" | grep -oE "Published release [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+              if [[ -n "$VERSION" ]]; then
+                VERSION="v$VERSION"
+              fi
+            fi
+            echo "release-version=$VERSION" >> $GITHUB_OUTPUT
+            echo "✅ Release published successfully: $VERSION"
           else
             echo "new-release=false" >> $GITHUB_OUTPUT
             echo "❌ Semantic-release failed with exit code $EXIT_CODE"
@@ -239,3 +249,5 @@ jobs:
     needs: semantic-release
     if: needs.semantic-release.outputs.new-release == 'true'
     uses: ./.github/workflows/release.yml
+    with:
+      tag_name: ${{ needs.semantic-release.outputs.release-version }}
