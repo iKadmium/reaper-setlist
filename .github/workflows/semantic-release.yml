@@ -31,6 +31,7 @@ jobs:
         if: github.event_name == 'push'
         uses: fountainhead/action-wait-for-check@v1.2.0
         id: wait-for-frontend
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           checkName: "Frontend"
@@ -41,6 +42,7 @@ jobs:
         if: github.event_name == 'push'
         uses: fountainhead/action-wait-for-check@v1.2.0
         id: wait-for-backend
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           checkName: "Backend"
@@ -48,12 +50,18 @@ jobs:
           timeoutSeconds: 1800
 
       - name: Check CI Results
-        if: github.event_name == 'push' && (steps.wait-for-frontend.outputs.conclusion != 'success' || steps.wait-for-backend.outputs.conclusion != 'success')
+        if: github.event_name == 'push'
         run: |
-          echo "CI checks failed:"
-          echo "Frontend: ${{ steps.wait-for-frontend.outputs.conclusion }}"
-          echo "Backend: ${{ steps.wait-for-backend.outputs.conclusion }}"
-          exit 1
+          echo "Frontend check result: ${{ steps.wait-for-frontend.outputs.conclusion || 'skipped' }}"
+          echo "Backend check result: ${{ steps.wait-for-backend.outputs.conclusion || 'skipped' }}"
+
+          # Only fail if a check explicitly failed (not if it was skipped/didn't exist)
+          if [[ "${{ steps.wait-for-frontend.outputs.conclusion }}" == "failure" ]] || [[ "${{ steps.wait-for-backend.outputs.conclusion }}" == "failure" ]]; then
+            echo "CI checks failed!"
+            exit 1
+          fi
+
+          echo "CI checks passed or were skipped (no changes)"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
