@@ -12,15 +12,9 @@
             }
         ],
         [
-            "semantic-release-github-pullrequest",
+            "@semantic-release/github",
             {
-                "baseRef": "main",
-                "pullRequestTitle": "chore(release): ${nextRelease.version}",
-                "pullRequestBody": "## Release ${nextRelease.version}\n\nThis is an automated release PR created by semantic-release.\n\n### Changes\n${nextRelease.notes}",
-                "labels": [
-                    "release",
-                    "automated"
-                ]
+                "assets": []
             }
         ]
     ]
