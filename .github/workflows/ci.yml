@@ -9,10 +9,32 @@ on:
       - main
 
 jobs:
+  # Detect changes to determine which jobs to run
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+
   # Job to build and test the SvelteKit Frontend
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
 
     steps:
       - name: Checkout repository
@@ -39,6 +61,8 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
 
     steps:
       - name: Checkout repository
