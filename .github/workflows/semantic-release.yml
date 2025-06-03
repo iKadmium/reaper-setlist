@@ -1,7 +1,17 @@
-name: Semantic Release with PR Tags
+name: Semantic Release with PR Tag      - name: Determine mode
+        id: mode
+        run: |
+          # Check if this push is from a merged release PR by looking for chore(release) pattern
+          COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+          echo "Commit message: $COMMIT_MESSAGE"
 
-on:
-  push:
+          if [[ "$COMMIT_MESSAGE" =~ ^chore\(release\) ]]; then
+            echo "mode=release" >> $GITHUB_OUTPUT
+            echo "🚀 Release mode: chore(release) pattern detected - triggering semantic-release"
+          else
+            echo "mode=pr" >> $GITHUB_OUTPUT
+            echo "📝 PR mode: Creating release PR"
+          fi
     branches:
       - main
   pull_request:
