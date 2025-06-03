@@ -2,6 +2,13 @@
 
 A modern setlist management application for REAPER DAW, built with Svelte frontend and Rust backend.
 
+## Features
+
+- 🎵 Manage setlists and songs
+- 🔧 Integration with REAPER DAW  
+- 🚀 Modern web interface
+- 📱 Responsive design
+
 ## Creating a project
 
 If you're seeing this, you've probably already done this step. Congrats!
