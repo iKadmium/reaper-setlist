@@ -216,7 +216,7 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
 
       - name: Set lowercase repository name
         id: repo
