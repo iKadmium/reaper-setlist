@@ -1,6 +1,6 @@
-# sv
+# Reaper Setlist
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A modern setlist management application for REAPER DAW, built with Svelte frontend and Rust backend.
 
 ## Creating a project
 
