@@ -110,44 +110,21 @@ jobs:
               echo "next-version=$VERSION" >> $GITHUB_OUTPUT
               echo "📋 Next release will be: $VERSION"
               
-              # Create release branch
-              git checkout -b "release/$VERSION"
-              
-              # Generate changelog using the config we created
+              # Generate changelog using our prepare config (stay on main)
               echo "📝 Generating changelog..."
               semantic-release --config .releaserc.prepare.json --no-ci --dry-run || true
-              
-              echo "has-release=true" >> $GITHUB_OUTPUT
               
               # Update package.json files with new version
               if [ -f "frontend/package.json" ]; then
                 echo "📦 Updating frontend package.json version to $VERSION"
                 sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" frontend/package.json
-                git add frontend/package.json
               fi
               
               # Update Cargo.toml if it exists
               if [ -f "backend/Cargo.toml" ]; then
                 echo "📦 Updating backend Cargo.toml version to $VERSION"
                 sed -i "s/^version = \".*\"/version = \"$VERSION\"/" backend/Cargo.toml
-                git add backend/Cargo.toml
               fi
-              
-              # Add changelog if it was generated
-              if [ -f "CHANGELOG.md" ]; then
-                git add CHANGELOG.md
-              fi
-              
-              # Commit the changes
-              git commit -m "chore(release): prepare $VERSION" || echo "No changes to commit"
-              
-              # Create the tag on this branch
-              echo "🏷️ Creating tag v$VERSION"
-              git tag -a "v$VERSION" -m "Release v$VERSION"
-              
-              # Push branch and tag
-              git push origin "release/$VERSION"
-              git push origin "v$VERSION"
               
               echo "has-release=true" >> $GITHUB_OUTPUT
             else
@@ -164,6 +141,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: release/${{ steps.prepare-release.outputs.next-version }}
+          commit-message: "chore(release): prepare ${{ steps.prepare-release.outputs.next-version }}"
           title: "🚀 Release ${{ steps.prepare-release.outputs.next-version }}"
           body: |
             ## Release ${{ steps.prepare-release.outputs.next-version }}
@@ -171,10 +149,8 @@ jobs:
             This release PR includes:
             - 📦 Version bumps in package.json/Cargo.toml
             - 📝 Updated CHANGELOG.md
-            - 🏷️ Git tag v${{ steps.prepare-release.outputs.next-version }}
 
-            **The tag has already been created and will be merged with this PR.**
-            **Merging this PR will complete the release process.**
+            **Merging this PR will trigger the release process and create the git tag.**
           labels: |
             release
             automated
@@ -183,27 +159,22 @@ jobs:
 
       - name: Complete Release
         if: steps.mode.outputs.mode == 'release'
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🚀 Release PR was merged, completing release process..."
+          echo "🚀 Release PR was merged, running semantic-release..."
 
-          # The tag should already exist from the PR, just create GitHub release
-          TAG_NAME=$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags --abbrev=0 HEAD 2>/dev/null)
+          # Run semantic-release to create tag and GitHub release
+          OUTPUT=$(semantic-release 2>&1)
+          echo "$OUTPUT" | tee semantic-release.log
 
-          if [[ -n "$TAG_NAME" ]]; then
-            echo "✅ Found tag: $TAG_NAME"
-            
-            # Create GitHub release using the existing tag
-            gh release create "$TAG_NAME" \
-              --title "Release $TAG_NAME" \
-              --notes "Automated release based on conventional commits." \
-              --verify-tag
-              
+          if echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"; then
             echo "new-release=true" >> $GITHUB_OUTPUT
+            echo "✅ Release published successfully"
           else
-            echo "❌ No tag found for this commit"
             echo "new-release=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No release published"
           fi
 
   trigger-release:
