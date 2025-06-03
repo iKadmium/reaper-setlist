@@ -1,0 +1,64 @@
+name: Release on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+  packages: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      startsWith(github.event.pull_request.title, 'chore(release):')
+    outputs:
+      new-release: ${{ steps.semantic.outputs.new-release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'semantic-release-bot'
+          git config --global user.email 'semantic-release-bot@users.noreply.github.com'
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release @semantic-release/changelog
+
+      - name: Run semantic-release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          semantic-release 2>&1 | tee semantic-release.log
+          # Check if a new release was published
+          if grep -q "Published release" semantic-release.log || grep -q "Created tag" semantic-release.log; then
+            echo "new-release=true" >> $GITHUB_OUTPUT
+          else
+            echo "new-release=false" >> $GITHUB_OUTPUT
+          fi
+
+  trigger-release:
+    name: Trigger Release Build
+    needs: release
+    if: needs.release.outputs.new-release == 'true'
+    uses: ./.github/workflows/release.yml

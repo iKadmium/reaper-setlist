@@ -75,23 +75,48 @@ jobs:
 
       - name: Install semantic-release
         run: |
-          npm install -g semantic-release @semantic-release/changelog semantic-release-plus
+          npm install -g semantic-release @semantic-release/changelog
 
-      - name: Run semantic-release
+      - name: Run semantic-release (dry-run)
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          semantic-release 2>&1 | tee semantic-release.log
-          # Check if a new release was published
-          if grep -q "Published release" semantic-release.log || grep -q "Created tag" semantic-release.log; then
+          # Run semantic-release in dry-run mode to get release info
+          semantic-release --dry-run 2>&1 | tee semantic-release.log
+
+          # Check if a new release would be published
+          if grep -q "Published release" semantic-release.log || grep -q "The next release version is" semantic-release.log; then
             echo "new-release=true" >> $GITHUB_OUTPUT
+            # Extract version from log
+            VERSION=$(grep -o "The next release version is [0-9.]*" semantic-release.log | sed 's/The next release version is //' || echo "")
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "new-release=false" >> $GITHUB_OUTPUT
           fi
 
-  trigger-release:
-    name: Trigger Release
-    needs: semantic-release
-    if: needs.semantic-release.outputs.new-release == 'true'
-    uses: ./.github/workflows/release.yml
+      - name: Generate changelog
+        if: steps.semantic.outputs.new-release == 'true'
+        run: |
+          # Run semantic-release again to generate changelog (still dry-run)
+          semantic-release --dry-run
+
+      - name: Create Release PR
+        if: steps.semantic.outputs.new-release == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(release): ${{ steps.semantic.outputs.version }} [skip ci]"
+          title: "chore(release): ${{ steps.semantic.outputs.version }}"
+          body: |
+            ## Release ${{ steps.semantic.outputs.version }}
+
+            This is an automated release PR created by semantic-release.
+
+            ### Changes
+            - Updated CHANGELOG.md with release notes
+            - Prepared for version ${{ steps.semantic.outputs.version }}
+
+            **Merging this PR will trigger the actual release process.**
+          branch: release/${{ steps.semantic.outputs.version }}
+          delete-branch: true
