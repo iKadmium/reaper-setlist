@@ -1,14 +1,15 @@
 <script lang="ts">
 	const ssr = false;
 
-	import type { Snippet } from 'svelte';
-	import '$lib/global.css';
 	import Navbar from '$lib/components/Navbar/Navbar.svelte';
+	import '$lib/global.css';
+	import type { LayoutProps } from './$types';
 
-	let { children }: { children?: Snippet } = $props();
+	let { children, data }: LayoutProps = $props();
 </script>
 
-<Navbar />
+<Navbar setupComplete={data.setupComplete} />
+
 <main>
 	{@render children?.()}
 </main>

@@ -4,28 +4,17 @@
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 	import { formatDuration } from '$lib/util';
-	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
 
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import AddIcon from 'virtual:icons/mdi/plus';
 
-	let songs = $state<Database<Song>>({});
-	let loading = $state<boolean>(true);
-	let error = $state<string | null>(null);
+	let { data }: { data: PageData } = $props();
 
-	onMount(async () => {
-		try {
-			const res = await fetch('/api/songs');
-			if (!res.ok) throw new Error('Failed to fetch songs');
-			songs = await res.json();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-	});
+	let songs = $state<Database<Song>>(data.songs);
+	const errorMessage = data.error;
 
 	async function handleLoadClick(song: Song) {
 		const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
@@ -63,12 +52,16 @@
 
 <h1>Songs</h1>
 
-<ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
-	{#snippet actions(item: Song)}
-		<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
-		<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-		<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
-	{/snippet}
-</ItemGrid>
+{#if errorMessage}
+	<p style="color: red;">{errorMessage}</p>
+{:else}
+	<ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
+		{#snippet actions(item: Song)}
+			<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
+			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
+			<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
+		{/snippet}
+	</ItemGrid>
+{/if}
 
 <Button elementType="a" href="song/add" color="success"><AddIcon /></Button>

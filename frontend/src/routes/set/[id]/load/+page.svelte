@@ -1,37 +1,24 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import Button from '$lib/components/Button/Button.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
-	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
 	import LoadIcon from 'virtual:icons/mdi/playlist-play';
+
+	let { data }: { data: PageData } = $props();
 
 	let log = $state<LogItem[]>([]);
 	let working = $state<boolean>(false);
-	let set = $state<Setlist | undefined>(undefined);
-	let songs = $state<Database<Song>>({});
-	let loading = $state<boolean>(true);
+	let set = $state<Setlist | undefined>(data.set);
+	let songs = $state<Database<Song>>(data.songs);
+	const errorMessage = data.error;
 
 	interface LogItem {
 		time: Date;
 		color: string;
 		message: string;
 	}
-
-	onMount(async () => {
-		try {
-			const id = page.params.id;
-			const setRes = await fetch(`/api/sets/${id}`);
-			if (!setRes.ok) throw new Error('Failed to fetch set');
-			set = await setRes.json();
-			const songsRes = await fetch('/api/songs');
-			if (!songsRes.ok) throw new Error('Failed to fetch songs');
-			songs = await songsRes.json();
-		} finally {
-			loading = false;
-		}
-	});
 
 	async function loadSong(songId: string, name: string): Promise<LogItem> {
 		const res = await fetch(`/api/reaper-project/${name}/load`, { method: 'POST' });
@@ -102,19 +89,23 @@
 
 <h1>Load Set</h1>
 
-<Button onclick={loadSet} disabled={working}><LoadIcon /></Button>
+{#if errorMessage}
+	<p style="color: red;">{errorMessage}</p>
+{:else if set}
+	<Button onclick={loadSet} disabled={working}><LoadIcon /></Button>
 
-{#if loading}
-	<p>Loading...</p>
-{:else if log.length > 0}
-	<ul class="list-group">
-		{#each log as item}
-			<li class="list-item" style={`background-color: var(--${item.color})`}>
-				<span>{item.time.toLocaleTimeString()}</span>
-				<span>{item.message}</span>
-			</li>
-		{/each}
-	</ul>
+	{#if log.length > 0}
+		<ul class="list-group">
+			{#each log as item}
+				<li class="list-item" style={`background-color: var(--${item.color})`}>
+					<span>{item.time.toLocaleTimeString()}</span>
+					<span>{item.message}</span>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+{:else}
+	<p>Set not found.</p>
 {/if}
 
 <style>

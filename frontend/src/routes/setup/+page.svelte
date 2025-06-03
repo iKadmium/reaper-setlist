@@ -1,31 +1,18 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
-	import { onMount } from 'svelte';
 	import type { ReaperSettings } from '$lib/models/reaper-settings';
+	import type { PageData } from './$types';
+	import { goto } from '$app/navigation';
 
-	let folderPath = $state<string>('');
-	let reaperUrl = $state<string>('');
-	let username = $state<string>('');
-	let password = $state<string>('');
+	let { data }: { data: PageData } = $props();
+
+	let folderPath = $state<string>(data.settings.folderPath);
+	let reaperUrl = $state<string>(data.settings.reaperUrl);
+	let username = $state<string>(data.settings.reaperUsername ?? '');
+	let password = $state<string>(data.settings.reaperPassword ?? '');
 	let form = $state<{ success?: boolean; message?: string }>({});
-	let loading = $state<boolean>(true);
-
-	onMount(async () => {
-		try {
-			const res = await fetch('/api/settings');
-			if (!res.ok) throw new Error('Failed to fetch settings');
-			const settings = (await res.json()) as ReaperSettings;
-			folderPath = settings.folderPath;
-			reaperUrl = settings.reaperUrl;
-			username = settings.reaperUsername ?? '';
-			password = settings.reaperPassword ?? '';
-		} catch (e) {
-			form.message = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-	});
+	const errorMessage = data.error;
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -55,6 +42,7 @@
 		} else {
 			form.success = true;
 			form.message = 'Settings saved successfully';
+			await goto('/song');
 		}
 	}
 
@@ -68,6 +56,10 @@
 </meta:head>
 
 <h1>Setup</h1>
+
+{#if errorMessage}
+	<p style="color: red;">{errorMessage}</p>
+{/if}
 
 <form onsubmit={handleSubmit}>
 	<div>

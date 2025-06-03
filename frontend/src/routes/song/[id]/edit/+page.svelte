@@ -1,23 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
 	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
-	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
 
-	let song = $state<Song | undefined>(undefined);
-	let loading = $state<boolean>(true);
+	let { data }: { data: PageData } = $props();
 
-	onMount(async () => {
-		try {
-			const id = page.params.id;
-			const res = await fetch(`/api/songs/${id}`);
-			if (!res.ok) throw new Error('Failed to fetch song');
-			song = await res.json();
-		} finally {
-			loading = false;
-		}
-	});
+	let song = $state<Song | undefined>(data.song);
+	const errorMessage = data.error;
 
 	async function onSubmit(song: Song) {
 		const resp = await fetch(`/api/songs/${song.id}`, {
@@ -42,8 +32,10 @@
 
 <h1>Edit Song</h1>
 
-{#if loading}
-	<p>Loading...</p>
+{#if errorMessage}
+	<p style="color: red;">{errorMessage}</p>
 {:else if song}
 	<SongEditor {song} {onSubmit} />
+{:else}
+	<p>Song not found.</p>
 {/if}

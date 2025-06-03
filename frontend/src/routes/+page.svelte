@@ -1,48 +1,21 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
 
+	import type { Setlist } from '$lib/models/setlist';
+	import { formatDuration } from '$lib/util';
 	import CopyIcon from 'virtual:icons/mdi/content-copy';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import AddIcon from 'virtual:icons/mdi/plus';
-	import type { Setlist } from '$lib/models/setlist';
-	import type { Database } from '$lib/models/database';
-	import type { Song } from '$lib/models/song';
-	import { formatDuration } from '$lib/util';
+	import type { PageData } from './$types';
 
-	let sets = $state<Database<Setlist>>({});
-	let songs = $state<Database<Song>>({});
-	let isLoading = $state(true);
-	let errorMessage = $state<string | null>(null);
+	let { data }: { data: PageData } = $props();
 
-	onMount(async () => {
-		try {
-			isLoading = true;
-			errorMessage = null;
-			const setResponse = await fetch('/api/sets');
-			if (!setResponse.ok) {
-				const errorData = await setResponse.json();
-				throw new Error(errorData.error || `Failed to fetch sets: ${setResponse.status}`);
-			}
-			const fetchedSets: Database<Setlist> = await setResponse.json();
-			const songResponse = await fetch('/api/songs');
-			if (!songResponse.ok) {
-				const errorData = await songResponse.json();
-				throw new Error(errorData.error || `Failed to fetch songs: ${songResponse.status}`);
-			}
-			const fetchedSongs: Database<Song> = await songResponse.json();
-			songs = fetchedSongs;
-			sets = fetchedSets;
-		} catch (err) {
-			console.error('Error fetching sets:', err);
-			errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-		} finally {
-			isLoading = false;
-		}
-	});
+	const sets = data.sets;
+	const songs = data.songs;
+	const errorMessage = data.error;
 
 	function formatTitle(item: Setlist) {
 		const dateString = `${new Date(item.date).toLocaleDateString()}`;
@@ -103,9 +76,7 @@
 
 <h1>Sets</h1>
 
-{#if isLoading}
-	<p>Loading sets...</p>
-{:else if errorMessage}
+{#if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else}
 	<ItemGrid items={Object.values(sets).toSorted(sortFunction)} getName={formatTitle}>
