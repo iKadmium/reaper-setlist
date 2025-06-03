@@ -214,15 +214,24 @@ jobs:
           echo "🚀 Release PR was merged, running semantic-release..."
 
           # Run semantic-release to create tag and GitHub release
+          set +e  # Don't exit on error so we can capture output
           OUTPUT=$(semantic-release 2>&1)
-          echo "$OUTPUT" | tee semantic-release.log
+          EXIT_CODE=$?
+          set -e
 
-          if echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"; then
+          echo "Semantic-release output:"
+          echo "$OUTPUT"
+          echo "Exit code: $EXIT_CODE"
+
+          if [[ $EXIT_CODE -eq 0 ]] && (echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"); then
             echo "new-release=true" >> $GITHUB_OUTPUT
             echo "✅ Release published successfully"
           else
             echo "new-release=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No release published"
+            echo "❌ Semantic-release failed with exit code $EXIT_CODE"
+            if [[ $EXIT_CODE -ne 0 ]]; then
+              exit $EXIT_CODE
+            fi
           fi
 
   trigger-release:
