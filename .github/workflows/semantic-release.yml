@@ -1,4 +1,4 @@
-name: Semantic Release
+name: Semantic Release with PR Tags
 
 on:
   push:
@@ -38,10 +38,10 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" && "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
             echo "mode=release" >> $GITHUB_OUTPUT
-            echo "🚀 Release mode: Publishing actual release"
+            echo "🚀 Release mode: Tag and release already created in PR"
           else
             echo "mode=pr" >> $GITHUB_OUTPUT
-            echo "📝 PR mode: Creating release PR"
+            echo "📝 PR mode: Creating release PR with tags"
           fi
 
       - name: Wait for Frontend CI
@@ -72,7 +72,6 @@ jobs:
           echo "Frontend check result: ${{ steps.wait-for-frontend.outputs.conclusion || 'skipped' }}"
           echo "Backend check result: ${{ steps.wait-for-backend.outputs.conclusion || 'skipped' }}"
 
-          # Only fail if a check explicitly failed (not if it was skipped/didn't exist)
           if [[ "${{ steps.wait-for-frontend.outputs.conclusion }}" == "failure" ]] || [[ "${{ steps.wait-for-backend.outputs.conclusion }}" == "failure" ]]; then
             echo "CI checks failed!"
             exit 1
@@ -94,81 +93,141 @@ jobs:
         run: |
           npm install -g semantic-release @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github
 
-      - name: Run semantic-release
-        id: semantic
+      - name: Prepare Release with Tags
+        if: steps.mode.outputs.mode == 'pr'
+        id: prepare-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "${{ steps.mode.outputs.mode }}" == "release" ]]; then
-            echo "🚀 Running semantic-release in RELEASE mode..."
-            OUTPUT=$(semantic-release 2>&1)
-            echo "$OUTPUT" | tee semantic-release.log
+          echo "📝 Checking if a release is needed..."
+          OUTPUT=$(semantic-release --dry-run 2>&1)
+          echo "$OUTPUT" | tee semantic-release.log
+          
+          if echo "$OUTPUT" | grep -q "The next release version is"; then
+            VERSION=$(echo "$OUTPUT" | grep -oE "The next release version is [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
             
-            if echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"; then
-              echo "new-release=true" >> $GITHUB_OUTPUT
-              echo "✅ Release published successfully"
-            else
-              echo "new-release=false" >> $GITHUB_OUTPUT
-              echo "ℹ️ No release published"
-            fi
-          else
-            echo "📝 Running semantic-release in DRY RUN mode to check for release..."
-            OUTPUT=$(semantic-release --dry-run 2>&1)
-            echo "$OUTPUT" | tee semantic-release.log
-            
-            # Check if there would be a release
-            if echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "would publish"; then
-              # Extract version from output
-              VERSION=$(echo "$OUTPUT" | grep -oE "Published release [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
-              if [[ -z "$VERSION" ]]; then
-                VERSION=$(echo "$OUTPUT" | grep -oE "The next release version is [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+            if [[ -n "$VERSION" ]]; then
+              echo "next-version=$VERSION" >> $GITHUB_OUTPUT
+              echo "📋 Next release will be: $VERSION"
+              
+              # Create release branch
+              git checkout -b "release/$VERSION"
+              
+              # Prepare release files using semantic-release plugins but don't publish
+              cat > .releaserc.prepare.json << 'PREP_EOF'
+          {
+            "branches": ["main"],
+            "plugins": [
+              "@semantic-release/commit-analyzer",
+              "@semantic-release/release-notes-generator",
+              [
+                "@semantic-release/changelog",
+                {
+                  "changelogFile": "CHANGELOG.md"
+                }
+              ]
+            ]
+          }
+          PREP_EOF
+              
+              # Generate changelog and prepare files
+              semantic-release --config .releaserc.prepare.json --no-ci --dry-run
+              
+              # Update package.json files with new version
+              if [ -f "package.json" ]; then
+                echo "📦 Updating root package.json version to $VERSION"
+                sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+                git add package.json
               fi
               
-              if [[ -n "$VERSION" ]]; then
-                echo "next-version=$VERSION" >> $GITHUB_OUTPUT
-                echo "new-release=pending" >> $GITHUB_OUTPUT
-                echo "📋 Next release would be: $VERSION"
-                
-                # Extract release notes from the output
-                NOTES=$(echo "$OUTPUT" | sed -n '/Release note/,/^$/p' | head -10)
-                if [[ -z "$NOTES" ]]; then
-                  NOTES="Automated release based on conventional commits."
-                fi
-                echo "release-notes<<EOF" >> $GITHUB_OUTPUT
-                echo "$NOTES" >> $GITHUB_OUTPUT
-                echo "EOF" >> $GITHUB_OUTPUT
-              else
-                echo "new-release=false" >> $GITHUB_OUTPUT
-                echo "ℹ️ No release needed"
+              if [ -f "frontend/package.json" ]; then
+                echo "�� Updating frontend package.json version to $VERSION"
+                sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" frontend/package.json
+                git add frontend/package.json
               fi
+              
+              # Update Cargo.toml if it exists
+              if [ -f "backend/Cargo.toml" ]; then
+                echo "📦 Updating backend Cargo.toml version to $VERSION"
+                sed -i "s/^version = \".*\"/version = \"$VERSION\"/" backend/Cargo.toml
+                git add backend/Cargo.toml
+              fi
+              
+              # Add changelog if it was generated
+              if [ -f "CHANGELOG.md" ]; then
+                git add CHANGELOG.md
+              fi
+              
+              # Commit the changes
+              git commit -m "chore(release): prepare $VERSION" || echo "No changes to commit"
+              
+              # Create the tag on this branch
+              echo "🏷️ Creating tag v$VERSION"
+              git tag -a "v$VERSION" -m "Release v$VERSION"
+              
+              # Push branch and tag
+              git push origin "release/$VERSION"
+              git push origin "v$VERSION"
+              
+              echo "has-release=true" >> $GITHUB_OUTPUT
+              
+              # Clean up temp file
+              rm -f .releaserc.prepare.json
             else
-              echo "new-release=false" >> $GITHUB_OUTPUT
-              echo "ℹ️ No release needed"
+              echo "has-release=false" >> $GITHUB_OUTPUT
             fi
+          else
+            echo "has-release=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No release needed"
           fi
 
       - name: Create Release PR
-        if: steps.semantic.outputs.new-release == 'pending'
+        if: steps.mode.outputs.mode == 'pr' && steps.prepare-release.outputs.has-release == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(release): ${{ steps.semantic.outputs.next-version }}"
-          title: "🚀 Release ${{ steps.semantic.outputs.next-version }}"
+          branch: release/${{ steps.prepare-release.outputs.next-version }}
+          title: "🚀 Release ${{ steps.prepare-release.outputs.next-version }}"
           body: |
-            ## Release ${{ steps.semantic.outputs.next-version }}
+            ## Release ${{ steps.prepare-release.outputs.next-version }}
 
-            This is an automated release PR created by semantic-release.
+            This release PR includes:
+            - 📦 Version bumps in package.json/Cargo.toml
+            - 📝 Updated CHANGELOG.md
+            - 🏷️ Git tag v${{ steps.prepare-release.outputs.next-version }}
 
-            ### Changes
-            ${{ steps.semantic.outputs.release-notes }}
-
-            **Merging this PR will trigger the actual release.**
-          branch: release/${{ steps.semantic.outputs.next-version }}
+            **The tag has already been created and will be merged with this PR.**
+            **Merging this PR will complete the release process.**
           labels: |
             release
             automated
           reviewers: ${{ github.actor }}
           draft: false
+
+      - name: Complete Release
+        if: steps.mode.outputs.mode == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Release PR was merged, completing release process..."
+          
+          # The tag should already exist from the PR, just create GitHub release
+          TAG_NAME=$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags --abbrev=0 HEAD 2>/dev/null)
+          
+          if [[ -n "$TAG_NAME" ]]; then
+            echo "✅ Found tag: $TAG_NAME"
+            
+            # Create GitHub release using the existing tag
+            gh release create "$TAG_NAME" \
+              --title "Release $TAG_NAME" \
+              --notes "Automated release based on conventional commits." \
+              --verify-tag
+              
+            echo "new-release=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No tag found for this commit"
+            echo "new-release=false" >> $GITHUB_OUTPUT
+          fi
 
   trigger-release:
     name: Trigger Release Build
