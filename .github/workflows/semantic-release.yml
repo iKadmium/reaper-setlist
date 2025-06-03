@@ -75,7 +75,7 @@ jobs:
 
       - name: Install semantic-release
         run: |
-          npm install -g semantic-release @semantic-release/changelog @semantic-release/git
+          npm install -g semantic-release @semantic-release/changelog semantic-release-plus
 
       - name: Run semantic-release
         id: semantic
