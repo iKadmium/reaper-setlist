@@ -92,31 +92,7 @@ jobs:
 
       - name: Install semantic-release
         run: |
-          npm install -g semantic-release @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/release-notes-generator semantic-release-github-pullrequest
-
-      - name: Create release config for mode
-        run: |
-          if [[ "${{ steps.mode.outputs.mode }}" == "release" ]]; then
-            echo "Creating standard release config..."
-            cat > .releaserc.release.json << 'EOF'
-          {
-              "branches": ["main"],
-              "plugins": [
-                  "@semantic-release/commit-analyzer",
-                  "@semantic-release/release-notes-generator",
-                  [
-                      "@semantic-release/changelog",
-                      {
-                          "changelogFile": "CHANGELOG.md"
-                      }
-                  ],
-                  "@semantic-release/github"
-              ]
-          }
-          EOF
-          else
-            echo "Using existing PR config (.releaserc.json)..."
-          fi
+          npm install -g semantic-release @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github
 
       - name: Run semantic-release
         id: semantic
@@ -125,25 +101,74 @@ jobs:
         run: |
           if [[ "${{ steps.mode.outputs.mode }}" == "release" ]]; then
             echo "🚀 Running semantic-release in RELEASE mode..."
-            OUTPUT=$(semantic-release --extends .releaserc.release.json 2>&1)
-          else
-            echo "📝 Running semantic-release in PR mode..."
             OUTPUT=$(semantic-release 2>&1)
-          fi
-
-          echo "$OUTPUT" | tee semantic-release.log
-
-          # Check results
-          if echo "$OUTPUT" | grep -q "Created pull request" || echo "$OUTPUT" | grep -q "Pull request created"; then
-            echo "new-release=pr-created" >> $GITHUB_OUTPUT
-            echo "✅ Pull request created successfully"
-          elif echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"; then
-            echo "new-release=true" >> $GITHUB_OUTPUT
-            echo "✅ Release published successfully"
+            echo "$OUTPUT" | tee semantic-release.log
+            
+            if echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"; then
+              echo "new-release=true" >> $GITHUB_OUTPUT
+              echo "✅ Release published successfully"
+            else
+              echo "new-release=false" >> $GITHUB_OUTPUT
+              echo "ℹ️ No release published"
+            fi
           else
-            echo "new-release=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No action needed"
+            echo "📝 Running semantic-release in DRY RUN mode to check for release..."
+            OUTPUT=$(semantic-release --dry-run 2>&1)
+            echo "$OUTPUT" | tee semantic-release.log
+            
+            # Check if there would be a release
+            if echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "would publish"; then
+              # Extract version from output
+              VERSION=$(echo "$OUTPUT" | grep -oE "Published release [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+              if [[ -z "$VERSION" ]]; then
+                VERSION=$(echo "$OUTPUT" | grep -oE "The next release version is [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+              fi
+              
+              if [[ -n "$VERSION" ]]; then
+                echo "next-version=$VERSION" >> $GITHUB_OUTPUT
+                echo "new-release=pending" >> $GITHUB_OUTPUT
+                echo "📋 Next release would be: $VERSION"
+                
+                # Extract release notes from the output
+                NOTES=$(echo "$OUTPUT" | sed -n '/Release note/,/^$/p' | head -10)
+                if [[ -z "$NOTES" ]]; then
+                  NOTES="Automated release based on conventional commits."
+                fi
+                echo "release-notes<<EOF" >> $GITHUB_OUTPUT
+                echo "$NOTES" >> $GITHUB_OUTPUT
+                echo "EOF" >> $GITHUB_OUTPUT
+              else
+                echo "new-release=false" >> $GITHUB_OUTPUT
+                echo "ℹ️ No release needed"
+              fi
+            else
+              echo "new-release=false" >> $GITHUB_OUTPUT
+              echo "ℹ️ No release needed"
+            fi
           fi
+
+      - name: Create Release PR
+        if: steps.semantic.outputs.new-release == 'pending'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(release): ${{ steps.semantic.outputs.next-version }}"
+          title: "🚀 Release ${{ steps.semantic.outputs.next-version }}"
+          body: |
+            ## Release ${{ steps.semantic.outputs.next-version }}
+
+            This is an automated release PR created by semantic-release.
+
+            ### Changes
+            ${{ steps.semantic.outputs.release-notes }}
+
+            **Merging this PR will trigger the actual release.**
+          branch: release/${{ steps.semantic.outputs.next-version }}
+          labels: |
+            release
+            automated
+          reviewers: ${{ github.actor }}
+          draft: false
 
   trigger-release:
     name: Trigger Release Build
