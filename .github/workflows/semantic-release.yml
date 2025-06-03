@@ -27,6 +27,32 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Wait for Frontend CI
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-frontend
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: "Frontend"
+          ref: ${{ github.event.after || github.sha }}
+          timeoutSeconds: 1800
+
+      - name: Wait for Backend CI
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-backend
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: "Backend"
+          ref: ${{ github.event.after || github.sha }}
+          timeoutSeconds: 1800
+
+      - name: Check CI Results
+        if: steps.wait-for-frontend.outputs.conclusion != 'success' || steps.wait-for-backend.outputs.conclusion != 'success'
+        run: |
+          echo "CI checks failed:"
+          echo "Frontend: ${{ steps.wait-for-frontend.outputs.conclusion }}"
+          echo "Backend: ${{ steps.wait-for-backend.outputs.conclusion }}"
+          exit 1
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
