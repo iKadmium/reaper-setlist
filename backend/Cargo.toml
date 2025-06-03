@@ -7,7 +7,6 @@ repository = "https://github.com/iKadmium/reaper-setlist"
 [dependencies]
 axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = "0.10.1"
-chrono = { version = "0.4.41", features = ["serde"] }
 reqwest = { version = "0.12", features = [
     "json",
     "rustls-tls-webpki-roots-no-provider",

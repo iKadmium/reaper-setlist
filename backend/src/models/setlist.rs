@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::data_access::database::StoredInDb;
@@ -8,14 +7,14 @@ use crate::data_access::database::StoredInDb;
 pub(crate) struct SetList {
     pub id: String,
     pub venue: String,
-    pub date: DateTime<Utc>,
+    pub date: String,
     pub songs: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct NewSetList {
     pub venue: String,
-    pub date: DateTime<Utc>,
+    pub date: String,
     pub songs: Vec<String>,
 }
 
