@@ -102,7 +102,7 @@ jobs:
           echo "📝 Checking if a release is needed..."
           OUTPUT=$(semantic-release --dry-run 2>&1)
           echo "$OUTPUT" | tee semantic-release.log
-          
+
           if echo "$OUTPUT" | grep -q "The next release version is"; then
             VERSION=$(echo "$OUTPUT" | grep -oE "The next release version is [0-9]+\.[0-9]+\.[0-9]+" | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
             
@@ -113,35 +113,15 @@ jobs:
               # Create release branch
               git checkout -b "release/$VERSION"
               
-              # Prepare release files using semantic-release plugins but don't publish
-              cat > .releaserc.prepare.json << 'PREP_EOF'
-          {
-            "branches": ["main"],
-            "plugins": [
-              "@semantic-release/commit-analyzer",
-              "@semantic-release/release-notes-generator",
-              [
-                "@semantic-release/changelog",
-                {
-                  "changelogFile": "CHANGELOG.md"
-                }
-              ]
-            ]
-          }
-          PREP_EOF
+              # Generate changelog using the config we created
+              echo "📝 Generating changelog..."
+              semantic-release --config .releaserc.prepare.json --no-ci --dry-run || true
               
-              # Generate changelog and prepare files
-              semantic-release --config .releaserc.prepare.json --no-ci --dry-run
+              echo "has-release=true" >> $GITHUB_OUTPUT
               
               # Update package.json files with new version
-              if [ -f "package.json" ]; then
-                echo "📦 Updating root package.json version to $VERSION"
-                sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-                git add package.json
-              fi
-              
               if [ -f "frontend/package.json" ]; then
-                echo "�� Updating frontend package.json version to $VERSION"
+                echo "📦 Updating frontend package.json version to $VERSION"
                 sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" frontend/package.json
                 git add frontend/package.json
               fi
@@ -170,9 +150,6 @@ jobs:
               git push origin "v$VERSION"
               
               echo "has-release=true" >> $GITHUB_OUTPUT
-              
-              # Clean up temp file
-              rm -f .releaserc.prepare.json
             else
               echo "has-release=false" >> $GITHUB_OUTPUT
             fi
@@ -210,10 +187,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "🚀 Release PR was merged, completing release process..."
-          
+
           # The tag should already exist from the PR, just create GitHub release
           TAG_NAME=$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags --abbrev=0 HEAD 2>/dev/null)
-          
+
           if [[ -n "$TAG_NAME" ]]; then
             echo "✅ Found tag: $TAG_NAME"
             
