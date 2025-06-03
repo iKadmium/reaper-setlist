@@ -5,7 +5,7 @@ A modern setlist management application for REAPER DAW, built with Svelte fronte
 ## Features
 
 - 🎵 Manage setlists and songs
-- 🔧 Integration with REAPER DAW  
+- 🔧 Integration with REAPER DAW
 - 🚀 Modern web interface
 - 📱 Responsive design
 

@@ -125,6 +125,55 @@ jobs:
                 sed -i "s/^version = \".*\"/version = \"$VERSION\"/" backend/Cargo.toml
               fi
               
+              # Generate changelog for this version
+              echo "📝 Generating changelog..."
+              
+              # Use semantic-release to generate release notes
+              RELEASE_NOTES=$(semantic-release --dry-run --no-ci 2>&1 | sed -n '/Release note for version/,/^$/p' | tail -n +2 | head -n -1)
+              
+              # If no specific release notes, generate from commits
+              if [[ -z "$RELEASE_NOTES" ]]; then
+                echo "📋 Generating changelog from recent commits..."
+                
+                # Get commits since last tag
+                LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+                if [[ -n "$LAST_TAG" ]]; then
+                  COMMITS=$(git log --oneline "${LAST_TAG}..HEAD" --pretty=format:"- %s" 2>/dev/null)
+                else
+                  COMMITS=$(git log --oneline --pretty=format:"- %s" -10)
+                fi
+                
+                # Create release notes
+                RELEASE_NOTES="### Changes 
+                $COMMITS"
+              fi
+              
+              # Update or create CHANGELOG.md
+              if [ -f "CHANGELOG.md" ]; then
+                echo "📝 Updating existing CHANGELOG.md"
+                # Create temporary file with new entry
+                {
+                  echo "# Changelog"
+                  echo ""
+                  echo "## [$VERSION] - $(date +%Y-%m-%d)"
+                  echo ""
+                  echo "$RELEASE_NOTES"
+                  echo ""
+                  # Add existing content (skip the header if it exists)
+                  tail -n +3 CHANGELOG.md 2>/dev/null || cat CHANGELOG.md
+                } > CHANGELOG.md.tmp
+                mv CHANGELOG.md.tmp CHANGELOG.md
+              else
+                echo "📝 Creating new CHANGELOG.md"
+                {
+                  echo "# Changelog"
+                  echo ""
+                  echo "## [$VERSION] - $(date +%Y-%m-%d)"
+                  echo ""
+                  echo "$RELEASE_NOTES"
+                } > CHANGELOG.md
+              fi
+              
               echo "has-release=true" >> $GITHUB_OUTPUT
             else
               echo "has-release=false" >> $GITHUB_OUTPUT
