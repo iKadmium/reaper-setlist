@@ -12,17 +12,16 @@
             }
         ],
         [
-            "semantic-release-plus",
+            "semantic-release-github-pullrequest",
             {
-                "assets": [
-                    "CHANGELOG.md"
-                ],
-                "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
-                "branchName": "release/${nextRelease.version}",
+                "baseRef": "main",
                 "pullRequestTitle": "chore(release): ${nextRelease.version}",
-                "pullRequestBody": "Automated release ${nextRelease.version}\n\n${nextRelease.notes}"
+                "pullRequestBody": "## Release ${nextRelease.version}\n\nThis is an automated release PR created by semantic-release.\n\n### Changes\n${nextRelease.notes}",
+                "labels": [
+                    "release",
+                    "automated"
+                ]
             }
-        ],
-        "@semantic-release/github"
+        ]
     ]
 }

@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [closed]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -17,7 +21,9 @@ jobs:
   semantic-release:
     name: Semantic Release
     runs-on: ubuntu-latest
-    if: github.repository_owner == github.actor || github.event_name == 'workflow_dispatch'
+    if: |
+      (github.event_name == 'push' && (github.repository_owner == github.actor || github.event_name == 'workflow_dispatch')) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
     outputs:
       new-release: ${{ steps.semantic.outputs.new-release }}
     steps:
@@ -26,6 +32,17 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine mode
+        id: mode
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" && "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+            echo "mode=release" >> $GITHUB_OUTPUT
+            echo "🚀 Release mode: Publishing actual release"
+          else
+            echo "mode=pr" >> $GITHUB_OUTPUT
+            echo "📝 PR mode: Creating release PR"
+          fi
 
       - name: Wait for Frontend CI
         if: github.event_name == 'push'
@@ -75,23 +92,61 @@ jobs:
 
       - name: Install semantic-release
         run: |
-          npm install -g semantic-release @semantic-release/changelog semantic-release-plus
+          npm install -g semantic-release @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/release-notes-generator semantic-release-github-pullrequest
+
+      - name: Create release config for mode
+        run: |
+          if [[ "${{ steps.mode.outputs.mode }}" == "release" ]]; then
+            echo "Creating standard release config..."
+            cat > .releaserc.release.json << 'EOF'
+          {
+              "branches": ["main"],
+              "plugins": [
+                  "@semantic-release/commit-analyzer",
+                  "@semantic-release/release-notes-generator",
+                  [
+                      "@semantic-release/changelog",
+                      {
+                          "changelogFile": "CHANGELOG.md"
+                      }
+                  ],
+                  "@semantic-release/github"
+              ]
+          }
+          EOF
+          else
+            echo "Using existing PR config (.releaserc.json)..."
+          fi
 
       - name: Run semantic-release
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          semantic-release 2>&1 | tee semantic-release.log
-          # Check if a new release was published
-          if grep -q "Published release" semantic-release.log || grep -q "Created tag" semantic-release.log; then
+          if [[ "${{ steps.mode.outputs.mode }}" == "release" ]]; then
+            echo "🚀 Running semantic-release in RELEASE mode..."
+            OUTPUT=$(semantic-release --extends .releaserc.release.json 2>&1)
+          else
+            echo "📝 Running semantic-release in PR mode..."
+            OUTPUT=$(semantic-release 2>&1)
+          fi
+
+          echo "$OUTPUT" | tee semantic-release.log
+
+          # Check results
+          if echo "$OUTPUT" | grep -q "Created pull request" || echo "$OUTPUT" | grep -q "Pull request created"; then
+            echo "new-release=pr-created" >> $GITHUB_OUTPUT
+            echo "✅ Pull request created successfully"
+          elif echo "$OUTPUT" | grep -q "Published release" || echo "$OUTPUT" | grep -q "Created tag"; then
             echo "new-release=true" >> $GITHUB_OUTPUT
+            echo "✅ Release published successfully"
           else
             echo "new-release=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No action needed"
           fi
 
   trigger-release:
-    name: Trigger Release
+    name: Trigger Release Build
     needs: semantic-release
     if: needs.semantic-release.outputs.new-release == 'true'
     uses: ./.github/workflows/release.yml
