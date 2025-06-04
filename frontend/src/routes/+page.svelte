@@ -1,46 +1,28 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
 
+	import type { NewSetlist, Setlist } from '$lib/models/setlist';
+	import { formatDuration } from '$lib/util';
+	import { notifications } from '$lib';
+	import { onMount } from 'svelte';
 	import CopyIcon from 'virtual:icons/mdi/content-copy';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
-	import LoadIcon from 'virtual:icons/mdi/file-upload';
+	import PlayIcon from 'virtual:icons/mdi/play';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import AddIcon from 'virtual:icons/mdi/plus';
-	import type { Setlist } from '$lib/models/setlist';
+	import type { PageData } from './$types';
 	import type { Database } from '$lib/models/database';
-	import type { Song } from '$lib/models/song';
-	import { formatDuration } from '$lib/util';
 
-	let sets = $state<Database<Setlist>>({});
-	let songs = $state<Database<Song>>({});
-	let isLoading = $state(true);
-	let errorMessage = $state<string | null>(null);
+	let { data }: { data: PageData } = $props();
 
-	onMount(async () => {
-		try {
-			isLoading = true;
-			errorMessage = null;
-			const setResponse = await fetch('/api/sets');
-			if (!setResponse.ok) {
-				const errorData = await setResponse.json();
-				throw new Error(errorData.error || `Failed to fetch sets: ${setResponse.status}`);
-			}
-			const fetchedSets: Database<Setlist> = await setResponse.json();
-			const songResponse = await fetch('/api/songs');
-			if (!songResponse.ok) {
-				const errorData = await songResponse.json();
-				throw new Error(errorData.error || `Failed to fetch songs: ${songResponse.status}`);
-			}
-			const fetchedSongs: Database<Song> = await songResponse.json();
-			songs = fetchedSongs;
-			sets = fetchedSets;
-		} catch (err) {
-			console.error('Error fetching sets:', err);
-			errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-		} finally {
-			isLoading = false;
+	const sets = $state<Database<Setlist>>(data.sets);
+	const songs = data.songs;
+	const errorMessage = data.error;
+
+	onMount(() => {
+		if (errorMessage) {
+			notifications.error(`Failed to load data: ${errorMessage}`);
 		}
 	});
 
@@ -48,13 +30,13 @@
 		const dateString = `${new Date(item.date).toLocaleDateString()}`;
 		const length = item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0);
 		const songCount = item.songs.length;
-		const songText = songCount > 0 ? ` (${songCount} song${songCount > 1 ? 's' : ''})` : '';
-		return `${dateString} - ${item.venue} - ${formatDuration(length)}${songText}`;
+		const songText = songCount > 0 ? ` (${songCount} song${songCount > 1 ? 's' : ''}, ${formatDuration(length)})` : '';
+		return `${dateString} - ${item.venue} - ${songText}`;
 	}
 
 	async function handleDeleteClick(item: Setlist) {
 		if (!item.id) {
-			alert('Cannot delete a set without an ID.');
+			notifications.error('Cannot delete a set without an ID.');
 			return;
 		}
 		if (confirm('Are you sure you want to delete this set?')) {
@@ -62,15 +44,16 @@
 			const result = await fetch(`api/sets/${item.id}`, { method: 'DELETE' });
 			if (result.ok) {
 				delete sets[item.id];
+				notifications.success('Set deleted successfully');
 			} else {
 				const error = await result.json();
-				alert(error.error ? `Failed to delete set: ${error.error}` : 'Failed to delete set.');
+				notifications.error(error.error ? `Failed to delete set: ${error.error}` : 'Failed to delete set');
 			}
 		}
 	}
 
 	async function handleDuplicateClick(item: Setlist) {
-		const duplicated: Partial<Setlist> = { ...item, id: undefined, venue: `${item.venue} (copy)` };
+		const duplicated: NewSetlist = { ...item, id: undefined, venue: `${item.venue} (copy)` };
 		// Update this URL to point to your new external backend
 		const result = await fetch('/api/sets', {
 			method: 'POST',
@@ -80,9 +63,10 @@
 		if (result.ok) {
 			const newSet = await result.json();
 			sets[newSet.id] = newSet; // Or sets = [...sets, newSet] with Svelte 5 runes
+			notifications.success('Set duplicated successfully');
 		} else {
 			const error = await result.json();
-			alert(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set.');
+			notifications.error(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set');
 		}
 	}
 
@@ -103,17 +87,15 @@
 
 <h1>Sets</h1>
 
-{#if isLoading}
-	<p>Loading sets...</p>
-{:else if errorMessage}
+{#if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else}
 	<ItemGrid items={Object.values(sets).toSorted(sortFunction)} getName={formatTitle}>
 		{#snippet actions(item)}
-			<Button elementType="a" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
-			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-			<Button color="primary" elementType="a" href={`/set/${item.id}/load`}><LoadIcon /></Button>
-			<Button color="success" onclick={() => handleDuplicateClick(item)}><CopyIcon /></Button>
+			<Button elementType="a" title="Edit" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
+			<Button color="delete" title="Delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
+			<Button color="primary" title="Load" elementType="a" href={`/set/${item.id}/load`}><PlayIcon /></Button>
+			<Button color="success" title="Duplicate" onclick={() => handleDuplicateClick(item)}><CopyIcon /></Button>
 		{/snippet}
 	</ItemGrid>
 {/if}

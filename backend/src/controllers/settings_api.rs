@@ -1,14 +1,36 @@
-use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
+use axum::{
+    Json, Router,
+    extract::State,
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post, put},
+};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::data_access::json_file::StoredInJsonFile;
+use crate::data_access::{json_file::StoredInJsonFile, reaper_client::ReaperClient};
 use crate::models::settings::Settings;
+
+#[derive(Deserialize)]
+struct TestConnectionRequest {
+    reaper_url: String,
+    reaper_username: Option<String>,
+    reaper_password: Option<String>,
+}
+
+#[derive(Serialize)]
+struct TestConnectionResponse {
+    success: bool,
+    message: String,
+}
 
 pub fn settings_api_controller(settings_state: Arc<RwLock<Settings>>) -> Router {
     // Changed to Arc<RwLock<Settings>>
     Router::new()
         .route("/", get(get_settings).put(update_settings))
+        .route("/action-ids", put(update_action_ids))
+        .route("/test-connection", post(test_reaper_connection))
         .with_state(settings_state)
 }
 
@@ -22,15 +44,91 @@ async fn update_settings(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Added State extractor for settings_state
     Json(new_settings): Json<Settings>,
 ) -> impl IntoResponse {
-    match new_settings.save().await {
+    let mut settings_write_guard = settings_state.write().await;
+    // Merge: preserve action ids if not present in new_settings
+    let merged_settings = Settings {
+        load_project_script_action_id: if new_settings.load_project_script_action_id.is_some() {
+            new_settings.load_project_script_action_id.clone()
+        } else {
+            settings_write_guard.load_project_script_action_id.clone()
+        },
+        list_projects_script_action_id: if new_settings.list_projects_script_action_id.is_some() {
+            new_settings.list_projects_script_action_id.clone()
+        } else {
+            settings_write_guard.list_projects_script_action_id.clone()
+        },
+        // ...other fields are always overwritten
+        folder_path: new_settings.folder_path.clone(),
+        reaper_url: new_settings.reaper_url.clone(),
+        reaper_username: new_settings.reaper_username.clone(),
+        reaper_password: new_settings.reaper_password.clone(),
+    };
+    match merged_settings.save().await {
         Ok(_) => {
-            let mut settings_write_guard = settings_state.write().await; // Acquire write lock
-            *settings_write_guard = new_settings; // Update the in-memory settings
+            *settings_write_guard = merged_settings;
             StatusCode::OK
         }
         Err(e) => {
             tracing::error!("Failed to save settings: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct ActionIdsRequest {
+    load_project_script_action_id: Option<String>,
+    list_projects_script_action_id: Option<String>,
+}
+
+async fn update_action_ids(
+    State(settings_state): State<Arc<RwLock<Settings>>>,
+    Json(action_ids): Json<ActionIdsRequest>,
+) -> impl IntoResponse {
+    let mut settings_write_guard = settings_state.write().await;
+    let mut updated_settings = settings_write_guard.clone();
+
+    // Update the action IDs
+    updated_settings.load_project_script_action_id = action_ids.load_project_script_action_id;
+    updated_settings.list_projects_script_action_id = action_ids.list_projects_script_action_id;
+
+    match updated_settings.save().await {
+        Ok(_) => {
+            *settings_write_guard = updated_settings;
+            StatusCode::OK
+        }
+        Err(e) => {
+            tracing::error!("Failed to save action IDs: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
+}
+
+async fn test_reaper_connection(
+    Json(test_request): Json<TestConnectionRequest>,
+) -> impl IntoResponse {
+    // Create temporary settings for testing
+    let test_settings = Settings {
+        reaper_url: test_request.reaper_url,
+        reaper_username: test_request.reaper_username,
+        reaper_password: test_request.reaper_password,
+        folder_path: String::new(), // Not needed for connection test
+        load_project_script_action_id: None,
+        list_projects_script_action_id: None,
+    };
+
+    let client = ReaperClient::new(&test_settings);
+    match client.go_to_start().await {
+        Ok(_) => Json(TestConnectionResponse {
+            success: true,
+            message: "Successfully connected to Reaper!".to_string(),
+        }),
+        Err(e) => {
+            tracing::warn!("Reaper connection test failed: {:?}", e);
+            Json(TestConnectionResponse {
+                success: false,
+                message: format!("Failed to communicate with Reaper: {:?}", e),
+            })
         }
     }
 }

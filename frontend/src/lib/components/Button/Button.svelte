@@ -9,12 +9,13 @@
 		children?: Snippet;
 		color?: ButtonColor;
 		disabled?: boolean;
+		title?: string;
 	}
 
 	export type ButtonColor = 'primary' | 'delete' | 'edit' | 'success';
 	export type ButtonElementType = 'a' | 'button' | 'submit';
 
-	let { elementType, onclick, href, children, color, disabled }: ButtonProps = $props();
+	let { elementType, onclick, href, children, color, disabled, title }: ButtonProps = $props();
 
 	let busy = $state(false);
 
@@ -36,7 +37,8 @@
 		}
 	}
 
-	async function handleClick() {
+	async function handleClick(event: MouseEvent) {
+		event.stopPropagation();
 		busy = true;
 		await onclick?.();
 		busy = false;
@@ -46,12 +48,14 @@
 </script>
 
 {#if elementType === 'a'}
-	<a class="button" style={`--button-color: ${buttonColor};`} {href}>{@render children?.()} </a>
+	<a class="button" {title} style={`--button-color: ${buttonColor};`} {href}>{@render children?.()} </a>
 {:else}
 	<button
 		class="button"
 		type={elementType === 'submit' ? 'submit' : 'button'}
 		style={`--button-color: ${buttonColor};`}
+		{title}
+		aria-label={title}
 		disabled={busy || disabled}
 		onclick={handleClick}
 	>
@@ -77,17 +81,24 @@
 		padding: 0.5rem 1rem;
 		border: 1px solid var(--text);
 		border-radius: 1rem;
+		box-sizing: border-box;
 
 		align-items: center;
 		color: var(--black);
 		font-weight: bold;
-		font-size: 24px;
+		font-size: 1.5rem;
 		text-decoration: none;
 		background-color: var(--button-color);
 		line-height: 1.5rem;
 
 		&:not(:disabled):hover {
 			background-color: hsl(from var(--button-color) h 100% calc(l * 0.9));
+		}
+	}
+
+	@media (max-width: 768px) {
+		.button {
+			width: 100%;
 		}
 	}
 </style>

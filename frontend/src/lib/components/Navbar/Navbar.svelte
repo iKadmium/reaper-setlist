@@ -1,12 +1,19 @@
 <script lang="ts">
+	export interface NavbarProps {
+		setupComplete?: boolean;
+	}
 	import { page } from '$app/state';
+
+	let { setupComplete = false }: NavbarProps = $props();
 </script>
 
 <nav>
 	<ul class="nav">
-		<li><a href="/" class:active={page.url.pathname === '/'}>Sets</a></li>
-		<li><a href="/song" class:active={page.url.pathname === '/song'}>Songs</a></li>
-		<li><a href="/setup" class:active={page.url.pathname === '/setup'}>Setup</a></li>
+		{#if setupComplete}
+			<li><a href="/" class:active={page.url.pathname === '/'}>Sets</a></li>
+			<li><a href="/song" class:active={page.url.pathname === '/song'}>Songs</a></li>
+		{/if}
+		<li><a href="/setup" class:active={page.url.pathname === '/setup' || page.url.pathname.startsWith('/setup/')}>Setup</a></li>
 	</ul>
 </nav>
 

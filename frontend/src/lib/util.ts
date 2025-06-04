@@ -1,3 +1,5 @@
+import type { ReaperSettings } from "./models/reaper-settings";
+
 export function formatDuration(seconds: number): string {
 	const minutes = Math.floor(seconds / 60);
 	const remainingSeconds = seconds % 60;

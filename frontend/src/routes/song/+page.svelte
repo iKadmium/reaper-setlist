@@ -4,34 +4,44 @@
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 	import { formatDuration } from '$lib/util';
-	import { onMount } from 'svelte';
+	import { notifications } from '$lib';
+	import type { PageData } from './$types';
 
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import AddIcon from 'virtual:icons/mdi/plus';
 
-	let songs = $state<Database<Song>>({});
-	let loading = $state<boolean>(true);
-	let error = $state<string | null>(null);
+	let { data }: { data: PageData } = $props();
 
-	onMount(async () => {
-		try {
-			const res = await fetch('/api/songs');
-			if (!res.ok) throw new Error('Failed to fetch songs');
-			songs = await res.json();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-	});
+	let songs = $state<Database<Song>>(data.songs);
+	const errorMessage = data.error;
 
 	async function handleLoadClick(song: Song) {
-		const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
-		await newTabResult.json(); // wait for the operation to complete
-		const songLoadResult = await fetch(`/api/reaper-project/${song.name}/load`, { method: 'POST' });
-		await songLoadResult.json(); // wait for the operation to complete
+		try {
+			const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
+			if (!newTabResult.ok) {
+				notifications.error('Failed to create new tab in Reaper');
+				return;
+			}
+			await newTabResult.json(); // wait for the operation to complete
+
+			const songLoadResult = await fetch(`/api/songs/load`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ relative_path: song.relativePath })
+			});
+			if (!songLoadResult.ok) {
+				notifications.error(`Failed to load ${song.name} in Reaper`);
+				return;
+			}
+			await songLoadResult.json(); // wait for the operation to complete
+			notifications.success(`${song.name} loaded successfully in Reaper!`);
+		} catch (error) {
+			notifications.error('Failed to communicate with Reaper');
+		}
 	}
 
 	async function handleDeleteClick(song: Song) {
@@ -39,9 +49,10 @@
 			const result = await fetch(`/api/songs/${song.id}`, { method: 'DELETE' });
 			if (result.ok) {
 				delete songs[song.id];
+				notifications.success('Song deleted successfully');
 			} else {
 				const error = await result.json();
-				error.error ? alert(`Failed to delete song: ${error.error}`) : alert('Failed to delete song.');
+				notifications.error(error.error ? `Failed to delete song: ${error.error}` : 'Failed to delete song');
 			}
 		}
 	}
@@ -63,12 +74,16 @@
 
 <h1>Songs</h1>
 
-<ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
-	{#snippet actions(item: Song)}
-		<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
-		<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-		<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
-	{/snippet}
-</ItemGrid>
+{#if errorMessage}
+	<p style="color: red;">{errorMessage}</p>
+{:else}
+	<ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
+		{#snippet actions(item: Song)}
+			<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
+			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
+			<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
+		{/snippet}
+	</ItemGrid>
+{/if}
 
 <Button elementType="a" href="song/add" color="success"><AddIcon /></Button>

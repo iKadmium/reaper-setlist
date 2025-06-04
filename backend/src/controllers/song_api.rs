@@ -24,7 +24,7 @@ pub fn song_api_controller(settings_state: Arc<RwLock<Settings>>) -> Router {
         .route("/{id}", get(get_song_by_id))
         .route("/{id}", put(edit_song_by_id))
         .route("/{id}", delete(delete_song_by_id))
-        .route("/{id}/load", get(load_song_by_id))
+        .route("/{id}/load", post(load_song_by_id))
         .with_state(settings_state)
 }
 
@@ -87,11 +87,7 @@ async fn delete_song_by_id(
     let result = Song::get_by_id(&id).await;
     match result {
         Ok(song) => {
-            let mut db = Song::get_all()
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            db.remove(&song.id);
-            song.save()
+            song.delete()
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok(StatusCode::NO_CONTENT)
@@ -111,10 +107,10 @@ async fn load_song_by_id(
     match result {
         Ok(song) => {
             let settings = settings_state.read().await.clone();
-            ReaperClient::new(&settings)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-                .load_project(&song.name)
+            let client = ReaperClient::new(&settings);
+
+            client
+                .load_project_by_path(&song.relative_path)
                 .await
                 .map_err(|_| StatusCode::BAD_GATEWAY)?;
             Ok(StatusCode::NO_CONTENT)

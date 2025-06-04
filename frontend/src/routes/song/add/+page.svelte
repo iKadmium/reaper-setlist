@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { notifications } from '$lib';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
-	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
+	import { type NewSong } from '$lib/models/song';
+	import type { PageProps } from './$types';
 	let song: NewSong = {
 		length: 0,
-		name: ''
+		name: '',
+		relativePath: ''
 	};
+
+	let { data }: PageProps = $props();
 
 	async function onSubmit(song: NewSong) {
 		const resp = await fetch('/api/songs', {
@@ -16,7 +21,11 @@
 			body: JSON.stringify(song)
 		});
 		if (resp.ok) {
+			notifications.success('Song added successfully!');
 			await goto('/song');
+		} else {
+			const error = await resp.json();
+			notifications.error(error.error ? `Failed to add song: ${error.error}` : 'Failed to add song');
 		}
 	}
 </script>
@@ -27,4 +36,4 @@
 
 <h1>Add Song</h1>
 
-<SongEditor {song} {onSubmit} />
+<SongEditor {song} songs={data.songs} projects={data.projects} {onSubmit} />

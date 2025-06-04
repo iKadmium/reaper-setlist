@@ -1,17 +1,21 @@
 <script lang="ts">
 	const ssr = false;
 
-	import type { Snippet } from 'svelte';
-	import '$lib/global.css';
 	import Navbar from '$lib/components/Navbar/Navbar.svelte';
+	import NotificationContainer from '$lib/components/Notification-Container/Notification-Container.svelte';
+	import '$lib/global.css';
+	import type { LayoutProps } from './$types';
 
-	let { children }: { children?: Snippet } = $props();
+	let { children, data }: LayoutProps = $props();
 </script>
 
-<Navbar />
+<Navbar setupComplete={data.setupComplete} />
+
 <main>
 	{@render children?.()}
 </main>
+
+<NotificationContainer />
 
 <style>
 	main {
@@ -25,5 +29,12 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 0.5rem;
+	}
+
+	@media (max-width: 768px) {
+		main {
+			padding-left: 1rem;
+			padding-right: 1rem;
+		}
 	}
 </style>

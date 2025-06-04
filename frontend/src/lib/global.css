@@ -32,8 +32,10 @@ body {
 
 h1 {
     font-size: 2rem;
-    margin: 0;
+    margin: 0 0 1rem 0;
     padding: 0;
+    color: var(--foreground);
+    font-weight: 600;
 }
 
 h2 {
@@ -42,21 +44,77 @@ h2 {
     padding: 0;
 }
 
+h3 {
+    font-size: 1.25rem;
+    margin: 0;
+    padding: 0;
+}
+
+/* Form styling */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .form-group {
+        margin-bottom: 0.5rem;
+    }
+}
+
+.form-group:last-of-type {
+    margin-bottom: 2rem;
+}
+
 label {
     display: block;
     margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--foreground);
+    font-size: 0.875rem;
 }
 
 input,
 select {
-    margin-top: 0.5rem;
-    margin-bottom: 1rem;
-    display: block;
     width: 100%;
-    background-color: hsl(from var(--background) h s calc(l * 0.9));
-    border: 1px solid var(--foreground);
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--current-line);
     border-radius: 0.5rem;
-    padding: 0.5rem;
+    font-size: 1rem;
+    background: hsl(from var(--background) h s calc(l * 0.9));
     color: var(--foreground);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
     margin: 0;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px hsla(from var(--primary) h s l / 0.2);
+}
+
+input::placeholder {
+    color: var(--comment);
+}
+
+
+
+.submit-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    justify-content: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--current-line);
+    gap: 0.75rem;
+}
+
+/* Responsive button groups */
+@media (max-width: 768px) {
+    .button-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }

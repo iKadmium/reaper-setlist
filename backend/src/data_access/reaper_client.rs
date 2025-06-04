@@ -1,4 +1,6 @@
 use std::time::Duration;
+use tracing::{Span, instrument};
+use url::Url;
 
 use crate::models::settings::Settings;
 use reqwest::Error as ReqwestError;
@@ -8,6 +10,7 @@ pub enum ReaperError {
     Http(ReqwestError),
     Command(String),
     Parse(String),
+    Config(String),
 }
 
 impl From<ReqwestError> for ReaperError {
@@ -16,62 +19,114 @@ impl From<ReqwestError> for ReaperError {
     }
 }
 
+#[derive(Debug)]
 pub enum ReaperCommand {
     GoToEnd,
     GoToStart,
     GetTransport,
     NewTab,
-    LoadProjectByName(String), // Added new variant
+    RunAction(String), // Action ID for custom scripts (changed from u32 to String)
 }
 
 impl ReaperCommand {
-    // Renamed from as_str and changed return type to String to handle formatted strings
     fn to_command_string(&self) -> String {
         match self {
             ReaperCommand::GoToEnd => "40043".to_string(),
             ReaperCommand::GoToStart => "40042".to_string(),
             ReaperCommand::GetTransport => "TRANSPORT".to_string(),
             ReaperCommand::NewTab => "40859".to_string(),
-            ReaperCommand::LoadProjectByName(name) => format!("OSC/loadproject:s{}", name),
+            ReaperCommand::RunAction(action_id) => action_id.to_string(),
         }
     }
 }
 
-pub struct ReaperClient {
-    base_url: String,
+pub struct ReaperClient<'a> {
+    settings: &'a Settings,
     client: reqwest::Client,
 }
 
-impl ReaperClient {
-    pub async fn new(settings: &Settings) -> Result<Self, ReaperError> {
-        // In a real application, you would load settings from a config file or environment variables
-        // For now, we'll use a placeholder. You'll need to integrate your Settings model here.
-        let reaper_url = settings.reaper_url.clone();
-
-        if reaper_url.is_empty() {
-            return Err(ReaperError::Command(
-                "Reaper URL is not configured".to_string(),
-            ));
-        }
-
-        Ok(Self {
-            base_url: reaper_url,
+impl<'a> ReaperClient<'a> {
+    pub fn new(settings: &'a Settings) -> Self {
+        Self {
+            settings,
             client: reqwest::Client::new(),
-        })
+        }
     }
 
-    // Updated to take ReaperCommand directly
+    #[instrument(skip(self))]
     async fn run_command(&self, command: &ReaperCommand) -> Result<String, ReaperError> {
         let command_str = command.to_command_string();
-        let url = format!("{}/_/{}", self.base_url, command_str);
+        let url = format!("{}/_/{}", self.settings.reaper_url, command_str);
+
         let response = self.client.get(&url).send().await?;
 
         if response.status().is_success() {
+            tracing::info!("Command '{}' executed successfully", command_str);
             Ok(response.text().await?)
         } else {
+            tracing::error!(
+                "Command '{}' failed with status: {}",
+                command_str,
+                response.status()
+            );
             Err(ReaperError::Command(format!(
                 "Command '{}' failed with status: {}",
-                command_str, // Use the string representation for the error message
+                command_str,
+                response.status()
+            )))
+        }
+    }
+
+    #[instrument(skip(self))]
+    async fn set_ext_state(
+        &self,
+        section: &str,
+        key: &str,
+        value: &str,
+    ) -> Result<(), ReaperError> {
+        let url = Url::parse(&format!(
+            "{}/_/SET/EXTSTATE/{}/{}/{}",
+            self.settings.reaper_url, section, key, value
+        ))
+        .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
+
+        let response = self.client.get(url).send().await?;
+
+        if response.status().is_success() {
+            tracing::info!("Successfully set ExtState ");
+            Ok(())
+        } else {
+            tracing::error!("Failed to set ExtState: {}", response.status());
+            Err(ReaperError::Command(format!(
+                "Failed to set ExtState: {}",
+                response.status()
+            )))
+        }
+    }
+
+    #[instrument(skip(self), fields(url))]
+    async fn get_ext_state(&self, section: &str, key: &str) -> Result<String, ReaperError> {
+        let url = Url::parse(&format!(
+            "{}/_/GET/EXTSTATE/{}/{}",
+            self.settings.reaper_url, section, key
+        ))
+        .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
+
+        Span::current().record("url", url.to_string());
+        let response = self.client.get(url).send().await?;
+
+        if response.status().is_success() {
+            let text = response.text().await?;
+            let last_column = text.split('\t').next_back().unwrap_or_default();
+            tracing::trace!(
+                state = last_column.to_string(),
+                "Successfully retrieved ExtState"
+            );
+            Ok(last_column.to_string())
+        } else {
+            tracing::error!("Failed to retrieve ExtState: {}", response.status());
+            Err(ReaperError::Command(format!(
+                "Failed to get ExtState: {}",
                 response.status()
             )))
         }
@@ -88,7 +143,6 @@ impl ReaperClient {
     }
 
     pub async fn get_duration(&self) -> Result<Duration, ReaperError> {
-        // go to the end of the project to get the duration
         self.go_to_end().await?;
         let transport_string = self.run_command(&ReaperCommand::GetTransport).await?;
         let parts: Vec<&str> = transport_string.split('\t').collect();
@@ -111,34 +165,91 @@ impl ReaperClient {
         Ok(())
     }
 
-    pub async fn load_project(&self, name: &str) -> Result<(), ReaperError> {
-        self.run_command(&ReaperCommand::LoadProjectByName(name.to_string()))
+    #[instrument(skip(self))]
+    pub async fn set_project_root(&self, folder_path: &str) -> Result<(), ReaperError> {
+        // Set temporary ExtState
+        self.set_ext_state("WebAppControl", "project_root_folder", folder_path)
             .await?;
+
         Ok(())
     }
 
-    // This function is synchronous in TypeScript, but to fit the async model of ReaperClient and Settings loading,
-    // it might be better as async if folder_path also comes from async Settings.
-    // For now, keeping it synchronous as per the TS example, assuming folder_path is readily available.
-    pub fn get_script(folder_path: &str) -> String {
-        let escaped_folder_path = folder_path
-            .replace('\\', "\\\\") // Escape backslashes
-            .replace("'", "\\'") // Escape single quotes
-            .replace("\"", "\\\""); // Escape double quotes
+    /// List project files by triggering the ListProjectFiles script and retrieving the result
+    #[instrument(skip(self))]
+    pub async fn list_projects(&self) -> Result<Vec<String>, ReaperError> {
+        let action_id = self
+            .settings
+            .list_projects_script_action_id
+            .clone()
+            .ok_or_else(|| {
+                ReaperError::Config("ListProjectFiles script action ID not configured".to_string())
+            })?;
 
-        format!(
-            r#"local is_new_value,filename,sectionID,cmdID,mode,resolution,val,contextstr = reaper.get_action_context()
-if contextstr == "" then
-  reaper.ShowConsoleMsg("No project"..val.."\n")
-else
-  local project_name = string.gmatch(contextstr,"[^:]+:[^:]+:s=(.*)")()
-  local path = "{}/" .. project_name .. "/" .. project_name .. ".rpp"
-  if project_name ~= nil then
-    local x = "noprompt:" .. path
-    reaper.Main_openProject(x)
-  end
-end"#,
-            escaped_folder_path
+        // Trigger script
+        self.run_command(&ReaperCommand::RunAction(action_id))
+            .await?;
+
+        // Retrieve result from ExtState
+        let file_list_str = self
+            .get_ext_state("WebAppControl", "project_file_list")
+            .await?;
+
+        if file_list_str.starts_with("ERROR") {
+            return Err(ReaperError::Command(format!(
+                "Reaper script error: {}",
+                file_list_str
+            )));
+        }
+
+        let project_files = if file_list_str.is_empty() {
+            Vec::new()
+        } else {
+            let root_path_str = self.settings.folder_path.replace('\\', "/");
+            let root_path = std::path::Path::new(&root_path_str);
+            file_list_str
+                .split(',')
+                .map(|s| {
+                    let file_path = std::path::Path::new(s.trim());
+                    if file_path.starts_with(root_path) {
+                        file_path.strip_prefix(root_path).unwrap_or(file_path)
+                    } else {
+                        file_path
+                    }
+                })
+                .map(|p| p.to_str().unwrap_or_default().to_string())
+                .collect()
+        };
+
+        Ok(project_files)
+    }
+
+    /// Load a project by relative path using the LoadProjectFromRelativePath script
+    pub async fn load_project_by_path(&self, relative_path: &str) -> Result<(), ReaperError> {
+        let action_id = self
+            .settings
+            .clone()
+            .load_project_script_action_id
+            .ok_or_else(|| {
+                ReaperError::Config(
+                    "LoadProjectFromRelativePath script action ID not configured".to_string(),
+                )
+            })?;
+
+        self.set_ext_state(
+            "WebAppControl",
+            "project_root_folder",
+            &self.settings.folder_path,
         )
+        .await?;
+
+        // Set temporary ExtState for project path
+        self.set_ext_state("WebAppControl", "temp_load_project_path", relative_path)
+            .await?;
+
+        // Trigger script
+        self.run_command(&ReaperCommand::RunAction(action_id))
+            .await?;
+
+        Ok(())
     }
 }
