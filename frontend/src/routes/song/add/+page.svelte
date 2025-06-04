@@ -5,7 +5,8 @@
 	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
 	let song: NewSong = {
 		length: 0,
-		name: ''
+		name: '',
+		relativePath: ''
 	};
 
 	async function onSubmit(song: NewSong) {

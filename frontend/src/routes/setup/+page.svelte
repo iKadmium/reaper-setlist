@@ -14,15 +14,13 @@
 	let reaperUrl = $state<string>(data.settings.reaperUrl);
 	let username = $state<string>(data.settings.reaperUsername ?? '');
 	let password = $state<string>(data.settings.reaperPassword ?? '');
-
 	// Store the original folder path to detect changes
 	const originalFolderPath = data.settings.folderPath;
 
 	const setupSteps = [
 		{ label: "In Reaper, under preferences > Control/OSC/Web, add a web browser interface if you haven't already." },
 		{ label: 'Enter the root folder path where your backing tracks are stored and the Access URL from the web browser interface in the form above.' },
-		{ label: 'Click "Save" - if you change the folder path, you\'ll be taken to installation instructions to re-download the script.' },
-		{ label: 'If you need to change the folder path later, update it here and re-download the script on the installation page.' }
+		{ label: 'Click "Save" and then proceed to the installation page to download and configure the required scripts.' }
 	];
 
 	async function testConnection() {
@@ -67,16 +65,19 @@
 		const folderPathValue = formData.get('backing-tracks-folder') || '';
 		const usernameValue = formData.get('reaper-username');
 		const passwordValue = formData.get('reaper-password');
+
 		const body: ReaperSettings = {
 			reaperUrl: reaperUrlValue ? (reaperUrlValue as string) : '',
 			folderPath: folderPathValue ? (folderPathValue as string) : ''
 		};
+
 		if (usernameValue && typeof usernameValue === 'string' && usernameValue.trim() !== '') {
 			body.reaperUsername = usernameValue;
 		}
 		if (passwordValue && typeof passwordValue === 'string' && passwordValue.trim() !== '') {
 			body.reaperPassword = passwordValue;
 		}
+
 		const res = await fetch('/api/settings', {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
@@ -88,14 +89,8 @@
 		} else {
 			notifications.success('Settings saved successfully!');
 
-			// Only redirect to installation if folder path changed (need to re-download script)
-			const folderPathChanged = folderPathValue !== originalFolderPath;
-			if (folderPathChanged) {
-				await goto('/setup/installation');
-			} else {
-				// If no folder path change, just go to songs page
-				await goto('/song');
-			}
+			// Always redirect to installation after saving basic settings
+			await goto('/setup/installation');
 		}
 	}
 </script>

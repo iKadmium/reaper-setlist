@@ -57,11 +57,12 @@
 	}
 
 	async function handleLoadClick() {
-		const response = await fetch(`/api/reaper-project/${song.name}/load`, {
+		const response = await fetch(`/api/songs/load`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
-			}
+			},
+			body: JSON.stringify({ relative_path: song.relativePath })
 		});
 		if (!response.ok) {
 			notifications.error(`Failed to load ${song.name} in Reaper`);
@@ -72,37 +73,71 @@
 </script>
 
 <form onsubmit={() => onSubmit(song)}>
-	<table>
-		<tbody>
-			<tr>
-				<th>Name</th>
-				<td>{song.name || 'No name yet'}</td>
-			</tr>
-			<tr>
-				<th>Duration</th>
-				<td>{duration}</td>
-			</tr>
-		</tbody>
-	</table>
+	<div class="form-fields">
+		<div class="field">
+			<label for="song-name">Song Name:</label>
+			<input bind:value={song.name} type="text" id="song-name" placeholder="Enter song name" required />
+		</div>
+
+		<div class="field">
+			<label for="relative-path">Project File Path (relative to root folder):</label>
+			<input bind:value={song.relativePath} type="text" id="relative-path" placeholder="e.g., songs/song1.rpp" required />
+		</div>
+
+		<div class="field">
+			<label for="duration">Duration (seconds):</label>
+			<input bind:value={song.length} type="number" id="duration" placeholder="Duration in seconds" min="0" required />
+			<span class="duration-display">{duration}</span>
+		</div>
+	</div>
 
 	<div class="actions">
 		<Button elementType="button" onclick={handleBrowseClick}><BrowseIcon /></Button>
-		<Button elementType="button" onclick={handleLoadClick} disabled={song.name === ''}><LoadIcon /></Button>
+		<Button elementType="button" onclick={handleLoadClick} disabled={song.name === '' || song.relativePath === ''}><LoadIcon /></Button>
 		<Button elementType="button" onclick={handleGetDurationClick}><GetDurationIcon /></Button>
 	</div>
 
-	<Button elementType="submit"><SaveIcon /></Button>
+	<Button elementType="submit" disabled={song.name === '' || song.relativePath === ''}><SaveIcon /></Button>
 </form>
 
 <style>
-	th {
-		text-align: left;
-		padding-right: 1rem;
+	.form-fields {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		width: 100%;
+		max-width: 500px;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.field label {
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.field input {
+		padding: 0.5rem;
+		border: 1px solid var(--border);
+		border-radius: 0.25rem;
+		background-color: var(--background);
+		color: var(--text);
+	}
+
+	.duration-display {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		font-style: italic;
 	}
 
 	.actions {
 		display: flex;
 		gap: 1rem;
+		margin-top: 1rem;
 	}
 
 	form {

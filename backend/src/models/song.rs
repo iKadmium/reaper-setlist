@@ -6,13 +6,15 @@ use serde::{Deserialize, Serialize};
 pub(crate) struct Song {
     pub id: String,
     pub name: String,
-    pub length: u64, // Length in seconds
+    pub length: u64,           // Length in seconds
+    pub relative_path: String, // Relative path to the project file
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct NewSong {
     pub name: String,
-    pub length: u64, // Length in seconds
+    pub length: u64,           // Length in seconds
+    pub relative_path: String, // Relative path to the project file
 }
 
 impl Song {
@@ -21,6 +23,7 @@ impl Song {
             id: uuid::Uuid::new_v4().to_string(),
             name: new_song.name,
             length: new_song.length,
+            relative_path: new_song.relative_path,
         }
     }
 }

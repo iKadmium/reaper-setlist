@@ -29,6 +29,10 @@ fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Reaper response parse error: {}", e),
         ),
+        ReaperError::ConfigError(e) => (
+            StatusCode::PRECONDITION_FAILED,
+            format!("Reaper configuration error: {}", e),
+        ),
     }
 }
 

@@ -3,6 +3,9 @@ export interface ReaperSettings {
 	reaperUrl: string;
 	reaperUsername?: string;
 	reaperPassword?: string;
+	setRootScriptActionId?: number;
+	loadProjectScriptActionId?: number;
+	listProjectsScriptActionId?: number;
 }
 
 export interface TestConnectionRequest {

@@ -4,6 +4,7 @@ mod models;
 
 use axum::Router;
 use axum::routing::get_service;
+use controllers::project_management_api::project_management_api_controller;
 use controllers::reaper_project_api::reaper_project_api_controller;
 use controllers::reaper_script_api::reaper_script_api_controller;
 use controllers::set_api::set_api_controller;
@@ -47,6 +48,7 @@ async fn main() {
     let static_service = get_service(ServeDir::new(SPA_DIR).fallback(index_html_service));
 
     let api_router = Router::new()
+        .nest("/api/projects", project_management_api_controller(settings_state.clone()))
         .nest(
             "/api/reaper-project",
             reaper_project_api_controller(settings_state.clone()),

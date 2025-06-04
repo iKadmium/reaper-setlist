@@ -26,7 +26,13 @@
 			}
 			await newTabResult.json(); // wait for the operation to complete
 
-			const songLoadResult = await fetch(`/api/reaper-project/${song.name}/load`, { method: 'POST' });
+			const songLoadResult = await fetch(`/api/songs/load`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ relative_path: song.relativePath })
+			});
 			if (!songLoadResult.ok) {
 				notifications.error(`Failed to load ${song.name} in Reaper`);
 				return;
@@ -57,7 +63,7 @@
 
 	function getName(song: Song) {
 		const displayLength = formatDuration(song.length);
-		const displayString = `${song.name} (${displayLength})`;
+		const displayString = `${song.name} (${displayLength}) - ${song.relativePath}`;
 		return displayString;
 	}
 </script>

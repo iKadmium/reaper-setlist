@@ -107,10 +107,12 @@ async fn load_song_by_id(
     match result {
         Ok(song) => {
             let settings = settings_state.read().await.clone();
-            ReaperClient::new(&settings)
+            let client = ReaperClient::new(&settings)
                 .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-                .load_project(&song.name)
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            
+            client
+                .load_project_by_path(&song.relative_path, &settings)
                 .await
                 .map_err(|_| StatusCode::BAD_GATEWAY)?;
             Ok(StatusCode::NO_CONTENT)

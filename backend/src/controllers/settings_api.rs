@@ -3,7 +3,7 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -29,6 +29,7 @@ pub fn settings_api_controller(settings_state: Arc<RwLock<Settings>>) -> Router 
     // Changed to Arc<RwLock<Settings>>
     Router::new()
         .route("/", get(get_settings).put(update_settings))
+        .route("/action-ids", put(update_action_ids))
         .route("/test-connection", post(test_reaper_connection))
         .with_state(settings_state)
 }
@@ -56,6 +57,37 @@ async fn update_settings(
     }
 }
 
+#[derive(Deserialize)]
+struct ActionIdsRequest {
+    set_root_script_action_id: Option<u32>,
+    load_project_script_action_id: Option<u32>,
+    list_projects_script_action_id: Option<u32>,
+}
+
+async fn update_action_ids(
+    State(settings_state): State<Arc<RwLock<Settings>>>,
+    Json(action_ids): Json<ActionIdsRequest>,
+) -> impl IntoResponse {
+    let mut settings_write_guard = settings_state.write().await;
+    let mut updated_settings = settings_write_guard.clone();
+
+    // Update the action IDs
+    updated_settings.set_root_script_action_id = action_ids.set_root_script_action_id;
+    updated_settings.load_project_script_action_id = action_ids.load_project_script_action_id;
+    updated_settings.list_projects_script_action_id = action_ids.list_projects_script_action_id;
+
+    match updated_settings.save().await {
+        Ok(_) => {
+            *settings_write_guard = updated_settings;
+            StatusCode::OK
+        }
+        Err(e) => {
+            tracing::error!("Failed to save action IDs: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
+}
+
 async fn test_reaper_connection(
     Json(test_request): Json<TestConnectionRequest>,
 ) -> impl IntoResponse {
@@ -65,6 +97,9 @@ async fn test_reaper_connection(
         reaper_username: test_request.reaper_username,
         reaper_password: test_request.reaper_password,
         folder_path: String::new(), // Not needed for connection test
+        set_root_script_action_id: None,
+        load_project_script_action_id: None,
+        list_projects_script_action_id: None,
     };
 
     match ReaperClient::new(&test_settings).await {
