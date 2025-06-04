@@ -11,6 +11,7 @@ pub(crate) struct Song {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct NewSong {
     pub name: String,
     pub length: u64,           // Length in seconds

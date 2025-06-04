@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
 	import { notifications } from '$lib';
-	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
+	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
+	import { type NewSong } from '$lib/models/song';
+	import type { PageProps } from './$types';
 	let song: NewSong = {
 		length: 0,
 		name: '',
 		relativePath: ''
 	};
+
+	let { data }: PageProps = $props();
 
 	async function onSubmit(song: NewSong) {
 		const resp = await fetch('/api/songs', {
@@ -33,4 +36,4 @@
 
 <h1>Add Song</h1>
 
-<SongEditor {song} {onSubmit} />
+<SongEditor {song} songs={data.songs} projects={data.projects} {onSubmit} />

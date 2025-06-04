@@ -36,7 +36,8 @@
 		}
 	}
 
-	async function handleClick() {
+	async function handleClick(event: MouseEvent) {
+		event.stopPropagation();
 		busy = true;
 		await onclick?.();
 		busy = false;

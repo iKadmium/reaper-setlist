@@ -40,35 +40,23 @@ impl ReaperCommand {
     }
 }
 
-pub struct ReaperClient {
-    base_url: String,
+pub struct ReaperClient<'a> {
+    settings: &'a Settings,
     client: reqwest::Client,
 }
 
-impl ReaperClient {
-    pub async fn new(settings: &Settings) -> Result<Self, ReaperError> {
-        let reaper_url = settings.reaper_url.clone();
-
-        if reaper_url.is_empty() {
-            return Err(ReaperError::Command(
-                "Reaper URL is not configured".to_string(),
-            ));
-        }
-
-        Ok(Self {
-            base_url: reaper_url,
+impl<'a> ReaperClient<'a> {
+    pub fn new(settings: &'a Settings) -> Self {
+        Self {
+            settings,
             client: reqwest::Client::new(),
-        })
+        }
     }
 
     #[instrument(skip(self))]
     async fn run_command(&self, command: &ReaperCommand) -> Result<String, ReaperError> {
         let command_str = command.to_command_string();
-        let url = if matches!(command, ReaperCommand::RunAction(_)) {
-            format!("{}/_/{}", self.base_url, command_str)
-        } else {
-            format!("{}/_/{}", self.base_url, command_str)
-        };
+        let url = format!("{}/_/{}", self.settings.reaper_url, command_str);
 
         let response = self.client.get(&url).send().await?;
 
@@ -98,7 +86,7 @@ impl ReaperClient {
     ) -> Result<(), ReaperError> {
         let url = Url::parse(&format!(
             "{}/_/SET/EXTSTATE/{}/{}/{}",
-            self.base_url, section, key, value
+            self.settings.reaper_url, section, key, value
         ))
         .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
 
@@ -120,16 +108,21 @@ impl ReaperClient {
     async fn get_ext_state(&self, section: &str, key: &str) -> Result<String, ReaperError> {
         let url = Url::parse(&format!(
             "{}/_/GET/EXTSTATE/{}/{}",
-            self.base_url, section, key
+            self.settings.reaper_url, section, key
         ))
         .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
 
-        Span::current().record("url", &url.to_string());
+        Span::current().record("url", url.to_string());
         let response = self.client.get(url).send().await?;
 
         if response.status().is_success() {
-            tracing::trace!("Successfully retrieved ExtState");
-            Ok(response.text().await?)
+            let text = response.text().await?;
+            let last_column = text.split('\t').next_back().unwrap_or_default();
+            tracing::trace!(
+                state = last_column.to_string(),
+                "Successfully retrieved ExtState"
+            );
+            Ok(last_column.to_string())
         } else {
             tracing::error!("Failed to retrieve ExtState: {}", response.status());
             Err(ReaperError::Command(format!(
@@ -172,31 +165,20 @@ impl ReaperClient {
         Ok(())
     }
 
-    #[instrument(skip(self, settings))]
-    pub async fn set_project_root(
-        &self,
-        folder_path: &str,
-        settings: &Settings,
-    ) -> Result<(), ReaperError> {
-        let action_id = settings.set_root_script_action_id.clone().ok_or_else(|| {
-            ReaperError::Config("SetProjectRootFolder script action ID not configured".to_string())
-        })?;
-
+    #[instrument(skip(self))]
+    pub async fn set_project_root(&self, folder_path: &str) -> Result<(), ReaperError> {
         // Set temporary ExtState
-        self.set_ext_state("WebAppControl", "temp_set_root_path", folder_path)
-            .await?;
-
-        // Trigger script
-        self.run_command(&ReaperCommand::RunAction(action_id))
+        self.set_ext_state("WebAppControl", "project_root_folder", folder_path)
             .await?;
 
         Ok(())
     }
 
     /// List project files by triggering the ListProjectFiles script and retrieving the result
-    #[instrument(skip(self, settings))]
-    pub async fn list_projects(&self, settings: &Settings) -> Result<Vec<String>, ReaperError> {
-        let action_id = settings
+    #[instrument(skip(self))]
+    pub async fn list_projects(&self) -> Result<Vec<String>, ReaperError> {
+        let action_id = self
+            .settings
             .list_projects_script_action_id
             .clone()
             .ok_or_else(|| {
@@ -206,9 +188,6 @@ impl ReaperClient {
         // Trigger script
         self.run_command(&ReaperCommand::RunAction(action_id))
             .await?;
-
-        // Give Reaper a moment to execute the script
-        tokio::time::sleep(Duration::from_millis(1000)).await;
 
         // Retrieve result from ExtState
         let file_list_str = self
@@ -225,19 +204,29 @@ impl ReaperClient {
         let project_files = if file_list_str.is_empty() {
             Vec::new()
         } else {
-            file_list_str.split(',').map(|s| s.to_string()).collect()
+            let root_path_str = self.settings.folder_path.replace('\\', "/");
+            let root_path = std::path::Path::new(&root_path_str);
+            file_list_str
+                .split(',')
+                .map(|s| {
+                    let file_path = std::path::Path::new(s.trim());
+                    if file_path.starts_with(root_path) {
+                        file_path.strip_prefix(root_path).unwrap_or(file_path)
+                    } else {
+                        file_path
+                    }
+                })
+                .map(|p| p.to_str().unwrap_or_default().to_string())
+                .collect()
         };
 
         Ok(project_files)
     }
 
     /// Load a project by relative path using the LoadProjectFromRelativePath script
-    pub async fn load_project_by_path(
-        &self,
-        relative_path: &str,
-        settings: &Settings,
-    ) -> Result<(), ReaperError> {
-        let action_id = settings
+    pub async fn load_project_by_path(&self, relative_path: &str) -> Result<(), ReaperError> {
+        let action_id = self
+            .settings
             .clone()
             .load_project_script_action_id
             .ok_or_else(|| {
@@ -245,6 +234,13 @@ impl ReaperClient {
                     "LoadProjectFromRelativePath script action ID not configured".to_string(),
                 )
             })?;
+
+        self.set_ext_state(
+            "WebAppControl",
+            "project_root_folder",
+            &self.settings.folder_path,
+        )
+        .await?;
 
         // Set temporary ExtState for project path
         self.set_ext_state("WebAppControl", "temp_load_project_path", relative_path)

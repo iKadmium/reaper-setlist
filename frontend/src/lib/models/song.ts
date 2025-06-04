@@ -11,7 +11,3 @@ export interface NewSong {
     length: number;
     relativePath: string; // relative path to the project file
 }
-
-export function isNewSong(song: Song | NewSong): song is NewSong {
-    return song.id === undefined;
-}

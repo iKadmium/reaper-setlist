@@ -3,7 +3,6 @@ export interface ReaperSettings {
 	reaperUrl: string;
 	reaperUsername?: string;
 	reaperPassword?: string;
-	setRootScriptActionId?: string;
 	loadProjectScriptActionId?: string;
 	listProjectsScriptActionId?: string;
 }

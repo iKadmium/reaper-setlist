@@ -1,14 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
-	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
 	import { notifications } from '$lib';
-	import type { PageData } from './$types';
+	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
+	import { type Song } from '$lib/models/song';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: PageData } = $props();
-
-	let song = $state<Song | undefined>(data.song);
-	const errorMessage = data.error;
+	let { data }: PageProps = $props();
 
 	async function onSubmit(song: Song) {
 		const resp = await fetch(`/api/songs/${song.id}`, {
@@ -34,10 +31,4 @@
 
 <h1>Edit Song</h1>
 
-{#if errorMessage}
-	<p style="color: red;">{errorMessage}</p>
-{:else if song}
-	<SongEditor {song} {onSubmit} />
-{:else}
-	<p>Song not found.</p>
-{/if}
+<SongEditor songs={data.songs} song={data.song} projects={data.projects} {onSubmit} />

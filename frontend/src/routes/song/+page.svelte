@@ -63,7 +63,7 @@
 
 	function getName(song: Song) {
 		const displayLength = formatDuration(song.length);
-		const displayString = `${song.name} (${displayLength}) - ${song.relativePath}`;
+		const displayString = `${song.name} (${displayLength})`;
 		return displayString;
 	}
 </script>

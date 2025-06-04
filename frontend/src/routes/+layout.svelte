@@ -30,4 +30,11 @@
 		align-items: flex-start;
 		gap: 0.5rem;
 	}
+
+	@media (max-width: 768px) {
+		main {
+			padding-left: 1rem;
+			padding-right: 1rem;
+		}
+	}
 </style>

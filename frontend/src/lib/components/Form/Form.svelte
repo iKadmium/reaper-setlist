@@ -30,8 +30,10 @@
 	/* Responsive design */
 	@media (max-width: 768px) {
 		.form-card {
-			margin: 1rem;
-			padding: 1.5rem;
+			margin: 0;
+			padding: 0;
+			border: 0;
+			box-shadow: none;
 		}
 	}
 </style>

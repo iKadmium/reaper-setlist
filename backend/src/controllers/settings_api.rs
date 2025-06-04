@@ -44,10 +44,28 @@ async fn update_settings(
     State(settings_state): State<Arc<RwLock<Settings>>>, // Added State extractor for settings_state
     Json(new_settings): Json<Settings>,
 ) -> impl IntoResponse {
-    match new_settings.save().await {
+    let mut settings_write_guard = settings_state.write().await;
+    // Merge: preserve action ids if not present in new_settings
+    let merged_settings = Settings {
+        load_project_script_action_id: if new_settings.load_project_script_action_id.is_some() {
+            new_settings.load_project_script_action_id.clone()
+        } else {
+            settings_write_guard.load_project_script_action_id.clone()
+        },
+        list_projects_script_action_id: if new_settings.list_projects_script_action_id.is_some() {
+            new_settings.list_projects_script_action_id.clone()
+        } else {
+            settings_write_guard.list_projects_script_action_id.clone()
+        },
+        // ...other fields are always overwritten
+        folder_path: new_settings.folder_path.clone(),
+        reaper_url: new_settings.reaper_url.clone(),
+        reaper_username: new_settings.reaper_username.clone(),
+        reaper_password: new_settings.reaper_password.clone(),
+    };
+    match merged_settings.save().await {
         Ok(_) => {
-            let mut settings_write_guard = settings_state.write().await; // Acquire write lock
-            *settings_write_guard = new_settings; // Update the in-memory settings
+            *settings_write_guard = merged_settings;
             StatusCode::OK
         }
         Err(e) => {
@@ -59,7 +77,6 @@ async fn update_settings(
 
 #[derive(Deserialize)]
 struct ActionIdsRequest {
-    set_root_script_action_id: Option<String>,
     load_project_script_action_id: Option<String>,
     list_projects_script_action_id: Option<String>,
 }
@@ -72,7 +89,6 @@ async fn update_action_ids(
     let mut updated_settings = settings_write_guard.clone();
 
     // Update the action IDs
-    updated_settings.set_root_script_action_id = action_ids.set_root_script_action_id;
     updated_settings.load_project_script_action_id = action_ids.load_project_script_action_id;
     updated_settings.list_projects_script_action_id = action_ids.list_projects_script_action_id;
 
@@ -97,33 +113,21 @@ async fn test_reaper_connection(
         reaper_username: test_request.reaper_username,
         reaper_password: test_request.reaper_password,
         folder_path: String::new(), // Not needed for connection test
-        set_root_script_action_id: None,
         load_project_script_action_id: None,
         list_projects_script_action_id: None,
     };
 
-    match ReaperClient::new(&test_settings).await {
-        Ok(client) => {
-            // Try a simple command to test the connection
-            match client.go_to_start().await {
-                Ok(_) => Json(TestConnectionResponse {
-                    success: true,
-                    message: "Successfully connected to Reaper!".to_string(),
-                }),
-                Err(e) => {
-                    tracing::warn!("Reaper connection test failed: {:?}", e);
-                    Json(TestConnectionResponse {
-                        success: false,
-                        message: format!("Failed to communicate with Reaper: {:?}", e),
-                    })
-                }
-            }
-        }
+    let client = ReaperClient::new(&test_settings);
+    match client.go_to_start().await {
+        Ok(_) => Json(TestConnectionResponse {
+            success: true,
+            message: "Successfully connected to Reaper!".to_string(),
+        }),
         Err(e) => {
-            tracing::warn!("Failed to create Reaper client: {:?}", e);
+            tracing::warn!("Reaper connection test failed: {:?}", e);
             Json(TestConnectionResponse {
                 success: false,
-                message: format!("Failed to connect to Reaper: {:?}", e),
+                message: format!("Failed to communicate with Reaper: {:?}", e),
             })
         }
     }

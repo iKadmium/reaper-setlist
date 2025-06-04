@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
-	import { isNewSetlist, type NewSetlist, type Setlist } from '$lib/models/setlist';
 	import type { Database } from '$lib/models/database';
+	import { type Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
 	import type { PageData } from './$types';
 

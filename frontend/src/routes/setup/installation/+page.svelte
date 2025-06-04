@@ -12,7 +12,6 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let setRootScriptActionId = $state<string | undefined>(data.settings?.setRootScriptActionId);
 	let loadProjectScriptActionId = $state<string | undefined>(data.settings?.loadProjectScriptActionId);
 	let listProjectsScriptActionId = $state<string | undefined>(data.settings?.listProjectsScriptActionId);
 
@@ -100,17 +99,7 @@
 
 <Form onsubmit={saveActionIds}>
 	<div class="script-config-item">
-		<h3>1. Set Project Root Folder Script</h3>
-		<p>This script sets the root folder for your projects.</p>
-		<a class="download-button" href="/lua/SetProjectRootFolder.lua" download="SetProjectRootFolder.lua"> Download SetProjectRootFolder.lua </a>
-		<div class="form-group">
-			<label for="set-root-action-id">Action ID:</label>
-			<input bind:value={setRootScriptActionId} type="text" id="set-root-action-id" name="set-root-action-id" placeholder="e.g., 40001" required />
-		</div>
-	</div>
-
-	<div class="script-config-item">
-		<h3>2. Load Project Script</h3>
+		<h3>1. Load Project Script</h3>
 		<p>This script loads a project from a relative path.</p>
 		<a class="download-button" href="/lua/LoadProjectFromRelativePath.lua" download="LoadProjectFromRelativePath.lua">
 			Download LoadProjectFromRelativePath.lua
@@ -122,7 +111,7 @@
 	</div>
 
 	<div class="script-config-item">
-		<h3>3. List Projects Script</h3>
+		<h3>2. List Projects Script</h3>
 		<p>This script lists all available projects in the root folder.</p>
 		<a class="download-button" href="/lua/ListProjectFiles.lua" download="ListProjectFiles.lua"> Download ListProjectFiles.lua </a>
 		<div class="form-group">

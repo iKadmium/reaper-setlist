@@ -2,7 +2,7 @@
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
 
-	import type { Setlist } from '$lib/models/setlist';
+	import type { NewSetlist, Setlist } from '$lib/models/setlist';
 	import { formatDuration } from '$lib/util';
 	import { notifications } from '$lib';
 	import { onMount } from 'svelte';
@@ -12,10 +12,11 @@
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import AddIcon from 'virtual:icons/mdi/plus';
 	import type { PageData } from './$types';
+	import type { Database } from '$lib/models/database';
 
 	let { data }: { data: PageData } = $props();
 
-	const sets = data.sets;
+	const sets = $state<Database<Setlist>>(data.sets);
 	const songs = data.songs;
 	const errorMessage = data.error;
 
@@ -29,8 +30,8 @@
 		const dateString = `${new Date(item.date).toLocaleDateString()}`;
 		const length = item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0);
 		const songCount = item.songs.length;
-		const songText = songCount > 0 ? ` (${songCount} song${songCount > 1 ? 's' : ''})` : '';
-		return `${dateString} - ${item.venue} - ${formatDuration(length)}${songText}`;
+		const songText = songCount > 0 ? ` (${songCount} song${songCount > 1 ? 's' : ''}, ${formatDuration(length)})` : '';
+		return `${dateString} - ${item.venue} - ${songText}`;
 	}
 
 	async function handleDeleteClick(item: Setlist) {
@@ -52,7 +53,7 @@
 	}
 
 	async function handleDuplicateClick(item: Setlist) {
-		const duplicated: Partial<Setlist> = { ...item, id: undefined, venue: `${item.venue} (copy)` };
+		const duplicated: NewSetlist = { ...item, id: undefined, venue: `${item.venue} (copy)` };
 		// Update this URL to point to your new external backend
 		const result = await fetch('/api/sets', {
 			method: 'POST',

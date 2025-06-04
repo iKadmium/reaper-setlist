@@ -91,7 +91,11 @@
 			notifications.success('Settings saved successfully!');
 
 			// Always redirect to installation after saving basic settings
-			await goto('/setup/installation');
+			if (data.settings.listProjectsScriptActionId && data.settings.loadProjectScriptActionId) {
+				await goto('/song');
+			} else {
+				await goto('/setup/installation');
+			}
 		}
 	}
 </script>

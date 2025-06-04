@@ -18,8 +18,6 @@ end
 -- Normalize path separators to forward slashes for consistency
 project_root_folder = project_root_folder:gsub("\\", "/")
 
-reaper.ShowConsoleMsg("Listing project files in: " .. project_root_folder .. "\n")
-
 local project_files = {}
 
 -- Recursive function to list .rpp files and traverse subdirectories
@@ -66,5 +64,3 @@ table.sort(project_files)
 
 local files_str = table.concat(project_files, ",")
 reaper.SetExtState(section, list_output_key, files_str, true)
-reaper.ShowConsoleMsg("Listed " .. #project_files .. " project files.\n")
-reaper.ShowConsoleMsg("Output stored in ExtState: " .. section .. ":" .. list_output_key .. "\n")

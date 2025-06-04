@@ -21,27 +21,27 @@
 	}
 
 	async function loadSong(songId: string, name: string): Promise<LogItem> {
-		const res = await fetch(`/api/reaper-project/${name}/load`, { method: 'POST' });
+		const res = await fetch(`/api/songs/${songId}/load`, { method: 'POST' });
 		if (res.ok) {
-			await res.json(); // wait for the operation to complete
+			await res.text(); // wait for the operation to complete
 			return { time: new Date(), message: `Loaded ${name}`, color: 'green' };
 		}
 		return { time: new Date(), message: 'Failed', color: 'red' };
 	}
 
 	async function newTab() {
-		const res = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
+		const res = await fetch(`/api/projects/new-tab`, { method: 'POST' });
 		if (res.ok) {
-			await res.json(); // wait for the operation to complete
+			await res.text(); // wait for the operation to complete
 			return { time: new Date(), message: 'New tab opened', color: 'green' };
 		}
 		return { time: new Date(), message: 'Failed to open new tab', color: 'red' };
 	}
 
 	async function goToStart() {
-		const res = await fetch(`/api/reaper-project/current/go-to-start`, { method: 'POST' });
+		const res = await fetch(`/api/projects/current/go-to-start`, { method: 'POST' });
 		if (res.ok) {
-			await res.json(); // wait for the operation to complete
+			await res.text(); // wait for the operation to complete
 			return { time: new Date(), message: 'Moved playhead to start', color: 'green' };
 		}
 		return { time: new Date(), message: 'Failed', color: 'red' };

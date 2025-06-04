@@ -63,6 +63,7 @@ pub fn project_api_controller(settings: Arc<RwLock<Settings>>) -> Router {
         .route("/current/get-duration", post(get_current_project_duration))
         .route("/current/go-to-start", post(current_project_go_to_start))
         .route("/current/go-to-end", post(current_project_go_to_end))
+        .route("/test-command-ids", post(test_command_ids))
         .route("/new-tab", post(new_project_tab))
         .with_state(settings)
 }
@@ -75,16 +76,9 @@ async fn set_project_root(
 ) -> Result<StatusCode, impl IntoResponse> {
     let settings = settings_state.read().await.clone();
 
-    match ReaperClient::new(&settings).await {
-        Ok(client) => {
-            match client
-                .set_project_root(&request.folder_path, &settings)
-                .await
-            {
-                Ok(_) => Ok(StatusCode::OK),
-                Err(e) => Err(map_reaper_error(e)),
-            }
-        }
+    let client = ReaperClient::new(&settings);
+    match client.set_project_root(&request.folder_path).await {
+        Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
@@ -94,20 +88,13 @@ async fn list_projects(
 ) -> Result<Json<ProjectListResponse>, impl IntoResponse> {
     let settings = settings_state.read().await.clone();
 
-    match ReaperClient::new(&settings).await {
-        Ok(client) => {
-            match client
-                .set_project_root(&settings.folder_path, &settings)
-                .await
-            {
-                Ok(_) => {}
-                Err(e) => return Err(map_reaper_error(e)),
-            }
-            match client.list_projects(&settings).await {
-                Ok(projects) => Ok(Json(ProjectListResponse { projects })),
-                Err(e) => Err(map_reaper_error(e)),
-            }
-        }
+    let client = ReaperClient::new(&settings);
+    match client.set_project_root(&settings.folder_path).await {
+        Ok(_) => {}
+        Err(e) => return Err(map_reaper_error(e)),
+    }
+    match client.list_projects().await {
+        Ok(projects) => Ok(Json(ProjectListResponse { projects })),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
@@ -118,16 +105,9 @@ async fn load_project(
 ) -> Result<StatusCode, impl IntoResponse> {
     let settings = settings_state.read().await.clone();
 
-    match ReaperClient::new(&settings).await {
-        Ok(client) => {
-            match client
-                .load_project_by_path(&request.relative_path, &settings)
-                .await
-            {
-                Ok(_) => Ok(StatusCode::OK),
-                Err(e) => Err(map_reaper_error(e)),
-            }
-        }
+    let client = ReaperClient::new(&settings);
+    match client.load_project_by_path(&request.relative_path).await {
+        Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
@@ -138,11 +118,9 @@ async fn get_current_project_duration(
     State(settings_state): State<Arc<RwLock<Settings>>>,
 ) -> Result<Json<u64>, impl IntoResponse> {
     let settings_read_guard = settings_state.read().await;
-    match ReaperClient::new(&settings_read_guard).await {
-        Ok(client) => match client.get_duration().await {
-            Ok(duration) => Ok(Json(duration.as_secs())),
-            Err(e) => Err(map_reaper_error(e)),
-        },
+    let client = ReaperClient::new(&settings_read_guard);
+    match client.get_duration().await {
+        Ok(duration) => Ok(Json(duration.as_secs())),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
@@ -151,11 +129,9 @@ async fn current_project_go_to_start(
     State(settings_state): State<Arc<RwLock<Settings>>>,
 ) -> Result<StatusCode, impl IntoResponse> {
     let settings_read_guard = settings_state.read().await;
-    match ReaperClient::new(&settings_read_guard).await {
-        Ok(client) => match client.go_to_start().await {
-            Ok(_) => Ok(StatusCode::OK),
-            Err(e) => Err(map_reaper_error(e)),
-        },
+    let client = ReaperClient::new(&settings_read_guard);
+    match client.go_to_start().await {
+        Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
@@ -164,11 +140,9 @@ async fn current_project_go_to_end(
     State(settings_state): State<Arc<RwLock<Settings>>>,
 ) -> Result<StatusCode, impl IntoResponse> {
     let settings_read_guard = settings_state.read().await;
-    match ReaperClient::new(&settings_read_guard).await {
-        Ok(client) => match client.go_to_end().await {
-            Ok(_) => Ok(StatusCode::OK),
-            Err(e) => Err(map_reaper_error(e)),
-        },
+    let client = ReaperClient::new(&settings_read_guard);
+    match client.go_to_end().await {
+        Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
@@ -177,11 +151,20 @@ async fn new_project_tab(
     State(settings_state): State<Arc<RwLock<Settings>>>,
 ) -> Result<StatusCode, impl IntoResponse> {
     let settings_read_guard = settings_state.read().await;
-    match ReaperClient::new(&settings_read_guard).await {
-        Ok(client) => match client.new_tab().await {
-            Ok(_) => Ok(StatusCode::OK),
-            Err(e) => Err(map_reaper_error(e)),
-        },
+    let client = ReaperClient::new(&settings_read_guard);
+    match client.new_tab().await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => Err(map_reaper_error(e)),
+    }
+}
+
+async fn test_command_ids(
+    State(settings_state): State<Arc<RwLock<Settings>>>,
+) -> Result<StatusCode, impl IntoResponse> {
+    let settings_read_guard = settings_state.read().await;
+    let client = ReaperClient::new(&settings_read_guard);
+    match client.list_projects().await {
+        Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(map_reaper_error(e)),
     }
 }
