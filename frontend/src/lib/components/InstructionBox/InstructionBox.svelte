@@ -52,11 +52,12 @@
 
 <style>
 	.instruction-box {
-		margin-top: 2rem;
 		padding: 1rem;
 		background-color: var(--background-secondary, rgba(255, 255, 255, 0.05));
 		border-radius: 0.5rem;
 		border-left: 4px solid var(--purple);
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	.instruction-box--success {

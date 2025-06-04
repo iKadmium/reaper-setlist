@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { notifications } from '$lib';
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
+	import Form from '$lib/components/Form/Form.svelte';
 	import Button from '$lib/components/Button/Button.svelte';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
 	import TestIcon from 'virtual:icons/mdi/check-network';
@@ -97,25 +98,24 @@
 	</ol>
 </div>
 
-<div class="action-ids-section">
-	<h2>Download Scripts & Configure Action IDs</h2>
-	<p>Download each script, install it in Reaper, and enter its assigned command ID:</p>
-
-	<form onsubmit={saveActionIds}>
-		<div class="script-config-item">
-			<h3>1. Set Project Root Folder Script</h3>
-			<p>This script sets the root folder for your projects.</p>
-			<a class="download-button" href="/api/reaper-script/SetProjectRootFolder.lua" download="SetProjectRootFolder.lua"> Download SetProjectRootFolder.lua </a>
+<Form onsubmit={saveActionIds}>
+	<div class="script-config-item">
+		<h3>1. Set Project Root Folder Script</h3>
+		<p>This script sets the root folder for your projects.</p>
+		<a class="download-button" href="/lua/SetProjectRootFolder.lua" download="SetProjectRootFolder.lua"> Download SetProjectRootFolder.lua </a>
+		<div class="form-group">
 			<label for="set-root-action-id">Action ID:</label>
 			<input bind:value={setRootScriptActionId} type="number" id="set-root-action-id" name="set-root-action-id" placeholder="e.g., 40001" required />
 		</div>
+	</div>
 
-		<div class="script-config-item">
-			<h3>2. Load Project Script</h3>
-			<p>This script loads a project from a relative path.</p>
-			<a class="download-button" href="/api/reaper-script/LoadProjectFromRelativePath.lua" download="LoadProjectFromRelativePath.lua">
-				Download LoadProjectFromRelativePath.lua
-			</a>
+	<div class="script-config-item">
+		<h3>2. Load Project Script</h3>
+		<p>This script loads a project from a relative path.</p>
+		<a class="download-button" href="/lua/LoadProjectFromRelativePath.lua" download="LoadProjectFromRelativePath.lua">
+			Download LoadProjectFromRelativePath.lua
+		</a>
+		<div class="form-group">
 			<label for="load-project-action-id">Action ID:</label>
 			<input
 				bind:value={loadProjectScriptActionId}
@@ -126,11 +126,13 @@
 				required
 			/>
 		</div>
+	</div>
 
-		<div class="script-config-item">
-			<h3>3. List Projects Script</h3>
-			<p>This script lists all available projects in the root folder.</p>
-			<a class="download-button" href="/api/reaper-script/ListProjectFiles.lua" download="ListProjectFiles.lua"> Download ListProjectFiles.lua </a>
+	<div class="script-config-item">
+		<h3>3. List Projects Script</h3>
+		<p>This script lists all available projects in the root folder.</p>
+		<a class="download-button" href="/lua/ListProjectFiles.lua" download="ListProjectFiles.lua"> Download ListProjectFiles.lua </a>
+		<div class="form-group">
 			<label for="list-projects-action-id">Action ID:</label>
 			<input
 				bind:value={listProjectsScriptActionId}
@@ -141,23 +143,17 @@
 				required
 			/>
 		</div>
+	</div>
 
-		<div class="action-buttons">
-			<Button elementType="button" color="primary" onclick={testConnection}><TestIcon /> Test Connection</Button>
-			<Button elementType="submit" color="success"><SaveIcon /> Save Action IDs</Button>
-		</div>
-	</form>
-</div>
+	<div class="submit-section">
+		<Button elementType="button" color="primary" onclick={testConnection}><TestIcon /> Test Connection</Button>
+		<Button elementType="submit" color="success"><SaveIcon /> Save Action IDs</Button>
+	</div>
+</Form>
 
 <InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
 
 <style>
-	.action-buttons {
-		display: flex;
-		gap: 1rem;
-		margin-top: 1rem;
-	}
-
 	.download-button {
 		display: inline-block;
 		background-color: var(--primary);
@@ -166,7 +162,7 @@
 		border-radius: 0.5rem;
 		text-decoration: none !important;
 		font-weight: 600;
-		margin-bottom: 0.5rem;
+		margin-bottom: 1rem;
 		transition: background-color 0.2s ease;
 		border: none;
 		cursor: pointer;
@@ -174,8 +170,8 @@
 	}
 
 	.download-button:hover {
-		background-color: var(--primary);
-		color: white !important;
+		background-color: hsl(from var(--primary) h s calc(l * 0.9));
+		color: var(--black) !important;
 	}
 
 	.installation-steps ul {
@@ -183,64 +179,31 @@
 		padding-left: 2rem;
 	}
 
-	.action-ids-section {
-		margin: 2rem 0;
-		padding: 1.5rem;
-		border: 2px solid var(--primary);
-		border-radius: 0.5rem;
-		background-color: var(--background);
-		box-sizing: border-box;
-		width: 100%;
-	}
-
-	.action-ids-section h2 {
-		margin-top: 0;
-		color: var(--primary);
-	}
-
-	.action-ids-section form {
-		display: flex;
-		flex-direction: column;
-		gap: 2rem;
+	.installation-steps ol {
+		margin: 0;
+		padding-left: 2rem;
 	}
 
 	.script-config-item {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.75rem;
 		padding: 1.5rem;
-		border: 1px solid var(--border);
+		border: 1px solid var(--current-line);
 		border-radius: 0.5rem;
-		background-color: var(--background-secondary, var(--background));
+		background-color: hsl(from var(--background) h s calc(l * 1.1));
 	}
 
 	.script-config-item h3 {
-		margin-top: 0;
-		margin-bottom: 0.5rem;
+		margin: 0;
 		color: var(--primary);
+		font-size: 1.1rem;
 	}
 
 	.script-config-item p {
-		margin: 0 0 1rem 0;
-		color: var(--text-secondary);
-	}
-
-	.action-ids-section label {
-		font-weight: 600;
-		color: var(--text-primary);
-		margin-top: 1rem;
-	}
-
-	.action-ids-section input {
-		padding: 0.5rem;
-		border: 1px solid var(--border);
-		border-radius: 0.25rem;
-		font-size: 1rem;
-		margin-top: 0.25rem;
-	}
-
-	.action-ids-section form > :global(button) {
-		margin-top: 1rem;
-		align-self: flex-start;
+		margin: 0 0 0.5rem 0;
+		color: var(--foreground);
+		opacity: 0.8;
+		font-size: 0.9rem;
 	}
 </style>

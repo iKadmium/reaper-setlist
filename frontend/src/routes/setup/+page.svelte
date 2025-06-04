@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
+	import Form from '$lib/components/Form/Form.svelte';
+	import UrlInput from '$lib/components/UrlInput/UrlInput.svelte';
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
-	import TestIcon from 'virtual:icons/mdi/check-network';
 	import type { ReaperSettings, TestConnectionRequest, TestConnectionResponse } from '$lib/models/reaper-settings';
 	import { notifications } from '$lib';
 	import type { PageData } from './$types';
@@ -103,50 +104,31 @@
 
 <InstructionBox title="Setup Help" steps={setupSteps} variant="help" listType="ordered" />
 
-<form onsubmit={handleSubmit}>
-	<div>
+<Form onsubmit={handleSubmit}>
+	<div class="form-group">
 		<label for="backing-tracks-folder">Backing Tracks Root Folder:</label>
-		<input bind:value={folderPath} type="text" id="backing-tracks-folder" name="backing-tracks-folder" placeholder="Enter folder path" />
+		<input bind:value={folderPath} type="text" id="backing-tracks-folder" name="backing-tracks-folder" placeholder="e.g., /path/to/your/backing/tracks" />
 	</div>
 
-	<div>
+	<div class="form-group">
 		<label for="reaper-url">Reaper URL:</label>
-		<div class="url-input-container">
-			<input bind:value={reaperUrl} type="text" id="reaper-url" name="reaper-url" placeholder="Enter Reaper URL" />
-			<Button elementType="button" color="primary" onclick={testConnection}><TestIcon /></Button>
-		</div>
+		<UrlInput bind:value={reaperUrl} id="reaper-url" name="reaper-url" placeholder="e.g., http://localhost:8080" onTest={testConnection} />
 	</div>
 
-	<div>
-		<label for="reaper-username">Reaper Username:</label>
-		<input bind:value={username} type="text" id="reaper-username" name="reaper-username" placeholder="Enter Reaper Username" />
+	<div class="form-group">
+		<label for="reaper-username">Reaper Username (optional):</label>
+		<input bind:value={username} type="text" id="reaper-username" name="reaper-username" placeholder="Username (if authentication is enabled)" />
 	</div>
 
-	<div>
-		<label for="reaper-password">Reaper Password:</label>
-		<input bind:value={password} type="password" id="reaper-password" name="reaper-password" placeholder="Enter Reaper Password" />
+	<div class="form-group">
+		<label for="reaper-password">Reaper Password (optional):</label>
+		<input bind:value={password} type="password" id="reaper-password" name="reaper-password" placeholder="Password (if authentication is enabled)" />
 	</div>
 
-	<Button elementType="submit" color="primary"><SaveIcon /></Button>
-</form>
-
-<style>
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		align-items: flex-start;
-	}
-
-	.url-input-container {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		width: 100%;
-	}
-
-	.url-input-container input {
-		flex: 1;
-		margin: 0;
-	}
-</style>
+	<div class="submit-section">
+		<Button elementType="submit" color="primary">
+			<SaveIcon />
+			Save Settings
+		</Button>
+	</div>
+</Form>
