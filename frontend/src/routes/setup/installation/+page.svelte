@@ -12,9 +12,9 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let setRootScriptActionId = $state<number | undefined>(data.settings?.setRootScriptActionId);
-	let loadProjectScriptActionId = $state<number | undefined>(data.settings?.loadProjectScriptActionId);
-	let listProjectsScriptActionId = $state<number | undefined>(data.settings?.listProjectsScriptActionId);
+	let setRootScriptActionId = $state<string | undefined>(data.settings?.setRootScriptActionId);
+	let loadProjectScriptActionId = $state<string | undefined>(data.settings?.loadProjectScriptActionId);
+	let listProjectsScriptActionId = $state<string | undefined>(data.settings?.listProjectsScriptActionId);
 
 	onMount(() => {
 		// If there's an error (setup incomplete), redirect to setup
@@ -25,7 +25,7 @@
 
 	async function testConnection() {
 		try {
-			const response = await fetch('/api/projects/set-root', { method: 'POST' });
+			const response = await fetch('/api/projects/list', { method: 'GET' });
 
 			if (response.ok) {
 				notifications.success('Successfully connected to Reaper and set project root!');
@@ -45,9 +45,9 @@
 		const listProjectsActionIdValue = formData.get('list-projects-action-id');
 
 		const body: ActionIdsRequest = {
-			set_root_script_action_id: setRootActionIdValue ? parseInt(setRootActionIdValue as string) : undefined,
-			load_project_script_action_id: loadProjectActionIdValue ? parseInt(loadProjectActionIdValue as string) : undefined,
-			list_projects_script_action_id: listProjectsActionIdValue ? parseInt(listProjectsActionIdValue as string) : undefined
+			set_root_script_action_id: setRootActionIdValue ? (setRootActionIdValue as string) : undefined,
+			load_project_script_action_id: loadProjectActionIdValue ? (loadProjectActionIdValue as string) : undefined,
+			list_projects_script_action_id: listProjectsActionIdValue ? (listProjectsActionIdValue as string) : undefined
 		};
 
 		try {
@@ -105,7 +105,7 @@
 		<a class="download-button" href="/lua/SetProjectRootFolder.lua" download="SetProjectRootFolder.lua"> Download SetProjectRootFolder.lua </a>
 		<div class="form-group">
 			<label for="set-root-action-id">Action ID:</label>
-			<input bind:value={setRootScriptActionId} type="number" id="set-root-action-id" name="set-root-action-id" placeholder="e.g., 40001" required />
+			<input bind:value={setRootScriptActionId} type="text" id="set-root-action-id" name="set-root-action-id" placeholder="e.g., 40001" required />
 		</div>
 	</div>
 
@@ -117,14 +117,7 @@
 		</a>
 		<div class="form-group">
 			<label for="load-project-action-id">Action ID:</label>
-			<input
-				bind:value={loadProjectScriptActionId}
-				type="number"
-				id="load-project-action-id"
-				name="load-project-action-id"
-				placeholder="e.g., 40002"
-				required
-			/>
+			<input bind:value={loadProjectScriptActionId} type="text" id="load-project-action-id" name="load-project-action-id" placeholder="e.g., 40002" required />
 		</div>
 	</div>
 
@@ -136,7 +129,7 @@
 			<label for="list-projects-action-id">Action ID:</label>
 			<input
 				bind:value={listProjectsScriptActionId}
-				type="number"
+				type="text"
 				id="list-projects-action-id"
 				name="list-projects-action-id"
 				placeholder="e.g., 40003"

@@ -29,7 +29,7 @@ fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Reaper response parse error: {}", e),
         ),
-        ReaperError::ConfigError(e) => (
+        ReaperError::Config(e) => (
             StatusCode::PRECONDITION_FAILED,
             format!("Reaper configuration error: {}", e),
         ),
@@ -40,7 +40,6 @@ pub fn reaper_project_api_controller(settings: Arc<RwLock<Settings>>) -> Router 
     Router::new()
         .route("/current/get-duration", post(get_current_project_duration))
         .route("/new-tab", post(new_project_tab))
-        .route("/{name}/load", post(load_project_by_name))
         .route("/current/go-to-start", post(current_project_go_to_start))
         .route("/current/go-to-end", post(current_project_go_to_end)) // Assuming go-to-end is similar to go-to-start
         .with_state(settings)
@@ -67,21 +66,6 @@ async fn new_project_tab(
     match ReaperClient::new(&settings_read_guard).await {
         // Pass reference to Settings inside guard
         Ok(client) => match client.new_tab().await {
-            Ok(_) => Ok(StatusCode::OK),
-            Err(e) => Err(map_reaper_error(e)),
-        },
-        Err(e) => Err(map_reaper_error(e)),
-    }
-}
-
-async fn load_project_by_name(
-    Path(name): Path<String>,
-    State(settings_state): State<Arc<RwLock<Settings>>>, // Changed to Arc<RwLock<Settings>>
-) -> Result<StatusCode, impl IntoResponse> {
-    let settings_read_guard = settings_state.read().await; // Acquire read lock
-    match ReaperClient::new(&settings_read_guard).await {
-        // Pass reference to Settings inside guard
-        Ok(client) => match client.load_project(&name).await {
             Ok(_) => Ok(StatusCode::OK),
             Err(e) => Err(map_reaper_error(e)),
         },

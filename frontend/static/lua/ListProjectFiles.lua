@@ -1,6 +1,6 @@
 -- ListProjectFiles.lua
 -- This script lists .rpp files in the defined project root folder (and subfolders).
--- It uses reaper.EnumerateFiles for robust, cross-platform file listing.
+-- It explicitly uses reaper.EnumerateFiles for files and reaper.EnumerateSubdirectories for directories.
 -- It stores the list as a comma-separated string in ExtState (relative paths).
 
 local section = "WebAppControl"
@@ -18,34 +18,43 @@ end
 -- Normalize path separators to forward slashes for consistency
 project_root_folder = project_root_folder:gsub("\\", "/")
 
-reaper.ShowConsoleMsg("Listing project files in: " .. project_root_folder .. " (using reaper.EnumerateFiles)\n")
+reaper.ShowConsoleMsg("Listing project files in: " .. project_root_folder .. "\n")
 
 local project_files = {}
 
--- Recursive function to list .rpp files
+-- Recursive function to list .rpp files and traverse subdirectories
 local function list_rpp_files_recursive(current_dir, base_path_for_relative)
+    -- Step 1: Enumerate files in the current directory
     local file_index = 0
     while true do
-        local filename, is_directory = reaper.EnumerateFiles(current_dir, file_index)
-        if not filename then -- End of enumeration
+        local filename = reaper.EnumerateFiles(current_dir, file_index)
+        if not filename then -- End of file enumeration
             break
         end
 
-        local full_path = current_dir .. "/" .. filename
-        local relative_path = full_path:gsub(base_path_for_relative .. "/", "")
-
-        if is_directory then
-            -- Avoid infinite recursion or re-entering parent directory
-            if filename ~= "." and filename ~= ".." then
-                list_rpp_files_recursive(full_path, base_path_for_relative) -- Recurse into subdirectory
-            end
-        else
-            -- It's a file, check if it's an .rpp file
-            if filename:lower():match("%.rpp$") then
-                table.insert(project_files, relative_path)
-            end
+        -- Check if it's an .rpp file
+        if filename:lower():match("%.rpp$") then
+            local full_path = current_dir .. "/" .. filename
+            local relative_path = full_path:gsub(base_path_for_relative .. "/", "")
+            table.insert(project_files, relative_path)
         end
         file_index = file_index + 1
+    end
+
+    -- Step 2: Enumerate subdirectories in the current directory and recurse
+    local subdir_index = 0
+    while true do
+        local dirname = reaper.EnumerateSubdirectories(current_dir, subdir_index)
+        if not dirname then -- End of subdirectory enumeration
+            break
+        end
+
+        -- Avoid special directory entries like "." and ".."
+        if dirname ~= "." and dirname ~= ".." then
+            local full_subdir_path = current_dir .. "/" .. dirname
+            list_rpp_files_recursive(full_subdir_path, base_path_for_relative) -- Recurse into subdirectory
+        end
+        subdir_index = subdir_index + 1
     end
 end
 

@@ -1,18 +1,42 @@
+use std::time::Duration;
+use tracing::{Span, instrument};
+use url::Url;
+
 use crate::models::settings::Settings;
 use reqwest::Error as ReqwestError;
-use std::time::Duration;
 
 #[derive(Debug)]
 pub enum ReaperError {
     Http(ReqwestError),
     Command(String),
     Parse(String),
-    ConfigError(String),
+    Config(String),
 }
 
 impl From<ReqwestError> for ReaperError {
     fn from(err: ReqwestError) -> ReaperError {
         ReaperError::Http(err)
+    }
+}
+
+#[derive(Debug)]
+pub enum ReaperCommand {
+    GoToEnd,
+    GoToStart,
+    GetTransport,
+    NewTab,
+    RunAction(String), // Action ID for custom scripts (changed from u32 to String)
+}
+
+impl ReaperCommand {
+    fn to_command_string(&self) -> String {
+        match self {
+            ReaperCommand::GoToEnd => "40043".to_string(),
+            ReaperCommand::GoToStart => "40042".to_string(),
+            ReaperCommand::GetTransport => "TRANSPORT".to_string(),
+            ReaperCommand::NewTab => "40859".to_string(),
+            ReaperCommand::RunAction(action_id) => action_id.to_string(),
+        }
     }
 }
 
@@ -37,181 +61,97 @@ impl ReaperClient {
         })
     }
 
-    // Set project root folder using the new API approach
-    pub async fn set_project_root(
-        &self,
-        folder_path: &str,
-        settings: &Settings,
-    ) -> Result<(), ReaperError> {
-        let action_id = settings.set_root_script_action_id.ok_or_else(|| {
-            ReaperError::ConfigError("Set root script action ID not configured".to_string())
-        })?;
-
-        // Step 1: Set temporary ExtState
-        let section = "WebAppControl";
-        let temp_key = "temp_set_root_path";
-
-        let encoded_path = urlencoding::encode(folder_path);
-        let set_temp_state_url = format!(
-            "{}/_extstate?section={}&key={}&value={}",
-            self.base_url, section, temp_key, encoded_path
-        );
-
-        let response = self.client.get(&set_temp_state_url).send().await?;
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Failed to set temporary ExtState: {}",
-                response.status()
-            )));
-        }
-
-        // Step 2: Trigger the script
-        let trigger_script_url = format!("{}/_run?_action={}", self.base_url, action_id);
-        let response = self.client.get(&trigger_script_url).send().await?;
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Failed to trigger root folder setting script: {}",
-                response.status()
-            )));
-        }
-
-        Ok(())
-    }
-
-    // List project files using the new API approach
-    pub async fn list_projects(&self, settings: &Settings) -> Result<Vec<String>, ReaperError> {
-        let action_id = settings.list_projects_script_action_id.ok_or_else(|| {
-            ReaperError::ConfigError("List projects script action ID not configured".to_string())
-        })?;
-
-        let section = "WebAppControl";
-        let list_output_key = "project_file_list";
-
-        // Step 1: Trigger the script
-        let trigger_script_url = format!("{}/_run?_action={}", self.base_url, action_id);
-        let response = self.client.get(&trigger_script_url).send().await?;
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Failed to trigger list script: {}",
-                response.status()
-            )));
-        }
-
-        // Step 2: Wait a moment for script execution
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-
-        // Step 3: Retrieve the project list from ExtState
-        let get_list_url = format!(
-            "{}/_extstate?section={}&key={}",
-            self.base_url, section, list_output_key
-        );
-        let response = self.client.get(&get_list_url).send().await?;
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Failed to retrieve project list from ExtState: {}",
-                response.status()
-            )));
-        }
-
-        let file_list_str = response.text().await?;
-        if file_list_str.starts_with("ERROR") {
-            return Err(ReaperError::Command(format!(
-                "Reaper script error: {}",
-                file_list_str
-            )));
-        }
-
-        let project_files: Vec<String> = if file_list_str.is_empty() {
-            Vec::new()
+    #[instrument(skip(self))]
+    async fn run_command(&self, command: &ReaperCommand) -> Result<String, ReaperError> {
+        let command_str = command.to_command_string();
+        let url = if matches!(command, ReaperCommand::RunAction(_)) {
+            format!("{}/_/{}", self.base_url, command_str)
         } else {
-            file_list_str.split(',').map(|s| s.to_string()).collect()
+            format!("{}/_/{}", self.base_url, command_str)
         };
 
-        Ok(project_files)
-    }
-
-    // Load a project by relative path using the new API approach
-    pub async fn load_project_by_path(
-        &self,
-        relative_project_path: &str,
-        settings: &Settings,
-    ) -> Result<(), ReaperError> {
-        let action_id = settings.load_project_script_action_id.ok_or_else(|| {
-            ReaperError::ConfigError("Load project script action ID not configured".to_string())
-        })?;
-
-        let section = "WebAppControl";
-        let temp_project_path_key = "temp_load_project_path";
-
-        // Step 1: Set temporary ExtState for project path
-        let encoded_path = urlencoding::encode(relative_project_path);
-        let set_temp_state_url = format!(
-            "{}/_extstate?section={}&key={}&value={}",
-            self.base_url, section, temp_project_path_key, encoded_path
-        );
-
-        let response = self.client.get(&set_temp_state_url).send().await?;
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Failed to set temporary ExtState for project load: {}",
-                response.status()
-            )));
-        }
-
-        // Step 2: Trigger the script
-        let trigger_script_url = format!("{}/_run?_action={}", self.base_url, action_id);
-        let response = self.client.get(&trigger_script_url).send().await?;
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Failed to trigger project load script: {}",
-                response.status()
-            )));
-        }
-
-        Ok(())
-    }
-
-    // Legacy methods for backward compatibility
-    pub async fn go_to_end(&self) -> Result<(), ReaperError> {
-        let url = format!("{}/_/{}", self.base_url, "40043");
         let response = self.client.get(&url).send().await?;
+
         if response.status().is_success() {
-            Ok(())
+            tracing::info!("Command '{}' executed successfully", command_str);
+            Ok(response.text().await?)
         } else {
+            tracing::error!(
+                "Command '{}' failed with status: {}",
+                command_str,
+                response.status()
+            );
             Err(ReaperError::Command(format!(
-                "Command 'go_to_end' failed with status: {}",
+                "Command '{}' failed with status: {}",
+                command_str,
                 response.status()
             )))
         }
+    }
+
+    #[instrument(skip(self))]
+    async fn set_ext_state(
+        &self,
+        section: &str,
+        key: &str,
+        value: &str,
+    ) -> Result<(), ReaperError> {
+        let url = Url::parse(&format!(
+            "{}/_/SET/EXTSTATE/{}/{}/{}",
+            self.base_url, section, key, value
+        ))
+        .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
+
+        let response = self.client.get(url).send().await?;
+
+        if response.status().is_success() {
+            tracing::info!("Successfully set ExtState ");
+            Ok(())
+        } else {
+            tracing::error!("Failed to set ExtState: {}", response.status());
+            Err(ReaperError::Command(format!(
+                "Failed to set ExtState: {}",
+                response.status()
+            )))
+        }
+    }
+
+    #[instrument(skip(self), fields(url))]
+    async fn get_ext_state(&self, section: &str, key: &str) -> Result<String, ReaperError> {
+        let url = Url::parse(&format!(
+            "{}/_/GET/EXTSTATE/{}/{}",
+            self.base_url, section, key
+        ))
+        .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
+
+        Span::current().record("url", &url.to_string());
+        let response = self.client.get(url).send().await?;
+
+        if response.status().is_success() {
+            tracing::trace!("Successfully retrieved ExtState");
+            Ok(response.text().await?)
+        } else {
+            tracing::error!("Failed to retrieve ExtState: {}", response.status());
+            Err(ReaperError::Command(format!(
+                "Failed to get ExtState: {}",
+                response.status()
+            )))
+        }
+    }
+
+    pub async fn go_to_end(&self) -> Result<(), ReaperError> {
+        self.run_command(&ReaperCommand::GoToEnd).await?;
+        Ok(())
     }
 
     pub async fn go_to_start(&self) -> Result<(), ReaperError> {
-        let url = format!("{}/_/{}", self.base_url, "40042");
-        let response = self.client.get(&url).send().await?;
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            Err(ReaperError::Command(format!(
-                "Command 'go_to_start' failed with status: {}",
-                response.status()
-            )))
-        }
+        self.run_command(&ReaperCommand::GoToStart).await?;
+        Ok(())
     }
 
     pub async fn get_duration(&self) -> Result<Duration, ReaperError> {
-        // go to the end of the project to get the duration
         self.go_to_end().await?;
-        let url = format!("{}/_/{}", self.base_url, "TRANSPORT");
-        let response = self.client.get(&url).send().await?;
-
-        if !response.status().is_success() {
-            return Err(ReaperError::Command(format!(
-                "Command 'get_transport' failed with status: {}",
-                response.status()
-            )));
-        }
-
-        let transport_string = response.text().await?;
+        let transport_string = self.run_command(&ReaperCommand::GetTransport).await?;
         let parts: Vec<&str> = transport_string.split('\t').collect();
         if parts.len() > 2 {
             parts[2]
@@ -228,32 +168,92 @@ impl ReaperClient {
     }
 
     pub async fn new_tab(&self) -> Result<(), ReaperError> {
-        let url = format!("{}/_/{}", self.base_url, "40859");
-        let response = self.client.get(&url).send().await?;
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            Err(ReaperError::Command(format!(
-                "Command 'new_tab' failed with status: {}",
-                response.status()
-            )))
-        }
+        self.run_command(&ReaperCommand::NewTab).await?;
+        Ok(())
     }
 
-    // Legacy load_project method (kept for compatibility with old code)
-    pub async fn load_project(&self, name: &str) -> Result<(), ReaperError> {
-        let command_str = format!("OSC/loadproject:s{}", name);
-        let url = format!("{}/_/{}", self.base_url, command_str);
-        let response = self.client.get(&url).send().await?;
+    #[instrument(skip(self, settings))]
+    pub async fn set_project_root(
+        &self,
+        folder_path: &str,
+        settings: &Settings,
+    ) -> Result<(), ReaperError> {
+        let action_id = settings.set_root_script_action_id.clone().ok_or_else(|| {
+            ReaperError::Config("SetProjectRootFolder script action ID not configured".to_string())
+        })?;
 
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            Err(ReaperError::Command(format!(
-                "Command '{}' failed with status: {}",
-                command_str,
-                response.status()
-            )))
+        // Set temporary ExtState
+        self.set_ext_state("WebAppControl", "temp_set_root_path", folder_path)
+            .await?;
+
+        // Trigger script
+        self.run_command(&ReaperCommand::RunAction(action_id))
+            .await?;
+
+        Ok(())
+    }
+
+    /// List project files by triggering the ListProjectFiles script and retrieving the result
+    #[instrument(skip(self, settings))]
+    pub async fn list_projects(&self, settings: &Settings) -> Result<Vec<String>, ReaperError> {
+        let action_id = settings
+            .list_projects_script_action_id
+            .clone()
+            .ok_or_else(|| {
+                ReaperError::Config("ListProjectFiles script action ID not configured".to_string())
+            })?;
+
+        // Trigger script
+        self.run_command(&ReaperCommand::RunAction(action_id))
+            .await?;
+
+        // Give Reaper a moment to execute the script
+        tokio::time::sleep(Duration::from_millis(1000)).await;
+
+        // Retrieve result from ExtState
+        let file_list_str = self
+            .get_ext_state("WebAppControl", "project_file_list")
+            .await?;
+
+        if file_list_str.starts_with("ERROR") {
+            return Err(ReaperError::Command(format!(
+                "Reaper script error: {}",
+                file_list_str
+            )));
         }
+
+        let project_files = if file_list_str.is_empty() {
+            Vec::new()
+        } else {
+            file_list_str.split(',').map(|s| s.to_string()).collect()
+        };
+
+        Ok(project_files)
+    }
+
+    /// Load a project by relative path using the LoadProjectFromRelativePath script
+    pub async fn load_project_by_path(
+        &self,
+        relative_path: &str,
+        settings: &Settings,
+    ) -> Result<(), ReaperError> {
+        let action_id = settings
+            .clone()
+            .load_project_script_action_id
+            .ok_or_else(|| {
+                ReaperError::Config(
+                    "LoadProjectFromRelativePath script action ID not configured".to_string(),
+                )
+            })?;
+
+        // Set temporary ExtState for project path
+        self.set_ext_state("WebAppControl", "temp_load_project_path", relative_path)
+            .await?;
+
+        // Trigger script
+        self.run_command(&ReaperCommand::RunAction(action_id))
+            .await?;
+
+        Ok(())
     }
 }

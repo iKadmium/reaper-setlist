@@ -59,9 +59,9 @@ async fn update_settings(
 
 #[derive(Deserialize)]
 struct ActionIdsRequest {
-    set_root_script_action_id: Option<u32>,
-    load_project_script_action_id: Option<u32>,
-    list_projects_script_action_id: Option<u32>,
+    set_root_script_action_id: Option<String>,
+    load_project_script_action_id: Option<String>,
+    list_projects_script_action_id: Option<String>,
 }
 
 async fn update_action_ids(
