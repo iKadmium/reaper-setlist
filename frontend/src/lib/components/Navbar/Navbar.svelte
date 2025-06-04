@@ -13,10 +13,7 @@
 			<li><a href="/" class:active={page.url.pathname === '/'}>Sets</a></li>
 			<li><a href="/song" class:active={page.url.pathname === '/song'}>Songs</a></li>
 		{/if}
-		<li><a href="/setup" class:active={page.url.pathname === '/setup'}>Setup</a></li>
-		{#if setupComplete}
-			<li><a href="/setup/installation" class:active={page.url.pathname === '/setup/installation'}>Installation</a></li>
-		{/if}
+		<li><a href="/setup" class:active={page.url.pathname === '/setup' || page.url.pathname.startsWith('/setup/')}>Setup</a></li>
 	</ul>
 </nav>
 

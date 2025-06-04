@@ -20,7 +20,7 @@
 
 	const setupSteps = [
 		{ label: "In Reaper, under preferences > Control/OSC/Web, add a web browser interface if you haven't already." },
-		{ label: 'Enter the root folder path where your backing tracks are stored and the Access URL from the web browser interface in the form above.' },
+		{ label: 'Enter the root folder path where your backing tracks are stored and the Access URL from the web browser interface in the form below.' },
 		{ label: 'Click "Save" and then proceed to the installation page to download and configure the required scripts.' }
 	];
 
@@ -99,12 +99,6 @@
 		}
 	}
 </script>
-
-<meta:head>
-	<title>Setup - Reaper Setlist</title>
-</meta:head>
-
-<h1>Setup</h1>
 
 <InstructionBox title="Setup Help" steps={setupSteps} variant="help" listType="ordered" />
 

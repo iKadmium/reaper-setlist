@@ -1,7 +1,5 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 	import { notifications } from '$lib';
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
 	import Form from '$lib/components/Form/Form.svelte';
@@ -14,13 +12,6 @@
 
 	let loadProjectScriptActionId = $state<string | undefined>(data.settings?.loadProjectScriptActionId);
 	let listProjectsScriptActionId = $state<string | undefined>(data.settings?.listProjectsScriptActionId);
-
-	onMount(() => {
-		// If there's an error (setup incomplete), redirect to setup
-		if (data.error) {
-			goto('/setup');
-		}
-	});
 
 	async function testConnection() {
 		try {
@@ -71,12 +62,6 @@
 		{ label: 'Create setlists', href: '/' }
 	];
 </script>
-
-<meta:head>
-	<title>Installation - Reaper Setlist</title>
-</meta:head>
-
-<h1>Installation</h1>
 
 <div class="installation-steps">
 	<ol>

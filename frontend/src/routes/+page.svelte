@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import CopyIcon from 'virtual:icons/mdi/content-copy';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
-	import LoadIcon from 'virtual:icons/mdi/file-upload';
+	import PlayIcon from 'virtual:icons/mdi/play';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import AddIcon from 'virtual:icons/mdi/plus';
 	import type { PageData } from './$types';
@@ -92,10 +92,10 @@
 {:else}
 	<ItemGrid items={Object.values(sets).toSorted(sortFunction)} getName={formatTitle}>
 		{#snippet actions(item)}
-			<Button elementType="a" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
-			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-			<Button color="primary" elementType="a" href={`/set/${item.id}/load`}><LoadIcon /></Button>
-			<Button color="success" onclick={() => handleDuplicateClick(item)}><CopyIcon /></Button>
+			<Button elementType="a" title="Edit" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
+			<Button color="delete" title="Delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
+			<Button color="primary" title="Load" elementType="a" href={`/set/${item.id}/load`}><PlayIcon /></Button>
+			<Button color="success" title="Duplicate" onclick={() => handleDuplicateClick(item)}><CopyIcon /></Button>
 		{/snippet}
 	</ItemGrid>
 {/if}

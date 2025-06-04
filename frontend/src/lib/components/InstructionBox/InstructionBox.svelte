@@ -58,6 +58,7 @@
 		border-left: 4px solid var(--purple);
 		width: 100%;
 		box-sizing: border-box;
+		margin: 2rem 0;
 	}
 
 	.instruction-box--success {
