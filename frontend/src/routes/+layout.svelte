@@ -2,6 +2,7 @@
 	const ssr = false;
 
 	import Navbar from '$lib/components/Navbar/Navbar.svelte';
+	import NotificationContainer from '$lib/components/Notification-Container/Notification-Container.svelte';
 	import '$lib/global.css';
 	import type { LayoutProps } from './$types';
 
@@ -13,6 +14,8 @@
 <main>
 	{@render children?.()}
 </main>
+
+<NotificationContainer />
 
 <style>
 	main {

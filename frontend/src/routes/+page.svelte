@@ -4,6 +4,8 @@
 
 	import type { Setlist } from '$lib/models/setlist';
 	import { formatDuration } from '$lib/util';
+	import { notifications } from '$lib';
+	import { onMount } from 'svelte';
 	import CopyIcon from 'virtual:icons/mdi/content-copy';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
@@ -17,6 +19,12 @@
 	const songs = data.songs;
 	const errorMessage = data.error;
 
+	onMount(() => {
+		if (errorMessage) {
+			notifications.error(`Failed to load data: ${errorMessage}`);
+		}
+	});
+
 	function formatTitle(item: Setlist) {
 		const dateString = `${new Date(item.date).toLocaleDateString()}`;
 		const length = item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0);
@@ -27,7 +35,7 @@
 
 	async function handleDeleteClick(item: Setlist) {
 		if (!item.id) {
-			alert('Cannot delete a set without an ID.');
+			notifications.error('Cannot delete a set without an ID.');
 			return;
 		}
 		if (confirm('Are you sure you want to delete this set?')) {
@@ -35,9 +43,10 @@
 			const result = await fetch(`api/sets/${item.id}`, { method: 'DELETE' });
 			if (result.ok) {
 				delete sets[item.id];
+				notifications.success('Set deleted successfully');
 			} else {
 				const error = await result.json();
-				alert(error.error ? `Failed to delete set: ${error.error}` : 'Failed to delete set.');
+				notifications.error(error.error ? `Failed to delete set: ${error.error}` : 'Failed to delete set');
 			}
 		}
 	}
@@ -53,9 +62,10 @@
 		if (result.ok) {
 			const newSet = await result.json();
 			sets[newSet.id] = newSet; // Or sets = [...sets, newSet] with Svelte 5 runes
+			notifications.success('Set duplicated successfully');
 		} else {
 			const error = await result.json();
-			alert(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set.');
+			notifications.error(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set');
 		}
 	}
 

@@ -87,11 +87,7 @@ async fn delete_song_by_id(
     let result = Song::get_by_id(&id).await;
     match result {
         Ok(song) => {
-            let mut db = Song::get_all()
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            db.remove(&song.id);
-            song.save()
+            song.delete()
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok(StatusCode::NO_CONTENT)

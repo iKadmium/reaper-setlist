@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
+	import { notifications } from '$lib';
 	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
 	let song: NewSong = {
 		length: 0,
@@ -16,7 +17,11 @@
 			body: JSON.stringify(song)
 		});
 		if (resp.ok) {
+			notifications.success('Song added successfully!');
 			await goto('/song');
+		} else {
+			const error = await resp.json();
+			notifications.error(error.error ? `Failed to add song: ${error.error}` : 'Failed to add song');
 		}
 	}
 </script>

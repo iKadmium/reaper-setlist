@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
+	import { notifications } from '$lib';
 	import type { Database } from '$lib/models/database';
 	import { isNewSetlist, type NewSetlist, type Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
@@ -25,7 +26,11 @@
 			body: JSON.stringify(set)
 		});
 		if (response.ok) {
+			notifications.success('Set added successfully!');
 			await goto('/');
+		} else {
+			const error = await response.json();
+			notifications.error(error.error ? `Failed to add set: ${error.error}` : 'Failed to add set');
 		}
 	}
 </script>

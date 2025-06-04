@@ -6,6 +6,7 @@
 	import LoadIcon from 'virtual:icons/mdi/file-upload';
 	import GetDurationIcon from 'virtual:icons/mdi/timer-refresh-outline';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
+	import { notifications } from '$lib';
 	import type { NewSong, Song } from '$lib/models/song';
 
 	export interface SongEditorProps<T extends SongLike> {
@@ -47,11 +48,12 @@
 			}
 		});
 		if (!response.ok) {
-			console.error('Failed to get duration:', response.text());
+			notifications.error('Failed to get duration from Reaper');
 			return;
 		}
 		const data = (await response.json()) as number;
 		song.length = data;
+		notifications.success('Duration retrieved from Reaper!');
 	}
 
 	async function handleLoadClick() {
@@ -62,9 +64,10 @@
 			}
 		});
 		if (!response.ok) {
-			console.error('Failed to load song:', response.statusText);
+			notifications.error(`Failed to load ${song.name} in Reaper`);
 			return;
 		}
+		notifications.success(`${song.name} loaded in Reaper!`);
 	}
 </script>
 

@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
 	import { isNewSong, type NewSong, type Song } from '$lib/models/song';
+	import { notifications } from '$lib';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -18,10 +19,11 @@
 			body: JSON.stringify(song)
 		});
 		if (resp.ok) {
+			notifications.success('Song updated successfully!');
 			await goto('/song');
 		} else {
 			const error = await resp.json();
-			alert(`Failed to update song: ${error.error || 'Unknown error'}`);
+			notifications.error(`Failed to update song: ${error.error || 'Unknown error'}`);
 		}
 	}
 </script>

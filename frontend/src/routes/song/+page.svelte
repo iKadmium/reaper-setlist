@@ -4,6 +4,7 @@
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 	import { formatDuration } from '$lib/util';
+	import { notifications } from '$lib';
 	import type { PageData } from './$types';
 
 	import DeleteIcon from 'virtual:icons/mdi/delete';
@@ -17,10 +18,24 @@
 	const errorMessage = data.error;
 
 	async function handleLoadClick(song: Song) {
-		const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
-		await newTabResult.json(); // wait for the operation to complete
-		const songLoadResult = await fetch(`/api/reaper-project/${song.name}/load`, { method: 'POST' });
-		await songLoadResult.json(); // wait for the operation to complete
+		try {
+			const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
+			if (!newTabResult.ok) {
+				notifications.error('Failed to create new tab in Reaper');
+				return;
+			}
+			await newTabResult.json(); // wait for the operation to complete
+
+			const songLoadResult = await fetch(`/api/reaper-project/${song.name}/load`, { method: 'POST' });
+			if (!songLoadResult.ok) {
+				notifications.error(`Failed to load ${song.name} in Reaper`);
+				return;
+			}
+			await songLoadResult.json(); // wait for the operation to complete
+			notifications.success(`${song.name} loaded successfully in Reaper!`);
+		} catch (error) {
+			notifications.error('Failed to communicate with Reaper');
+		}
 	}
 
 	async function handleDeleteClick(song: Song) {
@@ -28,9 +43,10 @@
 			const result = await fetch(`/api/songs/${song.id}`, { method: 'DELETE' });
 			if (result.ok) {
 				delete songs[song.id];
+				notifications.success('Song deleted successfully');
 			} else {
 				const error = await result.json();
-				error.error ? alert(`Failed to delete song: ${error.error}`) : alert('Failed to delete song.');
+				notifications.error(error.error ? `Failed to delete song: ${error.error}` : 'Failed to delete song');
 			}
 		}
 	}

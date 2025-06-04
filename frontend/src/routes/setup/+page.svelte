@@ -1,7 +1,10 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
+	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
 	import SaveIcon from 'virtual:icons/mdi/content-save';
-	import type { ReaperSettings } from '$lib/models/reaper-settings';
+	import TestIcon from 'virtual:icons/mdi/check-network';
+	import type { ReaperSettings, TestConnectionRequest, TestConnectionResponse } from '$lib/models/reaper-settings';
+	import { notifications } from '$lib';
 	import type { PageData } from './$types';
 	import { goto } from '$app/navigation';
 
@@ -11,8 +14,51 @@
 	let reaperUrl = $state<string>(data.settings.reaperUrl);
 	let username = $state<string>(data.settings.reaperUsername ?? '');
 	let password = $state<string>(data.settings.reaperPassword ?? '');
-	let form = $state<{ success?: boolean; message?: string }>({});
-	const errorMessage = data.error;
+
+	// Store the original folder path to detect changes
+	const originalFolderPath = data.settings.folderPath;
+
+	const setupSteps = [
+		{ label: "In Reaper, under preferences > Control/OSC/Web, add a web browser interface if you haven't already." },
+		{ label: 'Enter the root folder path where your backing tracks are stored and the Access URL from the web browser interface in the form above.' },
+		{ label: 'Click "Save" - if you change the folder path, you\'ll be taken to installation instructions to re-download the script.' },
+		{ label: 'If you need to change the folder path later, update it here and re-download the script on the installation page.' }
+	];
+
+	async function testConnection() {
+		if (!reaperUrl.trim()) {
+			notifications.error('Please enter a Reaper URL first');
+			return;
+		}
+
+		const testRequest: TestConnectionRequest = {
+			reaper_url: reaperUrl,
+			reaper_username: username.trim() || undefined,
+			reaper_password: password.trim() || undefined
+		};
+
+		try {
+			const response = await fetch('/api/settings/test-connection', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(testRequest)
+			});
+
+			if (!response.ok) {
+				notifications.error('Failed to test connection');
+				return;
+			}
+
+			const result: TestConnectionResponse = await response.json();
+			if (result.success) {
+				notifications.success(result.message);
+			} else {
+				notifications.error(result.message);
+			}
+		} catch (error) {
+			notifications.error('Failed to test connection: Network error');
+		}
+	}
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -37,17 +83,20 @@
 			body: JSON.stringify(body)
 		});
 		if (!res.ok) {
-			form.message = 'Failed to save settings';
+			notifications.error('Failed to save settings');
 			return;
 		} else {
-			form.success = true;
-			form.message = 'Settings saved successfully';
-			await goto('/song');
-		}
-	}
+			notifications.success('Settings saved successfully!');
 
-	async function handleClickHereClick() {
-		await fetch('/api/reaper-project/example/load', { method: 'POST' });
+			// Only redirect to installation if folder path changed (need to re-download script)
+			const folderPathChanged = folderPathValue !== originalFolderPath;
+			if (folderPathChanged) {
+				await goto('/setup/installation');
+			} else {
+				// If no folder path change, just go to songs page
+				await goto('/song');
+			}
+		}
 	}
 </script>
 
@@ -57,9 +106,7 @@
 
 <h1>Setup</h1>
 
-{#if errorMessage}
-	<p style="color: red;">{errorMessage}</p>
-{/if}
+<InstructionBox title="Setup Help" steps={setupSteps} variant="help" listType="ordered" />
 
 <form onsubmit={handleSubmit}>
 	<div>
@@ -69,7 +116,10 @@
 
 	<div>
 		<label for="reaper-url">Reaper URL:</label>
-		<input bind:value={reaperUrl} type="text" id="reaper-url" name="reaper-url" placeholder="Enter Reaper URL" />
+		<div class="url-input-container">
+			<input bind:value={reaperUrl} type="text" id="reaper-url" name="reaper-url" placeholder="Enter Reaper URL" />
+			<Button elementType="button" color="primary" onclick={testConnection}><TestIcon /></Button>
+		</div>
 	</div>
 
 	<div>
@@ -83,31 +133,7 @@
 	</div>
 
 	<Button elementType="submit" color="primary"><SaveIcon /></Button>
-	{#if !form?.success && form?.message}
-		<p>{form.message}</p>
-	{/if}
 </form>
-
-<h2>Instructions</h2>
-<ol>
-	{#if !folderPath || !reaperUrl}
-		<li>In Reaper, under preferences &gt; Control/OSC/Web, add a web browser interface if you haven't already.</li>
-		<li>Enter the root folder path where your backing tracks are stored and the Access URL from the web browser interface in the form above. Click "Save".</li>
-	{:else}
-		<li>
-			Save <a class="subtle-button" href="/api/reaper-script" download="loadproject.lua">this script</a> with a reasonable name in your scripts directory. To find
-			this, in Reaper, open the Options menu dropdown and click "Show REAPER resource path in explorer/finder". From there, navigate to the "Scripts" directory.
-		</li>
-		<li>In Reaper, open the Actions window (keyboard shortcut is the question mark "?" key).</li>
-		<li>Click "New Action" &gt; "Load ReaScript..." and select the script you saved in step 2.</li>
-		<li>In the "Shortcuts for selected action" section, click "Add".</li>
-		<li><button class="subtle-button" onclick={handleClickHereClick}>Click here</button>. The shortcut text should now read "/loadproject".</li>
-		<li>Click OK.</li>
-		<li>Add your songs from the song link in the navbar.</li>
-		<li>Add setlists.</li>
-		<li>If you need to move the folder path, update it above, save and re-download the script.</li>
-	{/if}
-</ol>
 
 <style>
 	form {
@@ -117,13 +143,15 @@
 		align-items: flex-start;
 	}
 
-	.subtle-button {
-		background-color: unset;
-		border: none;
-		color: var(--foreground);
-		cursor: pointer;
-		font-size: inherit;
-		padding: 0;
-		text-decoration: underline;
+	.url-input-container {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		width: 100%;
+	}
+
+	.url-input-container input {
+		flex: 1;
+		margin: 0;
 	}
 </style>
