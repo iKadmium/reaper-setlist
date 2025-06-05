@@ -281,7 +281,7 @@ impl<'a> ReaperClient<'a> {
         if file_list_str.starts_with("ERROR") {
             return Err(ReaperError::Command(format!(
                 "Reaper script error: {}",
-                "No file list returned".to_string()
+                "No file list returned"
             )));
         }
 
