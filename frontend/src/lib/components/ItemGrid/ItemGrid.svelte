@@ -3,21 +3,28 @@
 
 	export interface ItemGridProps<T> {
 		items: T[];
-		getName: (item: T) => string;
-		actions: Snippet<[T]>; // Changed type
+		nameDisplay?: Snippet<[T]>;
+		getName?: (item: T) => string;
+		actions: Snippet<[T]>;
 	}
 </script>
 
 <script lang="ts">
 	type T = $$Generic;
 
-	let { items, getName, actions }: ItemGridProps<T> = $props();
+	let { items, nameDisplay, getName, actions }: ItemGridProps<T> = $props();
 </script>
 
 <div class="item-grid">
 	{#each items as item}
 		<div class="list-item">
-			<span class="name">{getName(item)}</span>
+			<div class="name">
+				{#if nameDisplay}
+					{@render nameDisplay(item)}
+				{:else if getName}
+					{getName(item)}
+				{/if}
+			</div>
 			<div class="actions">
 				{@render actions(item)}
 			</div>
@@ -26,10 +33,18 @@
 </div>
 
 <style>
+	.name {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		min-width: 0; /* Allow text to wrap */
+	}
+
 	.actions {
 		display: flex;
 		flex-direction: row;
 		gap: 0.5rem;
+		flex-shrink: 0; /* Prevent actions from shrinking */
 	}
 	.item-grid {
 		display: grid;

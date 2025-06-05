@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
+	import ResponsiveActions from '$lib/components/ResponsiveActions/ResponsiveActions.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 	import { formatDuration } from '$lib/util';
@@ -60,12 +61,6 @@
 	function sortFunction(a: Song, b: Song) {
 		return a.name.localeCompare(b.name);
 	}
-
-	function getName(song: Song) {
-		const displayLength = formatDuration(song.length);
-		const displayString = `${song.name} (${displayLength})`;
-		return displayString;
-	}
 </script>
 
 <meta:head>
@@ -77,13 +72,64 @@
 {#if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else}
-	<ItemGrid items={Object.values(songs).toSorted(sortFunction)} {getName}>
+	<ItemGrid items={Object.values(songs).toSorted(sortFunction)}>
+		{#snippet nameDisplay(item)}
+			<div class="song-info">
+				<span class="song-name">{item.name}</span>
+				<span class="song-duration">{formatDuration(item.length)}</span>
+			</div>
+		{/snippet}
 		{#snippet actions(item: Song)}
-			<Button elementType="a" color="edit" href={`/song/${item.id}/edit`}><EditIcon /></Button>
-			<Button color="delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-			<Button color="primary" onclick={() => handleLoadClick(item)}><PlayIcon /></Button>
+			<ResponsiveActions>
+				{#snippet primaryAction()}
+					<Button color="primary" onclick={() => handleLoadClick(item)} variant="icon"><PlayIcon /></Button>
+				{/snippet}
+				{#snippet secondaryActions()}
+					<Button elementType="a" color="edit" href={`/song/${item.id}/edit`} variant="icon"><EditIcon /></Button>
+					<Button color="delete" onclick={() => handleDeleteClick(item)} variant="icon"><DeleteIcon /></Button>
+				{/snippet}
+			</ResponsiveActions>
 		{/snippet}
 	</ItemGrid>
 {/if}
 
-<Button elementType="a" href="song/add" color="success"><AddIcon /></Button>
+<div class="action-section">
+	<Button elementType="a" href="song/add" color="success">Add Song</Button>
+</div>
+
+<style>
+	.song-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+
+	.song-name {
+		font-weight: 500;
+		color: var(--text);
+		font-size: 1rem;
+	}
+
+	.song-duration {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		font-weight: 400;
+	}
+
+	/* On mobile, show name and duration on same line to save space */
+	@media (max-width: 768px) {
+		.song-info {
+			flex-direction: row;
+			gap: 0.5rem;
+			align-items: baseline;
+		}
+
+		.song-name {
+			font-size: 0.95rem;
+		}
+
+		.song-duration {
+			font-size: 0.8rem;
+		}
+	}
+</style>

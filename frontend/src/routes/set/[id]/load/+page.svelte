@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
+	import Step from '$lib/components/Step/Step.svelte';
+	import type { StepStatus } from '$lib/components/Step/Step.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
@@ -8,75 +10,185 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let log = $state<LogItem[]>([]);
 	let working = $state<boolean>(false);
+	let hasExecuted = $state<boolean>(false);
+	let replaceExistingTabs = $state<boolean>(true);
+	let movePlayheadToStart = $state<boolean>(true);
 	let set = $state<Setlist | undefined>(data.set);
 	let songs = $state<Database<Song>>(data.songs);
 	const errorMessage = data.error;
 
-	interface LogItem {
-		time: Date;
-		color: string;
-		message: string;
+	interface LoadStep {
+		id: string;
+		title: string;
+		description?: string;
+		status: StepStatus;
+		songId?: string;
+		songName?: string;
+		isNewTab?: boolean;
 	}
 
-	async function loadSong(songId: string, name: string): Promise<LogItem> {
+	let steps = $state<LoadStep[]>([]);
+
+	// Generate steps when set or replace option changes, but only if we haven't executed yet
+	$effect(() => {
+		if (set && !working && !hasExecuted) {
+			generateSteps();
+		}
+		// This effect will re-run when replaceExistingTabs or movePlayheadToStart changes
+		replaceExistingTabs;
+		movePlayheadToStart;
+	});
+
+	function generateSteps() {
+		if (!set) return;
+
+		const newSteps: LoadStep[] = [];
+
+		// Add initial step based on the replace existing tabs option
+		if (replaceExistingTabs) {
+			newSteps.push({
+				id: 'close-all-tabs',
+				title: 'Close All Tabs',
+				description: 'Close all existing tabs in Reaper before loading the setlist',
+				status: 'pending'
+			});
+		}
+
+		set.songs.forEach((songId, index) => {
+			const songName = songs[songId]?.name || `Unknown Song (${songId})`;
+
+			// Add new tab step for all songs except the first, or for first song if not replacing tabs
+			if (index > 0 || !replaceExistingTabs) {
+				newSteps.push({
+					id: index === 0 ? 'open-new-tab-initial' : `new-tab-${index}`,
+					title: 'Open New Tab',
+					description: index === 0 ? `Create a new tab in Reaper for the setlist` : `Create a new tab in Reaper for ${songName}`,
+					status: 'pending'
+				});
+			}
+
+			// Add load song step
+			newSteps.push({
+				id: `load-song-${songId}`,
+				title: `Load ${songName}`,
+				description: `Load the project file for ${songName}`,
+				status: 'pending',
+				songId,
+				songName
+			});
+
+			// Add go to start step only if movePlayheadToStart is enabled
+			if (movePlayheadToStart) {
+				newSteps.push({
+					id: `go-to-start-${index}`,
+					title: 'Move Playhead to Start',
+					description: `Position the playhead at the beginning of ${songName}`,
+					status: 'pending'
+				});
+			}
+		});
+
+		steps = newSteps;
+	}
+
+	async function loadSong(songId: string, name: string): Promise<boolean> {
 		const res = await fetch(`/api/songs/${songId}/load`, { method: 'POST' });
 		if (res.ok) {
 			await res.text(); // wait for the operation to complete
-			return { time: new Date(), message: `Loaded ${name}`, color: 'green' };
+			return true;
 		}
-		return { time: new Date(), message: 'Failed', color: 'red' };
+		return false;
 	}
 
-	async function newTab() {
+	async function newTab(): Promise<boolean> {
 		const res = await fetch(`/api/projects/new-tab`, { method: 'POST' });
 		if (res.ok) {
 			await res.text(); // wait for the operation to complete
-			return { time: new Date(), message: 'New tab opened', color: 'green' };
+			return true;
 		}
-		return { time: new Date(), message: 'Failed to open new tab', color: 'red' };
+		return false;
 	}
 
-	async function goToStart() {
+	async function closeAllTabs(): Promise<boolean> {
+		const res = await fetch(`/api/projects/close-all-tabs`, { method: 'POST' });
+		if (res.ok) {
+			await res.text(); // wait for the operation to complete
+			return true;
+		}
+		return false;
+	}
+
+	async function goToStart(): Promise<boolean> {
 		const res = await fetch(`/api/projects/current/go-to-start`, { method: 'POST' });
 		if (res.ok) {
 			await res.text(); // wait for the operation to complete
-			return { time: new Date(), message: 'Moved playhead to start', color: 'green' };
+			return true;
 		}
-		return { time: new Date(), message: 'Failed', color: 'red' };
+		return false;
+	}
+
+	function updateStepStatus(stepId: string, status: StepStatus) {
+		const stepIndex = steps.findIndex((s) => s.id === stepId);
+		if (stepIndex !== -1) {
+			steps[stepIndex].status = status;
+		}
+	}
+
+	async function executeStep(step: LoadStep): Promise<boolean> {
+		updateStepStatus(step.id, 'running');
+
+		try {
+			let success = false;
+
+			if (step.id === 'close-all-tabs') {
+				success = await closeAllTabs();
+			} else if (step.id === 'open-new-tab-initial' || step.id.startsWith('new-tab-')) {
+				success = await newTab();
+			} else if (step.id.startsWith('load-song-') && step.songId && step.songName) {
+				success = await loadSong(step.songId, step.songName);
+			} else if (step.id.startsWith('go-to-start-')) {
+				success = await goToStart();
+			}
+
+			updateStepStatus(step.id, success ? 'completed' : 'error');
+			return success;
+		} catch (error) {
+			console.error(`Error executing step ${step.id}:`, error);
+			updateStepStatus(step.id, 'error');
+			return false;
+		}
 	}
 
 	async function loadSet() {
 		if (!set || working) return;
+
+		// Reset steps if they have been executed before
+		if (hasExecuted) {
+			hasExecuted = false;
+			generateSteps();
+		}
+
+		if (steps.length === 0) return;
+
 		working = true;
-		log.splice(0, log.length);
+		hasExecuted = true;
+
 		try {
-			for (const index in set.songs) {
-				const songId = set.songs[index];
+			for (const step of steps) {
+				const success = await executeStep(step);
 
-				const name = songs[songId]?.name;
-				if (!name) {
-					log.push({ time: new Date(), message: `Song ID ${songId} not found`, color: 'red' });
-					continue;
+				// If a step fails, we could either continue or stop
+				// For now, let's continue even if a step fails
+				if (!success) {
+					console.warn(`Step ${step.id} failed, but continuing...`);
 				}
 
-				if (index !== '0') {
-					log.push({ time: new Date(), message: `Opening new tab`, color: 'foreground' });
-					const newTabResult = await newTab();
-					log.push(newTabResult);
-				}
-
-				log.push({ time: new Date(), message: `Loading ${name}`, color: 'foreground' });
-				const loadSongResult = await loadSong(songId, name);
-				log.push(loadSongResult);
-
-				log.push({ time: new Date(), message: `Move the playhead to the start`, color: 'foreground' });
-				const goToStartResult = await goToStart();
-				log.push(goToStartResult);
+				// Small delay between steps for better UX
+				await new Promise((resolve) => setTimeout(resolve, 200));
 			}
-		} catch (e) {
-			console.error(e);
+		} catch (error) {
+			console.error('Error during setlist loading:', error);
 		} finally {
 			working = false;
 		}
@@ -92,37 +204,73 @@
 {#if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else if set}
-	<Button onclick={loadSet} disabled={working}><LoadIcon /></Button>
+	<div class="options-container">
+		<label class="checkbox-label">
+			<input type="checkbox" bind:checked={replaceExistingTabs} disabled={working} />
+			Replace existing tabs (close all tabs before loading)
+		</label>
 
-	{#if log.length > 0}
-		<ul class="list-group">
-			{#each log as item}
-				<li class="list-item" style={`background-color: var(--${item.color})`}>
-					<span>{item.time.toLocaleTimeString()}</span>
-					<span>{item.message}</span>
-				</li>
+		<label class="checkbox-label">
+			<input type="checkbox" bind:checked={movePlayheadToStart} disabled={working} />
+			Move playhead to start for each song
+		</label>
+	</div>
+
+	<div class="load-button-container">
+		<Button onclick={loadSet} disabled={working}>
+			{working ? 'Loading...' : hasExecuted ? 'Load Again' : 'Load Set'}
+		</Button>
+	</div>
+
+	{#if steps.length > 0}
+		<div class="steps-container">
+			{#each steps as step (step.id)}
+				<Step title={step.title} description={step.description} status={step.status} />
 			{/each}
-		</ul>
+		</div>
 	{/if}
 {:else}
 	<p>Set not found.</p>
 {/if}
 
 <style>
-	.list-group {
-		list-style: none;
-		padding: 0;
-		width: 100%;
-		border-radius: 0.5rem;
-		margin: 0;
-		overflow: hidden;
+	.options-container {
+		margin-bottom: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
 	}
 
-	.list-item {
-		padding: 0.5rem;
-		color: var(--background);
+	.checkbox-label {
 		display: flex;
-		flex-direction: row;
-		gap: 1rem;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1rem;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		width: auto;
+		margin: 0;
+		cursor: pointer;
+	}
+
+	.checkbox-label:has(input:disabled) {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.steps-container {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		width: 100%;
+		margin: 1rem 0;
+	}
+
+	.load-button-container {
+		display: flex;
+		justify-content: center;
 	}
 </style>

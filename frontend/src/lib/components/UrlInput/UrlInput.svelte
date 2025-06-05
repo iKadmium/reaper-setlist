@@ -16,10 +16,7 @@
 
 <div class="url-input-container">
 	<input bind:value type="text" {id} {name} {placeholder} />
-	<Button elementType="button" color="primary" onclick={onTest}>
-		<TestIcon />
-		{testLabel}
-	</Button>
+	<Button elementType="button" color="primary" onclick={onTest}>Test</Button>
 </div>
 
 <style>

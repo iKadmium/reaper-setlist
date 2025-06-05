@@ -57,7 +57,7 @@
 		<p class="message">{notification.message}</p>
 		<span class="timestamp">{notification.timestamp.toLocaleTimeString()}</span>
 	</div>
-	<Button elementType="button" color={notification.type} onclick={handleDismiss}>
+	<Button elementType="button" color={notification.type} onclick={handleDismiss} variant="icon">
 		<CloseIcon />
 	</Button>
 </div>

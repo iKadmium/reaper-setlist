@@ -11,6 +11,7 @@ pub enum ReaperError {
     Command(String),
     Parse(String),
     Config(String),
+    NonceMismatch, // Added NonceMismatch variant
 }
 
 impl From<ReqwestError> for ReaperError {
@@ -25,6 +26,7 @@ pub enum ReaperCommand {
     GoToStart,
     GetTransport,
     NewTab,
+    CloseAllTabs,
     RunAction(String), // Action ID for custom scripts (changed from u32 to String)
 }
 
@@ -35,6 +37,7 @@ impl ReaperCommand {
             ReaperCommand::GoToStart => "40042".to_string(),
             ReaperCommand::GetTransport => "TRANSPORT".to_string(),
             ReaperCommand::NewTab => "40859".to_string(),
+            ReaperCommand::CloseAllTabs => "40860".to_string(),
             ReaperCommand::RunAction(action_id) => action_id.to_string(),
         }
     }
@@ -53,12 +56,35 @@ impl<'a> ReaperClient<'a> {
         }
     }
 
+    /// Helper function to create an authenticated GET request
+    fn authenticated_get(&self, url: &str) -> reqwest::RequestBuilder {
+        let mut request = self.client.get(url);
+
+        // Add basic auth if credentials are provided
+        if let (Some(username), Some(password)) = (
+            &self.settings.reaper_username,
+            &self.settings.reaper_password,
+        ) {
+            request = request.basic_auth(username, Some(password));
+        }
+
+        request
+    }
+
+    /// Simple connectivity test that returns the raw HTTP status code
+    #[instrument(skip(self))]
+    pub async fn test_connectivity(&self) -> Result<u16, ReaperError> {
+        let url = format!("{}/_/TRANSPORT", self.settings.reaper_url);
+        let response = self.authenticated_get(&url).send().await?;
+        Ok(response.status().as_u16())
+    }
+
     #[instrument(skip(self))]
     async fn run_command(&self, command: &ReaperCommand) -> Result<String, ReaperError> {
         let command_str = command.to_command_string();
         let url = format!("{}/_/{}", self.settings.reaper_url, command_str);
 
-        let response = self.client.get(&url).send().await?;
+        let response = self.authenticated_get(&url).send().await?;
 
         if response.status().is_success() {
             tracing::info!("Command '{}' executed successfully", command_str);
@@ -78,7 +104,8 @@ impl<'a> ReaperClient<'a> {
     }
 
     #[instrument(skip(self))]
-    async fn set_ext_state(
+    pub async fn set_ext_state(
+        // Changed to pub
         &self,
         section: &str,
         key: &str,
@@ -90,10 +117,15 @@ impl<'a> ReaperClient<'a> {
         ))
         .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
 
-        let response = self.client.get(url).send().await?;
+        let response = self.authenticated_get(url.as_str()).send().await?;
 
         if response.status().is_success() {
-            tracing::info!("Successfully set ExtState ");
+            tracing::info!(
+                "Successfully set ExtState {}/{} to '{}'",
+                section,
+                key,
+                value
+            );
             Ok(())
         } else {
             tracing::error!("Failed to set ExtState: {}", response.status());
@@ -105,7 +137,12 @@ impl<'a> ReaperClient<'a> {
     }
 
     #[instrument(skip(self), fields(url))]
-    async fn get_ext_state(&self, section: &str, key: &str) -> Result<String, ReaperError> {
+    pub async fn get_ext_state(
+        &self,
+        section: &str,
+        key: &str,
+    ) -> Result<Option<String>, ReaperError> {
+        // Changed to pub and Option<String>
         let url = Url::parse(&format!(
             "{}/_/GET/EXTSTATE/{}/{}",
             self.settings.reaper_url, section, key
@@ -113,23 +150,64 @@ impl<'a> ReaperClient<'a> {
         .map_err(|e| ReaperError::Command(format!("Invalid base URL: {}", e)))?;
 
         Span::current().record("url", url.to_string());
-        let response = self.client.get(url).send().await?;
+
+        let response = self.authenticated_get(url.as_str()).send().await?;
 
         if response.status().is_success() {
             let text = response.text().await?;
-            let last_column = text.split('\t').next_back().unwrap_or_default();
-            tracing::trace!(
-                state = last_column.to_string(),
-                "Successfully retrieved ExtState"
-            );
-            Ok(last_column.to_string())
+            // Reaper's GET/EXTSTATE response format:
+            // - "EXTSTATE\tsection\tkey\tvalue\n" if the key has a non-empty value.
+            // - "VALUE\n" if the key exists but its value is empty, or if the key does not exist.
+            // - An empty response body might also occur in some edge cases for non-existent keys.
+
+            let parts = text
+                .split('\n')
+                .next()
+                .unwrap_or("")
+                .split('\t')
+                .collect::<Vec<&str>>();
+
+            if parts.len() == 4 && parts[0] == "EXTSTATE" {
+                // Valid response with section, key, and value
+                if parts[1] == section && parts[2] == key {
+                    tracing::info!("Retrieved ExtState {}/{}: '{}'", section, key, parts[3]);
+                    Ok(Some(parts[3].to_string()))
+                } else {
+                    tracing::warn!(
+                        "Unexpected ExtState response: section={}, key={}",
+                        parts[1],
+                        parts[2]
+                    );
+                    Ok(None)
+                }
+            } else if parts.len() == 2 && parts[0] == "VALUE" {
+                // Key exists but has no value
+                tracing::info!("ExtState {}/{} exists but is empty", section, key);
+                Ok(Some("".to_string()))
+            } else {
+                tracing::warn!("Unexpected ExtState response format: {}", text);
+                Ok(None)
+            }
         } else {
-            tracing::error!("Failed to retrieve ExtState: {}", response.status());
+            tracing::error!(
+                "Failed to retrieve ExtState {}/{}: {}",
+                section,
+                key,
+                response.status()
+            );
             Err(ReaperError::Command(format!(
-                "Failed to get ExtState: {}",
+                "Failed to get ExtState {}/{}: {}",
+                section,
+                key,
                 response.status()
             )))
         }
+    }
+
+    /// Clears an ExtState value by setting it to an empty string.
+    #[instrument(skip(self))]
+    pub async fn clear_ext_state(&self, section: &str, key: &str) -> Result<(), ReaperError> {
+        self.set_ext_state(section, key, "").await
     }
 
     pub async fn go_to_end(&self) -> Result<(), ReaperError> {
@@ -165,6 +243,11 @@ impl<'a> ReaperClient<'a> {
         Ok(())
     }
 
+    pub async fn close_all_tabs(&self) -> Result<(), ReaperError> {
+        self.run_command(&ReaperCommand::CloseAllTabs).await?;
+        Ok(())
+    }
+
     #[instrument(skip(self))]
     pub async fn set_project_root(&self, folder_path: &str) -> Result<(), ReaperError> {
         // Set temporary ExtState
@@ -192,12 +275,13 @@ impl<'a> ReaperClient<'a> {
         // Retrieve result from ExtState
         let file_list_str = self
             .get_ext_state("WebAppControl", "project_file_list")
-            .await?;
+            .await?
+            .unwrap_or("ERROR".to_string());
 
         if file_list_str.starts_with("ERROR") {
             return Err(ReaperError::Command(format!(
                 "Reaper script error: {}",
-                file_list_str
+                "No file list returned"
             )));
         }
 
@@ -251,5 +335,26 @@ impl<'a> ReaperClient<'a> {
             .await?;
 
         Ok(())
+    }
+
+    /// Enable dummy mode for testing (scripts will simulate actions without actually performing them)
+    pub async fn enable_dummy_mode(&self) -> Result<(), ReaperError> {
+        self.set_ext_state("WebAppControl", "dummy_mode", "true")
+            .await?;
+        Ok(())
+    }
+
+    /// Disable dummy mode (scripts will perform real actions)
+    pub async fn disable_dummy_mode(&self) -> Result<(), ReaperError> {
+        self.set_ext_state("WebAppControl", "dummy_mode", "false")
+            .await?;
+        Ok(())
+    }
+
+    /// Check if the last load operation was successful
+    pub async fn get_last_load_result(&self) -> Result<Option<String>, ReaperError> {
+        // Ensure this returns Option<String>
+        self.get_ext_state("WebAppControl", "last_load_result")
+            .await
     }
 }

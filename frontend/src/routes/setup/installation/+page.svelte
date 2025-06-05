@@ -1,17 +1,26 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import { notifications } from '$lib';
-	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
-	import Form from '$lib/components/Form/Form.svelte';
 	import Button from '$lib/components/Button/Button.svelte';
-	import SaveIcon from 'virtual:icons/mdi/content-save';
-	import TestIcon from 'virtual:icons/mdi/check-network';
+	import Form from '$lib/components/Form/Form.svelte';
+	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
 	import type { ActionIdsRequest } from '$lib/models/action-ids';
+	import DownloadIcon from 'virtual:icons/mdi/download';
+	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	let loadProjectScriptActionId = $state<string | undefined>(data.settings?.loadProjectScriptActionId);
 	let listProjectsScriptActionId = $state<string | undefined>(data.settings?.listProjectsScriptActionId);
+
+	let loadProjectTestState = $state<'success' | 'error' | null>(null);
+	let listProjectsTestState = $state<'success' | 'error' | null>(null);
+
+	function clearLoadProjectTestState() {
+		loadProjectTestState = null;
+	}
+	function clearListProjectsTestState() {
+		listProjectsTestState = null;
+	}
 
 	async function testConnection() {
 		try {
@@ -57,11 +66,63 @@
 		}
 	}
 
+	// Test Load Project Script
+	async function testLoadProjectScript() {
+		loadProjectTestState = null;
+		try {
+			const response = await fetch('/api/settings/test-load-project', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ load_project_script_action_id: loadProjectScriptActionId })
+			});
+			if (response.ok) {
+				loadProjectTestState = 'success';
+			} else {
+				loadProjectTestState = 'error';
+				const errorText = await response.text();
+				notifications.error(`Load Project Script test failed: ${errorText}`);
+			}
+		} catch (error) {
+			loadProjectTestState = 'error';
+			notifications.error('Load Project Script test failed: Network error');
+		}
+	}
+
+	// Test List Projects Script
+	async function testListProjectsScript() {
+		listProjectsTestState = null;
+		try {
+			const response = await fetch('/api/settings/test-list-projects', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ list_projects_script_action_id: listProjectsScriptActionId })
+			});
+			if (response.ok) {
+				listProjectsTestState = 'success';
+			} else {
+				listProjectsTestState = 'error';
+				const errorText = await response.text();
+				notifications.error(`List Projects Script test failed: ${errorText}`);
+			}
+		} catch (error) {
+			listProjectsTestState = 'error';
+			notifications.error('List Projects Script test failed: Network error');
+		}
+	}
+
 	const nextSteps = [
 		{ label: 'Add your songs', href: '/song' },
 		{ label: 'Create setlists', href: '/' }
 	];
 </script>
+
+<div class="mobile-warning">
+	<h2>Mobile Warning</h2>
+	<p>
+		This will be an annoying and error-prone process if you can't copy and paste these values. It's strongly recommended to perform this step on the same
+		computer that runs Reaper.
+	</p>
+</div>
 
 <div class="installation-steps">
 	<ol>
@@ -86,64 +147,104 @@
 	<div class="script-config-item">
 		<h3>1. Load Project Script</h3>
 		<p>This script loads a project from a relative path.</p>
-		<a class="download-button" href="/lua/LoadProjectFromRelativePath.lua" download="LoadProjectFromRelativePath.lua">
+		<a class="download-link" href="/lua/LoadProjectFromRelativePath.lua" download="LoadProjectFromRelativePath.lua">
+			<DownloadIcon />
 			Download LoadProjectFromRelativePath.lua
 		</a>
 		<div class="form-group">
 			<label for="load-project-action-id">Action ID:</label>
-			<input bind:value={loadProjectScriptActionId} type="text" id="load-project-action-id" name="load-project-action-id" placeholder="e.g., 40002" required />
+			<div class="input-with-button">
+				<input
+					bind:value={loadProjectScriptActionId}
+					type="text"
+					id="load-project-action-id"
+					name="load-project-action-id"
+					placeholder="e.g., _RS4a7b2c8d9e1f3a5b6c7d8e9f0a1b2c3d4e5f6a7b"
+					required
+					class:success={loadProjectTestState === 'success'}
+					class:error={loadProjectTestState === 'error'}
+					oninput={clearLoadProjectTestState}
+				/>
+				<Button variant="text" elementType="button" onclick={testLoadProjectScript}>Test</Button>
+			</div>
 		</div>
 	</div>
 
 	<div class="script-config-item">
 		<h3>2. List Projects Script</h3>
 		<p>This script lists all available projects in the root folder.</p>
-		<a class="download-button" href="/lua/ListProjectFiles.lua" download="ListProjectFiles.lua"> Download ListProjectFiles.lua </a>
-		<div class="form-group">
+		<a class="download-link" href="/lua/ListProjectFiles.lua" download="ListProjectFiles.lua">
+			<DownloadIcon />
+			Download ListProjectFiles.lua
+		</a>
+		<div class="form-group input-with-test">
 			<label for="list-projects-action-id">Action ID:</label>
-			<input
-				bind:value={listProjectsScriptActionId}
-				type="text"
-				id="list-projects-action-id"
-				name="list-projects-action-id"
-				placeholder="e.g., 40003"
-				required
-			/>
+			<div class="input-with-button">
+				<input
+					bind:value={listProjectsScriptActionId}
+					type="text"
+					id="list-projects-action-id"
+					name="list-projects-action-id"
+					placeholder="e.g., _RS9f8e7d6c5b4a3928176e5d4c3b2a19087f6e5d4c"
+					required
+					class:success={listProjectsTestState === 'success'}
+					class:error={listProjectsTestState === 'error'}
+					oninput={clearListProjectsTestState}
+				/>
+				<Button variant="text" elementType="button" onclick={testListProjectsScript}>Test</Button>
+			</div>
 		</div>
 	</div>
 
 	<div class="submit-section">
-		<Button elementType="button" color="primary" onclick={testConnection}><TestIcon /> Test Connection</Button>
-		<Button elementType="submit" color="success"><SaveIcon /> Save Action IDs</Button>
+		<Button elementType="submit" color="success">Save</Button>
 	</div>
 </Form>
 
 <InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
 
 <style>
-	.download-button {
-		display: inline-block;
-		background-color: var(--primary);
-		color: var(--black) !important;
-		padding: 0.75rem 1.5rem;
+	.mobile-warning {
+		display: none;
+		background-color: hsla(from var(--red) h s l / 25%);
+		border: 1px solid var(--current-line);
 		border-radius: 0.5rem;
-		text-decoration: none !important;
-		font-weight: 600;
-		margin-bottom: 1rem;
-		transition: background-color 0.2s ease;
-		border: none;
-		cursor: pointer;
-		font-size: inherit;
+		padding: 1rem;
+		margin-bottom: 2rem;
 	}
 
-	.download-button:hover {
-		background-color: hsl(from var(--primary) h s calc(l * 0.9));
-		color: var(--black) !important;
+	@media (max-width: 768px) {
+		.mobile-warning {
+			display: block;
+		}
+	}
+
+	.download-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--purple);
+		text-decoration: none;
+		font-weight: 500;
+		margin-bottom: 1rem;
+		transition: color 0.2s ease;
+		font-size: 0.95rem;
+	}
+
+	.download-link:hover {
+		color: hsl(from var(--purple) h s calc(l * 0.9));
+		text-decoration: underline;
 	}
 
 	.installation-steps ul {
 		margin: 0.5rem 0;
 		padding-left: 2rem;
+	}
+
+	@media (max-width: 768px) {
+		.installation-steps {
+			margin-bottom: 2rem;
+		}
 	}
 
 	.installation-steps ol {
@@ -172,5 +273,17 @@
 		color: var(--foreground);
 		opacity: 0.8;
 		font-size: 0.9rem;
+	}
+
+	.input-with-test input {
+		flex: 1;
+	}
+	input.success {
+		border-color: var(--green);
+		box-shadow: 0 0 0 1px var(--green);
+	}
+	input.error {
+		border-color: var(--red);
+		box-shadow: 0 0 0 1px var(--red);
 	}
 </style>
