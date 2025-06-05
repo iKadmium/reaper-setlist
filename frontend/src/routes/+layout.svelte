@@ -29,12 +29,13 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 0.5rem;
+		box-sizing: border-box;
 	}
 
 	@media (max-width: 768px) {
 		main {
-			padding-left: 1rem;
-			padding-right: 1rem;
+			padding: 1rem;
+			border-radius: 0;
 		}
 	}
 </style>

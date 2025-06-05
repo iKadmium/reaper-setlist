@@ -1,18 +1,18 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
+	import ResponsiveActions from '$lib/components/ResponsiveActions/ResponsiveActions.svelte';
 
+	import { notifications } from '$lib';
+	import type { Database } from '$lib/models/database';
 	import type { NewSetlist, Setlist } from '$lib/models/setlist';
 	import { formatDuration } from '$lib/util';
-	import { notifications } from '$lib';
 	import { onMount } from 'svelte';
 	import CopyIcon from 'virtual:icons/mdi/content-copy';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
-	import PlayIcon from 'virtual:icons/mdi/play';
 	import EditIcon from 'virtual:icons/mdi/pencil';
-	import AddIcon from 'virtual:icons/mdi/plus';
+	import PlayIcon from 'virtual:icons/mdi/play';
 	import type { PageData } from './$types';
-	import type { Database } from '$lib/models/database';
 
 	let { data }: { data: PageData } = $props();
 
@@ -25,14 +25,6 @@
 			notifications.error(`Failed to load data: ${errorMessage}`);
 		}
 	});
-
-	function formatTitle(item: Setlist) {
-		const dateString = `${new Date(item.date).toLocaleDateString()}`;
-		const length = item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0);
-		const songCount = item.songs.length;
-		const songText = songCount > 0 ? ` (${songCount} song${songCount > 1 ? 's' : ''}, ${formatDuration(length)})` : '';
-		return `${dateString} - ${item.venue} - ${songText}`;
-	}
 
 	async function handleDeleteClick(item: Setlist) {
 		if (!item.id) {
@@ -72,12 +64,32 @@
 
 	function sortFunction(a: Setlist, b: Setlist) {
 		if (a.date !== b.date) {
-			return new Date(b.date).getTime() - new Date(a.date).getTime();
+			return new Date(a.date).getTime() - new Date(b.date).getTime();
 		}
 		if (a.venue !== b.venue) {
 			return a.venue.localeCompare(b.venue);
 		}
 		return a.id.localeCompare(b.id);
+	}
+
+	function formatDate(dateString: string): string {
+		const date = new Date(dateString);
+		const currentYear = new Date().getFullYear();
+		const dateYear = date.getFullYear();
+
+		const options: Intl.DateTimeFormatOptions = {
+			day: 'numeric',
+			month: 'long'
+		};
+
+		// Only include year if it's different from current year
+		if (dateYear !== currentYear) {
+			options.year = 'numeric';
+		}
+
+		// Use user's locale, fallback to en-US
+		const userLocale = navigator.language || 'en-US';
+		return date.toLocaleDateString(userLocale, options);
 	}
 </script>
 
@@ -90,14 +102,101 @@
 {#if errorMessage}
 	<p style="color: red;">{errorMessage}</p>
 {:else}
-	<ItemGrid items={Object.values(sets).toSorted(sortFunction)} getName={formatTitle}>
+	<ItemGrid items={Object.values(sets).toSorted(sortFunction)}>
+		{#snippet nameDisplay(item)}
+			<div class="set-info">
+				<div class="set-header">
+					<span class="date">{formatDate(item.date)}</span>
+					<span class="venue">{item.venue}</span>
+				</div>
+				{#if item.songs.length > 0}
+					<div class="set-details">
+						<span class="song-count">{item.songs.length} song{item.songs.length > 1 ? 's' : ''}</span>
+						<span class="duration">{formatDuration(item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0))}</span>
+					</div>
+				{/if}
+			</div>
+		{/snippet}
 		{#snippet actions(item)}
-			<Button elementType="a" title="Edit" color="edit" href={`/set/${item.id}/edit`}><EditIcon /></Button>
-			<Button color="delete" title="Delete" onclick={() => handleDeleteClick(item)}><DeleteIcon /></Button>
-			<Button color="primary" title="Load" elementType="a" href={`/set/${item.id}/load`}><PlayIcon /></Button>
-			<Button color="success" title="Duplicate" onclick={() => handleDuplicateClick(item)}><CopyIcon /></Button>
+			<ResponsiveActions>
+				{#snippet primaryAction()}
+					<Button color="primary" elementType="a" href={`/set/${item.id}/load`} variant="icon"><PlayIcon /></Button>
+				{/snippet}
+				{#snippet secondaryActions()}
+					<Button elementType="a" color="edit" href={`/set/${item.id}/edit`} variant="icon"><EditIcon /></Button>
+					<Button color="delete" onclick={() => handleDeleteClick(item)} variant="icon"><DeleteIcon /></Button>
+					<Button color="success" onclick={() => handleDuplicateClick(item)} variant="icon"><CopyIcon /></Button>
+				{/snippet}
+			</ResponsiveActions>
 		{/snippet}
 	</ItemGrid>
 {/if}
 
-<Button elementType="a" href="set/add" color="success"><AddIcon /></Button>
+<div class="action-section">
+	<Button elementType="a" href="set/add" color="success">Add Set</Button>
+</div>
+
+<style>
+	.set-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.set-header {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+
+	.date {
+		font-weight: 600;
+		color: var(--text);
+		font-size: 1rem;
+	}
+
+	.venue {
+		font-size: 1.1rem;
+		color: var(--text);
+		font-weight: 500;
+	}
+
+	.set-details {
+		display: flex;
+		gap: 1rem;
+		font-size: 0.875rem;
+		color: var(--text-muted);
+	}
+
+	.song-count {
+		font-weight: 500;
+	}
+
+	.duration {
+		font-weight: 400;
+	}
+
+	/* On mobile, allow venue names to wrap properly */
+	@media (max-width: 768px) {
+		.set-header {
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		.date {
+			font-size: 0.875rem;
+			font-weight: 500;
+		}
+
+		.venue {
+			font-size: 1rem;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+		}
+
+		.set-details {
+			gap: 0.75rem;
+			font-size: 0.8rem;
+		}
+	}
+</style>

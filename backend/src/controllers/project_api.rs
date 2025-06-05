@@ -50,6 +50,10 @@ fn map_reaper_error(err: ReaperError) -> impl IntoResponse {
             StatusCode::PRECONDITION_FAILED,
             format!("Reaper configuration error: {}", e),
         ),
+        ReaperError::NonceMismatch => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Reaper nonce mismatch".to_string(),
+        ),
     }
 }
 
@@ -65,6 +69,7 @@ pub fn project_api_controller(settings: Arc<RwLock<Settings>>) -> Router {
         .route("/current/go-to-end", post(current_project_go_to_end))
         .route("/test-command-ids", post(test_command_ids))
         .route("/new-tab", post(new_project_tab))
+        .route("/close-all-tabs", post(close_all_tabs))
         .with_state(settings)
 }
 
@@ -153,6 +158,17 @@ async fn new_project_tab(
     let settings_read_guard = settings_state.read().await;
     let client = ReaperClient::new(&settings_read_guard);
     match client.new_tab().await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => Err(map_reaper_error(e)),
+    }
+}
+
+async fn close_all_tabs(
+    State(settings_state): State<Arc<RwLock<Settings>>>,
+) -> Result<StatusCode, impl IntoResponse> {
+    let settings_read_guard = settings_state.read().await;
+    let client = ReaperClient::new(&settings_read_guard);
+    match client.close_all_tabs().await {
         Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(map_reaper_error(e)),
     }

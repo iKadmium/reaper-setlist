@@ -24,6 +24,8 @@
 			goto('/setup');
 		} else if (tabId === 'installation' && data.canAccessInstallation) {
 			goto('/setup/installation');
+		} else if (tabId === 'test') {
+			goto('/setup/test');
 		}
 	}
 </script>
