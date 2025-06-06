@@ -14,7 +14,7 @@ local KEYS = {
 local OPERATIONS = {
     open_project = "OpenProject",
     list_projects = "ListProjects",
-    test = "TestOperation"
+    test = "TestActionId"
 }
 
 ---@param func function

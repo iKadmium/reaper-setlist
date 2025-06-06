@@ -1,3 +1,4 @@
+import { generateUUID } from '$lib/util';
 import type { ButtonColor } from '../components/Button/Button.svelte';
 
 export interface Notification {
@@ -8,20 +9,6 @@ export interface Notification {
     timestamp: Date;
 }
 
-// Fallback UUID generation for non-secure contexts
-function generateId(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-    }
-
-    // Fallback: generate a pseudo-UUID using Math.random()
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
 class NotificationStore {
     private notifications = $state<Notification[]>([]);
 
@@ -30,7 +17,7 @@ class NotificationStore {
     }
 
     add(message: string, type: ButtonColor = 'primary', duration?: number): string {
-        const id = generateId();
+        const id = generateUUID();
         const notification: Notification = {
             id,
             message,

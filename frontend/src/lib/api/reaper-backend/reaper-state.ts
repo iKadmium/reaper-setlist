@@ -1,10 +1,14 @@
+import { test } from "vitest";
+
 export const StateKeys = {
 	Operation: "Operation",
+	ProjectRoot: "ProjectRoot",
 	ProjectPath: "ProjectPath",
 	ScriptOutput: "ScriptOutput",
 	ScriptActionId: "ScriptActionId",
 	SongsLength: "SongsLength",
 	SetsLength: "SetsLength",
+	TestInput: "TestInput",
 } as const;
 
 export type StateKey = typeof StateKeys[keyof typeof StateKeys];
@@ -18,6 +22,7 @@ export type SectionKey = typeof SectionKeys[keyof typeof SectionKeys];
 export const OperationKeys = {
 	ListProjects: "ListProjects",
 	OpenProject: "OpenProject",
+	TestActionId: "TestActionId",
 }
 
 export type OperationKey = typeof OperationKeys[keyof typeof OperationKeys];
@@ -72,6 +77,10 @@ export class ReaperStateAccessor {
 
 	public async setExtState(key: StateKey, value: string, temp: boolean = false): Promise<void> {
 		return this.setExtStateInternal(key, value, temp);
+	}
+
+	public async SetOperation(operation: OperationKey): Promise<void> {
+		await this.setExtState(StateKeys.Operation, operation, false);
 	}
 
 	public async getStoreItems<T>(name: KVStoreName): Promise<string> {

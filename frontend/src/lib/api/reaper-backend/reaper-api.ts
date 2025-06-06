@@ -1,5 +1,6 @@
+import { generateUUID } from '$lib/util';
 import type { ReaperApiClient, ReaperSettingsStore } from '../api';
-import { StateKeys, type ReaperStateAccessor } from './reaper-state';
+import { OperationKeys, StateKeys, type ReaperStateAccessor } from './reaper-state';
 
 const GO_TO_END = '40043';
 const GO_TO_START = '40042';
@@ -28,20 +29,36 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 
 	async listProjects(): Promise<string[]> {
 		const actionId = await this.accessor.getExtState(StateKeys.ScriptActionId);
-		await this.accessor.setExtState(StateKeys.Operation, 'ListProjects', true);
+		await this.accessor.SetOperation(OperationKeys.ListProjects);
 		await this.sendCommand(actionId);
 		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
+
 		const lines = result.split('\n').filter((line) => line.trim() !== '');
 		const projects = lines[0].split(',');
 		return projects;
 	}
 
 	async loadByFilename(name: string): Promise<void> {
-		throw new Error('Method not implemented.');
+		const actionId = await this.accessor.getExtState(StateKeys.ScriptActionId);
+		await this.accessor.setExtState(StateKeys.ProjectPath, name, false);
+		await this.accessor.SetOperation(OperationKeys.OpenProject);
+		await this.sendCommand(actionId);
+		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
+
+		if (result !== 'OK') {
+			throw new Error(`Failed to load project: ${result}`);
+		}
 	}
 
 	async testActionId(actionId: string): Promise<boolean> {
-		throw new Error('Method not implemented.');
+		const input = generateUUID();
+		await this.accessor.setExtState(StateKeys.TestInput, input, false);
+		await this.accessor.SetOperation(OperationKeys.TestActionId);
+		await this.sendCommand(actionId);
+		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
+		const expectedOutput = `Test input received: ${input}`;
+
+		return result === expectedOutput;
 	}
 
 	async getDuration(): Promise<number> {

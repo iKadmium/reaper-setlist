@@ -9,10 +9,10 @@ export class ReaperSettingsStoreImpl implements ReaperSettingsStore {
 	}
 
 	async getFolderPath(): Promise<string | undefined> {
-		return this.accessor.getExtState(StateKeys.ProjectPath);
+		return this.accessor.getExtState(StateKeys.ProjectRoot);
 	}
 	async setFolderPath(path: string): Promise<void> {
-		await this.accessor.setExtState(StateKeys.ProjectPath, path);
+		await this.accessor.setExtState(StateKeys.ProjectRoot, path);
 	}
 	async getScriptActionId(): Promise<string | undefined> {
 		return this.accessor.getExtState(StateKeys.ScriptActionId);
