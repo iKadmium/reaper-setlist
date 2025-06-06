@@ -34,9 +34,17 @@ local operations = {
         if not project_path or project_path == "" then
             error("No project path specified")
         end
-
         project_path = project_path:gsub("\\", "/")
-        reaper.Main_openProject(project_path)
+
+        local project_root_folder = reaper.GetExtState(section, KEYS.project_root_folder)
+        if not project_root_folder or project_root_folder == "" then
+            error("No project root folder specified")
+        end
+        project_root_folder = project_root_folder:gsub("\\", "/")
+
+        local complete_path = project_root_folder .. "/" .. project_path
+
+        reaper.Main_openProject(complete_path)
         reaper.DeleteExtState(section, KEYS.project_path, true)
     end),
 
