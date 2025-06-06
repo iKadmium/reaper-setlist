@@ -13,17 +13,13 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
 
         // If setup is not complete, navigate to setup page
         if (!setupComplete && browser && url.pathname !== '/setup') {
-
+            goto('/setup');
             return { setupComplete };
         }
 
         return { setupComplete };
     } catch (error) {
-        // For errors, log and continue (let pages handle their own error states)
-        if (browser && url.pathname !== '/setup') {
-            goto('/setup');
-        }
-        console.warn('Setup check failed:', error);
+        console.error('Error during setup check:', error);
         return { setupComplete: false };
     }
 };

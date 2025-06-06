@@ -1,25 +1,23 @@
 import type { ReaperSettingsStore } from '../api';
-import { ReaperStateAccessor } from './reaper-state';
+import { ReaperStateAccessor, StateKeys } from './reaper-state';
 
 export class ReaperSettingsStoreImpl implements ReaperSettingsStore {
 	private readonly accessor: ReaperStateAccessor;
-	private readonly urlRoot: string;
 
-	constructor(urlRoot: string, accessor: ReaperStateAccessor) {
+	constructor(accessor: ReaperStateAccessor) {
 		this.accessor = accessor;
-		this.urlRoot = urlRoot;
 	}
 
 	async getFolderPath(): Promise<string | undefined> {
-		return this.accessor.getExtState(`folderPath`);
+		return this.accessor.getExtState(StateKeys.ProjectPath);
 	}
 	async setFolderPath(path: string): Promise<void> {
-		await this.accessor.setExtState(`folderPath`, path);
+		await this.accessor.setExtState(StateKeys.ProjectPath, path);
 	}
 	async getScriptActionId(): Promise<string | undefined> {
-		return this.accessor.getExtState(`scriptActionId`);
+		return this.accessor.getExtState(StateKeys.ScriptActionId);
 	}
 	async setScriptActionId(id: string): Promise<void> {
-		await this.accessor.setExtState(`scriptActionId`, id);
+		await this.accessor.setExtState(StateKeys.ScriptActionId, id);
 	}
 }

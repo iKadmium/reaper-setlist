@@ -1,6 +1,5 @@
-import type { PageLoad } from './$types';
-import type { ReaperSettings } from '$lib/models/reaper-settings';
 import { getApi } from '$lib/api/api';
+import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
     try {

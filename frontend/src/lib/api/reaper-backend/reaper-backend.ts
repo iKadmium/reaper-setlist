@@ -4,10 +4,9 @@ import type { Api, ReaperApiClient, ReaperSettingsStore, SetlistsStore, SongsSto
 import { ReaperApiClientImpl } from './reaper-api';
 import { ReaperKVS } from './reaper-kvs';
 import { ReaperSettingsStoreImpl } from './reaper-settings-store';
-import { ReaperStateAccessor } from './reaper-state';
+import { KVStores, ReaperStateAccessor, SectionKeys } from './reaper-state';
 
 const REAPER_URL_ROOT = '/_';
-const REAPER_STATE_KEY = 'ReaperSetlist';
 
 export class ReaperBackend implements Api {
 	public readonly reaper: ReaperApiClient;
@@ -19,10 +18,10 @@ export class ReaperBackend implements Api {
 		fetch: typeof globalThis.fetch = globalThis.fetch,
 		private readonly urlRoot: string = REAPER_URL_ROOT
 	) {
-		const stateAccessor = new ReaperStateAccessor(REAPER_STATE_KEY, this.urlRoot, fetch);
-		this.settings = new ReaperSettingsStoreImpl(this.urlRoot, stateAccessor);
+		const stateAccessor = new ReaperStateAccessor(SectionKeys.ReaperSetlist, this.urlRoot, fetch);
+		this.settings = new ReaperSettingsStoreImpl(stateAccessor);
 		this.reaper = new ReaperApiClientImpl(stateAccessor, this.urlRoot, fetch);
-		this.songs = new ReaperKVS<Song>('songs', stateAccessor);
-		this.sets = new ReaperKVS<Setlist>('sets', stateAccessor);
+		this.songs = new ReaperKVS<Song>(KVStores.Songs, stateAccessor);
+		this.sets = new ReaperKVS<Setlist>(KVStores.Sets, stateAccessor);
 	}
 }

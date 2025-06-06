@@ -1,13 +1,13 @@
-export interface Song {
+export interface Song extends SongCommon {
     id: string;
-    name: string;
-    length: number; // in seconds
-    path: string; // relative path to the project file
 }
 
-export interface NewSong {
+export interface NewSong extends SongCommon {
     id?: undefined; // explicitly undefined
+}
+
+interface SongCommon {
     name: string;
     length: number;
-    path: string; // relative path to the project file
+    path: string;
 }

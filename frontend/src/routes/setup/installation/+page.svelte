@@ -3,7 +3,6 @@
 	import Button from '$lib/components/Button/Button.svelte';
 	import Form from '$lib/components/Form/Form.svelte';
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
-	import type { ActionIdsRequest } from '$lib/models/action-ids';
 	import DownloadIcon from 'virtual:icons/mdi/download';
 	import type { PageData } from './$types';
 	import { getApi } from '$lib/api/api';

@@ -1,5 +1,5 @@
 import type { ReaperApiClient, ReaperSettingsStore } from '../api';
-import type { ReaperStateAccessor } from './reaper-state';
+import { StateKeys, type ReaperStateAccessor } from './reaper-state';
 
 const GO_TO_END = '40043';
 const GO_TO_START = '40042';
@@ -23,14 +23,14 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 	}
 
 	async setProjectRoot(root: string): Promise<void> {
-		this.accessor.setExtState('project_root', root, false);
+		this.accessor.setExtState(StateKeys.ProjectPath, root, false);
 	}
 
 	async listProjects(): Promise<string[]> {
-		const actionId = await this.accessor.getExtState('scriptActionId');
-		await this.accessor.setExtState('Operation', 'ListProjects', true);
+		const actionId = await this.accessor.getExtState(StateKeys.ScriptActionId);
+		await this.accessor.setExtState(StateKeys.Operation, 'ListProjects', true);
 		await this.sendCommand(actionId);
-		const result = await this.accessor.getExtState('ListProjectFilesOutput');
+		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
 		const lines = result.split('\n').filter((line) => line.trim() !== '');
 		const projects = lines[0].split(',');
 		return projects;

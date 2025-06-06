@@ -1,5 +1,6 @@
 -- filepath: /workspaces/reaper-setlist/lua/.luacheckrc
 std = "lua54"
-globals = { "reaper" }
-files["*.lua"].read_globals = { "reaper" }
-include_files = { "reaper-api.lua" }
+read_globals = { "reaper" }
+exclude_files = { "reaper-api.lua" }
+max_line_length = 120
+unused_args = false

@@ -1,4 +1,3 @@
-import type { ReaperSettings } from "../models/reaper-settings";
 import type { Setlist } from "../models/setlist";
 import type { Song } from "../models/song";
 import type { KeyValueStore } from "./key-value-store";
@@ -9,7 +8,6 @@ export interface ReaperApiClient {
     listProjects: () => Promise<string[]>,
     loadByFilename: (name: string) => Promise<void>,
 
-    testConnection: (settings: ReaperSettings) => Promise<boolean>,
     testActionId(actionId: string): Promise<boolean>;
 
     getDuration: () => Promise<number>,

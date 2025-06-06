@@ -1,11 +1,42 @@
+export const StateKeys = {
+	Operation: "Operation",
+	ProjectPath: "ProjectPath",
+	ScriptOutput: "ScriptOutput",
+	ScriptActionId: "ScriptActionId",
+	SongsLength: "SongsLength",
+	SetsLength: "SetsLength",
+} as const;
+
+export type StateKey = typeof StateKeys[keyof typeof StateKeys];
+
+export const SectionKeys = {
+	ReaperSetlist: "ReaperSetlist"
+}
+
+export type SectionKey = typeof SectionKeys[keyof typeof SectionKeys];
+
+export const OperationKeys = {
+	ListProjects: "ListProjects",
+	OpenProject: "OpenProject",
+}
+
+export type OperationKey = typeof OperationKeys[keyof typeof OperationKeys];
+
+export const KVStores = {
+	Songs: "Songs",
+	Sets: "Sets",
+}
+
+export type KVStoreName = typeof KVStores[keyof typeof KVStores];
+
 export class ReaperStateAccessor {
 	constructor(
-		private section: string,
+		private readonly section: SectionKey,
 		private readonly urlRoot: string,
 		private readonly fetch: typeof globalThis.fetch
-	) {}
+	) { }
 
-	public async getExtState(key: string): Promise<string> {
+	private async getExtStateInternal(key: string): Promise<string> {
 		const response = await this.fetch(`${this.urlRoot}/GET/EXTSTATE/${this.section}/${key}`, {
 			method: 'GET'
 		});
@@ -22,7 +53,7 @@ export class ReaperStateAccessor {
 		throw new Error(`Failed to get key ${key}: ${response.statusText}`);
 	}
 
-	public async setExtState(key: string, value: string, temp: boolean = false): Promise<void> {
+	public async setExtStateInternal(key: string, value: string, temp: boolean = false): Promise<void> {
 		const url = temp
 			? `${this.urlRoot}/SET/EXTSTATE/${this.section}/${key}/${value}`
 			: `${this.urlRoot}/SET/EXTSTATEPERSIST/${this.section}/${key}/${value}`;
@@ -33,5 +64,48 @@ export class ReaperStateAccessor {
 		if (!response.ok) {
 			throw new Error(`Failed to set key ${key}: ${response.statusText}`);
 		}
+	}
+
+	public async getExtState(key: StateKey): Promise<string> {
+		return this.getExtStateInternal(key);
+	}
+
+	public async setExtState(key: StateKey, value: string, temp: boolean = false): Promise<void> {
+		return this.setExtStateInternal(key, value, temp);
+	}
+
+	public async getStoreItems<T>(name: KVStoreName): Promise<string> {
+		const lengthKey = `${name}Length`;
+		const lengthString = await this.getExtStateInternal(lengthKey);
+		console.log(`Length string for ${name}:`, lengthString);
+		if (!lengthString) {
+			return ''; // No items found
+		}
+		const length = parseInt(lengthString, 10);
+		const chunkPromises = Array.from({ length }, (_, index) => {
+			const chunkKey = `${name}Chunk${index}`;
+			return this.getExtStateInternal(chunkKey);
+		});
+		const chunks = await Promise.all(chunkPromises);
+		const decodedChunks = chunks.map(chunk => decodeURIComponent(chunk));
+		const combinedString = decodedChunks.join('');
+		return combinedString;
+	}
+
+	public async setStoreItems<T>(name: KVStoreName, items: Record<string, T>): Promise<void> {
+		const itemsString = JSON.stringify(items);
+		const encoded = encodeURIComponent(itemsString);
+		const chunkSize = 512; // Size of each chunk in characters
+		const chunks = [];
+		for (let i = 0; i < encoded.length; i += chunkSize) {
+			chunks.push(encoded.slice(i, i + chunkSize));
+		}
+		const lengthKey = `${name}Length`;
+		await this.setExtStateInternal(lengthKey, String(chunks.length), false);
+		const chunkPromises = chunks.map((chunk, index) => {
+			const chunkKey = `${name}Chunk${index}`;
+			return this.setExtStateInternal(chunkKey, chunk, false);
+		});
+		await Promise.all(chunkPromises);
 	}
 }
