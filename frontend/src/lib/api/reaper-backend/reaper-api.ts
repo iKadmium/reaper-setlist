@@ -1,5 +1,5 @@
 import { generateUUID } from '$lib/util';
-import type { ReaperApiClient, ReaperSettingsStore } from '../api';
+import type { ReaperApiClient } from '../api';
 import { OperationKeys, StateKeys, type ReaperStateAccessor } from './reaper-state';
 
 const GO_TO_END = '40043';

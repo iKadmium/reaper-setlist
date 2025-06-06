@@ -1,3 +1,4 @@
+import { generateUUID } from "$lib/util";
 import { KeyValueStore, type WithId } from "../key-value-store";
 import type { KVStoreName, ReaperStateAccessor } from "./reaper-state";
 
@@ -32,7 +33,7 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
 
     async add(value: Omit<TValue, 'id'>): Promise<TValue> {
         const items = await this.fetchAll();
-        const key = crypto.randomUUID();
+        const key = generateUUID();
         const valueWithId = { ...value, id: key } as TValue;
         items[key] = valueWithId;
         await this.save(items);
