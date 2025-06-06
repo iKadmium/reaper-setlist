@@ -43,11 +43,6 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		await this.accessor.setExtState(StateKeys.ProjectPath, name, false);
 		await this.accessor.SetOperation(OperationKeys.OpenProject);
 		await this.sendCommand(actionId);
-		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
-
-		if (result !== 'OK') {
-			throw new Error(`Failed to load project: ${result}`);
-		}
 	}
 
 	async testActionId(actionId: string): Promise<boolean> {
@@ -64,6 +59,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 	async getDuration(): Promise<number> {
 		await this.goToEnd();
 		const transport = await this.getTransport();
+		console.log()
 		const seconds = parseInt(transport);
 		if (isNaN(seconds)) {
 			throw new Error(`Invalid transport value: ${transport}`);
@@ -77,7 +73,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		if (parts.length < 2) {
 			throw new Error(`Unexpected transport format: ${result}`);
 		}
-		return parts[1];
+		return parts[2];
 	}
 
 	async goToStart(): Promise<void> {
