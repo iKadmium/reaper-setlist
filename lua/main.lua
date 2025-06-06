@@ -3,7 +3,7 @@ local operation_key = "Operation"
 
 local project_path_key = "ProjectPath"
 local project_root_folder_key = "ProjectRootFolder"
-local list_project_files_output_key = "ListProjectFilesOutput"
+local list_projects_output_key = "ListProjectsOutput"
 
 local ListProjectFiles = require("list_project_files")
 
@@ -29,7 +29,7 @@ local operations = {
         reaper.DeleteExtState(section, project_path_key, true)
     end,
 
-    ["ListProjectFiles"] = function()
+    ["ListProjects"] = function()
         local project_root_folder = reaper.GetExtState(section, project_root_folder_key)
         if not project_root_folder or project_root_folder == "" then
             reaper.ShowConsoleMsg("No project root folder specified. Exiting.\n")
@@ -41,7 +41,7 @@ local operations = {
 
         local project_files = ListProjectFiles(project_root_folder)
 
-        reaper.SetExtState(section, list_project_files_output_key, table.concat(project_files, ","), false)
+        reaper.SetExtState(section, list_projects_output_key, table.concat(project_files, ","), false)
     end,
 }
 
