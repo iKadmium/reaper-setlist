@@ -33,6 +33,8 @@
 			try {
 				// Call the API to delete the set
 				await api.sets.delete(item.id);
+				delete sets[item.id]; // Remove from local state
+				notifications.success('Set deleted successfully');
 			} catch (error) {
 				notifications.error(`Failed to delete set: ${(error as Error).message}`);
 			}
@@ -97,12 +99,10 @@
 					<span class="date">{formatDate(item.date)}</span>
 					<span class="venue">{item.venue}</span>
 				</div>
-				{#if item.songs.length > 0}
-					<div class="set-details">
-						<span class="song-count">{item.songs.length} song{item.songs.length > 1 ? 's' : ''}</span>
-						<span class="duration">{formatDuration(item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0))}</span>
-					</div>
-				{/if}
+				<div class="set-details">
+					<span class="song-count">{item.songs.length} song{item.songs.length > 1 ? 's' : ''}</span>
+					<span class="duration">{formatDuration(item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0))}</span>
+				</div>
 			</div>
 		{/snippet}
 		{#snippet actions(item)}

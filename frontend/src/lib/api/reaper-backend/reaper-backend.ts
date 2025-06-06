@@ -3,6 +3,7 @@ import type { Song } from '$lib/models/song';
 import type { Api, ReaperApiClient, ReaperSettingsStore, SetlistsStore, SongsStore } from '../api';
 import { ReaperApiClientImpl } from './reaper-api';
 import { ReaperKVS } from './reaper-kvs';
+import { ReaperSetlistStoreImpl } from './reaper-setlist-store';
 import { ReaperSettingsStoreImpl } from './reaper-settings-store';
 import { KVStores, ReaperStateAccessor, SectionKeys } from './reaper-state';
 
@@ -22,6 +23,6 @@ export class ReaperBackend implements Api {
 		this.settings = new ReaperSettingsStoreImpl(stateAccessor);
 		this.reaper = new ReaperApiClientImpl(stateAccessor, this.urlRoot, fetch);
 		this.songs = new ReaperKVS<Song>(KVStores.Songs, stateAccessor);
-		this.sets = new ReaperKVS<Setlist>(KVStores.Sets, stateAccessor);
+		this.sets = new ReaperSetlistStoreImpl(KVStores.Sets, stateAccessor);
 	}
 }

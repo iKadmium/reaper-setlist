@@ -34,6 +34,8 @@
 		if (confirm('Are you sure you want to delete this song?')) {
 			try {
 				await api.songs.delete(song.id);
+				delete songs[song.id];
+				api.sets.deleteSongFromSets(song.id);
 				notifications.success('Song deleted successfully');
 			} catch (error) {
 				notifications.error(`Failed to delete song: ${(error as Error).message}`);

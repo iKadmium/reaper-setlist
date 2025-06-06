@@ -21,7 +21,7 @@
 
 	async function onSubmit(set: NewSetlist) {
 		try {
-			const response = await api.sets.add(set);
+			await api.sets.add(set);
 			notifications.success('Set added successfully!');
 			await goto('/');
 		} catch (error) {

@@ -19,7 +19,9 @@ export interface ReaperApiClient {
 
 export interface SongsStore extends KeyValueStore<string, Song> { }
 
-export interface SetlistsStore extends KeyValueStore<string, Setlist> { }
+export interface SetlistsStore extends KeyValueStore<string, Setlist> {
+    deleteSongFromSets(id: string): unknown;
+}
 
 export interface ReaperSettingsStore {
     getFolderPath: () => Promise<string | undefined>,

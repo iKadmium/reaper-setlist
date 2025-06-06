@@ -31,6 +31,12 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
         await this.save(items);
     }
 
+    async updateMany(updater: (entries: Record<string, TValue>) => Record<string, TValue>): Promise<void> {
+        const items = await this.fetchAll();
+        const updatedItems = updater(items);
+        await this.save(updatedItems);
+    }
+
     async add(value: Omit<TValue, 'id'>): Promise<TValue> {
         const items = await this.fetchAll();
         const key = generateUUID();
