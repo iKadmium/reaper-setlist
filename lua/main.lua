@@ -6,7 +6,7 @@ local section = "ReaperSetlist"
 local KEYS = {
     operation = "Operation",
     project_path = "ProjectPath",
-    project_root_folder = "ProjectRootFolder",
+    project_root_folder = "ProjectRoot",
     test_input = "TestInput",
     script_output = "ScriptOutput"
 }

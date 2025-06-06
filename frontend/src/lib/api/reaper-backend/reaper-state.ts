@@ -101,11 +101,12 @@ export class ReaperStateAccessor {
 
 	public async setStoreItems<T>(name: KVStoreName, items: Record<string, T>): Promise<void> {
 		const itemsString = JSON.stringify(items);
-		const encoded = encodeURIComponent(itemsString);
 		const chunkSize = 512; // Size of each chunk in characters
 		const chunks = [];
-		for (let i = 0; i < encoded.length; i += chunkSize) {
-			chunks.push(encoded.slice(i, i + chunkSize));
+		for (let i = 0; i < itemsString.length; i += chunkSize) {
+			const slice = itemsString.slice(i, i + chunkSize);
+			const encoded = encodeURIComponent(slice);
+			chunks.push(encoded);
 		}
 		const lengthKey = `${name}Length`;
 		await this.setExtStateInternal(lengthKey, String(chunks.length), false);
