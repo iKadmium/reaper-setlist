@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
 	import type { Database } from '$lib/models/database';
 	import { type Setlist } from '$lib/models/setlist';
@@ -11,17 +13,14 @@
 	let set = $state<Setlist | undefined>(data.set);
 	let songs = $state<Database<Song>>(data.songs);
 	const errorMessage = data.error;
+	const api = getApi();
 
 	async function onSubmit(set: Setlist) {
-		const response = await fetch(`/api/sets/${set.id}`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(set)
-		});
-		if (response.ok) {
+		try {
+			await api.sets.update(set.id, set);
 			await goto('/');
+		} catch (error) {
+			notifications.error(`Failed to update set: ${(error as Error).message}`);
 		}
 	}
 </script>

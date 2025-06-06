@@ -1,30 +1,22 @@
-import type { ProjectListResponse } from '$lib/api/projects';
+import { getApi } from '$lib/api/api';
 import type { Database } from '$lib/models/database';
 import type { Song } from '$lib/models/song';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
     try {
-        const [listResponse, songsResponse] = await Promise.all([
-            fetch('/api/projects/list'),
-            fetch('/api/songs')
+        const api = getApi(fetch);
+
+        const [projects, songs] = await Promise.all([
+            api.reaper.listProjects(),
+            api.songs.list()
         ]);
-
-        if (!listResponse.ok) {
-            throw new Error(`Failed to fetch projects: ${listResponse.status}`);
-        }
-
-        if (!songsResponse.ok) {
-            throw new Error(`Failed to fetch songs: ${songsResponse.status}`);
-        }
-
-        const projects: ProjectListResponse = await listResponse.json() as ProjectListResponse;
-        const songs: Database<Song> = await songsResponse.json() as Database<Song>;
 
         return {
             songs,
-            projects: projects.projects
+            projects: projects
         };
+
     } catch (error) {
         return {
             projects: [],

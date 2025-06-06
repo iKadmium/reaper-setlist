@@ -6,107 +6,47 @@
 	import type { ActionIdsRequest } from '$lib/models/action-ids';
 	import DownloadIcon from 'virtual:icons/mdi/download';
 	import type { PageData } from './$types';
+	import { getApi } from '$lib/api/api';
 
 	let { data }: { data: PageData } = $props();
 
-	let loadProjectScriptActionId = $state<string | undefined>(data.settings?.loadProjectScriptActionId);
-	let listProjectsScriptActionId = $state<string | undefined>(data.settings?.listProjectsScriptActionId);
+	const api = getApi();
 
-	let loadProjectTestState = $state<'success' | 'error' | null>(null);
-	let listProjectsTestState = $state<'success' | 'error' | null>(null);
+	let scriptActionId = $state<string | undefined>(data.scriptActionId);
+	let scriptTestState = $state<'success' | 'error' | null>(null);
 
-	function clearLoadProjectTestState() {
-		loadProjectTestState = null;
-	}
-	function clearListProjectsTestState() {
-		listProjectsTestState = null;
+	function clearScriptTestState() {
+		scriptTestState = null;
 	}
 
-	async function testConnection() {
-		try {
-			const response = await fetch('/api/projects/list', { method: 'GET' });
-
-			if (response.ok) {
-				notifications.success('Successfully connected to Reaper and set project root!');
-			} else {
-				const errorText = await response.text();
-				notifications.error(`Failed to set project root: ${errorText}`);
-			}
-		} catch (error) {
-			notifications.error(`Error connecting to Reaper: ${error instanceof Error ? error.message : 'Unknown error'}`);
-		}
-	}
-	async function saveActionIds(event: Event) {
+	async function saveActionId(event: Event) {
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
-		const setRootActionIdValue = formData.get('set-root-action-id');
-		const loadProjectActionIdValue = formData.get('load-project-action-id');
-		const listProjectsActionIdValue = formData.get('list-projects-action-id');
-
-		const body: ActionIdsRequest = {
-			set_root_script_action_id: setRootActionIdValue ? (setRootActionIdValue as string) : undefined,
-			load_project_script_action_id: loadProjectActionIdValue ? (loadProjectActionIdValue as string) : undefined,
-			list_projects_script_action_id: listProjectsActionIdValue ? (listProjectsActionIdValue as string) : undefined
-		};
+		const loadProjectActionIdValue = formData.get('script-action-id');
 
 		try {
-			const response = await fetch('/api/settings/action-ids', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-
-			if (response.ok) {
-				notifications.success('Action IDs saved successfully!');
-			} else {
-				notifications.error('Failed to save action IDs');
-			}
+			await api.settings.setScriptActionId(loadProjectActionIdValue as string);
+			notifications.success('Action IDs saved successfully!');
 		} catch (error) {
-			notifications.error('Error saving action IDs');
+			notifications.error('Failed to save action IDs');
 		}
 	}
 
-	// Test Load Project Script
-	async function testLoadProjectScript() {
-		loadProjectTestState = null;
+	// Test Script
+	async function testScript() {
+		scriptTestState = null;
 		try {
-			const response = await fetch('/api/settings/test-load-project', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ load_project_script_action_id: loadProjectScriptActionId })
-			});
-			if (response.ok) {
-				loadProjectTestState = 'success';
-			} else {
-				loadProjectTestState = 'error';
-				const errorText = await response.text();
-				notifications.error(`Load Project Script test failed: ${errorText}`);
-			}
-		} catch (error) {
-			loadProjectTestState = 'error';
-			notifications.error('Load Project Script test failed: Network error');
-		}
-	}
+			const success = await api.reaper.testActionId(scriptActionId as string);
 
-	// Test List Projects Script
-	async function testListProjectsScript() {
-		listProjectsTestState = null;
-		try {
-			const response = await fetch('/api/settings/test-list-projects', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ list_projects_script_action_id: listProjectsScriptActionId })
-			});
-			if (response.ok) {
-				listProjectsTestState = 'success';
+			if (success) {
+				scriptTestState = 'success';
 			} else {
-				listProjectsTestState = 'error';
-				const errorText = await response.text();
-				notifications.error(`List Projects Script test failed: ${errorText}`);
+				scriptTestState = 'error';
+				notifications.error(`Load Project Script test failed`);
 			}
 		} catch (error) {
-			listProjectsTestState = 'error';
-			notifications.error('List Projects Script test failed: Network error');
+			scriptTestState = 'error';
+			notifications.error(`Load Project Script test failed: ${(error as Error).message}`);
 		}
 	}
 
@@ -143,55 +83,29 @@
 	</ol>
 </div>
 
-<Form onsubmit={saveActionIds}>
+<Form onsubmit={saveActionId}>
 	<div class="script-config-item">
-		<h3>1. Load Project Script</h3>
+		<h3>Script</h3>
 		<p>This script loads a project from a relative path.</p>
 		<a class="download-link" href="/lua/LoadProjectFromRelativePath.lua" download="LoadProjectFromRelativePath.lua">
 			<DownloadIcon />
 			Download LoadProjectFromRelativePath.lua
 		</a>
 		<div class="form-group">
-			<label for="load-project-action-id">Action ID:</label>
+			<label for="script-action-id">Action ID:</label>
 			<div class="input-with-button">
 				<input
-					bind:value={loadProjectScriptActionId}
+					bind:value={scriptActionId}
 					type="text"
-					id="load-project-action-id"
-					name="load-project-action-id"
+					id="script-action-id"
+					name="script-action-id"
 					placeholder="e.g., _RS4a7b2c8d9e1f3a5b6c7d8e9f0a1b2c3d4e5f6a7b"
 					required
-					class:success={loadProjectTestState === 'success'}
-					class:error={loadProjectTestState === 'error'}
-					oninput={clearLoadProjectTestState}
+					class:success={scriptTestState === 'success'}
+					class:error={scriptTestState === 'error'}
+					oninput={clearScriptTestState}
 				/>
-				<Button variant="text" elementType="button" onclick={testLoadProjectScript}>Test</Button>
-			</div>
-		</div>
-	</div>
-
-	<div class="script-config-item">
-		<h3>2. List Projects Script</h3>
-		<p>This script lists all available projects in the root folder.</p>
-		<a class="download-link" href="/lua/ListProjectFiles.lua" download="ListProjectFiles.lua">
-			<DownloadIcon />
-			Download ListProjectFiles.lua
-		</a>
-		<div class="form-group input-with-test">
-			<label for="list-projects-action-id">Action ID:</label>
-			<div class="input-with-button">
-				<input
-					bind:value={listProjectsScriptActionId}
-					type="text"
-					id="list-projects-action-id"
-					name="list-projects-action-id"
-					placeholder="e.g., _RS9f8e7d6c5b4a3928176e5d4c3b2a19087f6e5d4c"
-					required
-					class:success={listProjectsTestState === 'success'}
-					class:error={listProjectsTestState === 'error'}
-					oninput={clearListProjectsTestState}
-				/>
-				<Button variant="text" elementType="button" onclick={testListProjectsScript}>Test</Button>
+				<Button variant="text" elementType="button" onclick={testScript}>Test</Button>
 			</div>
 		</div>
 	</div>
@@ -273,17 +187,5 @@
 		color: var(--foreground);
 		opacity: 0.8;
 		font-size: 0.9rem;
-	}
-
-	.input-with-test input {
-		flex: 1;
-	}
-	input.success {
-		border-color: var(--green);
-		box-shadow: 0 0 0 1px var(--green);
-	}
-	input.error {
-		border-color: var(--red);
-		box-shadow: 0 0 0 1px var(--red);
 	}
 </style>

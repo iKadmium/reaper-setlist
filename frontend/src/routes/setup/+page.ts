@@ -1,27 +1,21 @@
+import { getApi } from '$lib/api/api';
 import type { PageLoad } from './$types';
-import type { ReaperSettings } from '$lib/models/reaper-settings';
 
 export const load: PageLoad = async ({ fetch }) => {
     try {
-        const response = await fetch('/api/settings');
+        const api = getApi(fetch);
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch settings: ${response.status}`);
-        }
-
-        const settings: ReaperSettings = await response.json();
+        const folderPath = await api.settings.getFolderPath();
+        const scriptActionId = await api.settings.getScriptActionId();
 
         return {
-            settings
+            folderPath,
+            scriptActionId
         };
     } catch (error) {
         return {
-            settings: {
-                folderPath: '',
-                reaperUrl: '',
-                reaperUsername: '',
-                reaperPassword: ''
-            } as ReaperSettings,
+            folderPath: '',
+            scriptActionId: '',
             error: error instanceof Error ? error.message : 'An unknown error occurred.'
         };
     }

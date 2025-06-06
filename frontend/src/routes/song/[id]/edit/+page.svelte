@@ -1,26 +1,22 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
 	import { type Song } from '$lib/models/song';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+	const api = getApi();
 
 	async function onSubmit(song: Song) {
-		const resp = await fetch(`/api/songs/${song.id}`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(song)
-		});
-		if (resp.ok) {
+		try {
+			api.songs.update(song.id, song);
 			notifications.success('Song updated successfully!');
 			await goto('/song');
-		} else {
-			const error = await resp.json();
-			notifications.error(`Failed to update song: ${error.error || 'Unknown error'}`);
+		} catch (error) {
+			notifications.error(`Failed to update song: ${(error as Error).message}`);
+			return;
 		}
 	}
 </script>

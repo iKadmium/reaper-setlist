@@ -1,44 +1,29 @@
 <script lang="ts">
+	import { notifications } from '$lib';
 	import Button from '$lib/components/Button/Button.svelte';
 	import ItemGrid from '$lib/components/ItemGrid/ItemGrid.svelte';
 	import ResponsiveActions from '$lib/components/ResponsiveActions/ResponsiveActions.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 	import { formatDuration } from '$lib/util';
-	import { notifications } from '$lib';
 	import type { PageData } from './$types';
 
+	import { getApi } from '$lib/api/api';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
-	import AddIcon from 'virtual:icons/mdi/plus';
 
 	let { data }: { data: PageData } = $props();
 
 	let songs = $state<Database<Song>>(data.songs);
+	const api = getApi();
+
 	const errorMessage = data.error;
 
 	async function handleLoadClick(song: Song) {
 		try {
-			const newTabResult = await fetch(`/api/reaper-project/new-tab`, { method: 'POST' });
-			if (!newTabResult.ok) {
-				notifications.error('Failed to create new tab in Reaper');
-				return;
-			}
-			await newTabResult.json(); // wait for the operation to complete
-
-			const songLoadResult = await fetch(`/api/songs/load`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ relative_path: song.relativePath })
-			});
-			if (!songLoadResult.ok) {
-				notifications.error(`Failed to load ${song.name} in Reaper`);
-				return;
-			}
-			await songLoadResult.json(); // wait for the operation to complete
+			await api.reaper.newTab();
+			await api.reaper.loadByFilename(song.path);
 			notifications.success(`${song.name} loaded successfully in Reaper!`);
 		} catch (error) {
 			notifications.error('Failed to communicate with Reaper');
@@ -47,13 +32,12 @@
 
 	async function handleDeleteClick(song: Song) {
 		if (confirm('Are you sure you want to delete this song?')) {
-			const result = await fetch(`/api/songs/${song.id}`, { method: 'DELETE' });
-			if (result.ok) {
-				delete songs[song.id];
+			try {
+				await api.songs.delete(song.id);
 				notifications.success('Song deleted successfully');
-			} else {
-				const error = await result.json();
-				notifications.error(error.error ? `Failed to delete song: ${error.error}` : 'Failed to delete song');
+			} catch (error) {
+				notifications.error(`Failed to delete song: ${(error as Error).message}`);
+				return;
 			}
 		}
 	}

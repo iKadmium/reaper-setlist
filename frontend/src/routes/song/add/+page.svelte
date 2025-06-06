@@ -1,32 +1,29 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
 	import { type NewSong } from '$lib/models/song';
 	import type { PageProps } from './$types';
 	let song: NewSong = {
 		length: 0,
 		name: '',
-		relativePath: ''
+		path: ''
 	};
 
 	let { data }: PageProps = $props();
+	const api = getApi();
 
 	async function onSubmit(song: NewSong) {
-		const resp = await fetch('/api/songs', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(song)
-		});
-		if (resp.ok) {
+		try {
+			await api.songs.add(song);
 			notifications.success('Song added successfully!');
-			await goto('/song');
-		} else {
-			const error = await resp.json();
-			notifications.error(error.error ? `Failed to add song: ${error.error}` : 'Failed to add song');
+		} catch (error) {
+			notifications.error(`Failed to add song: ${(error as Error).message}`);
+			return;
 		}
+
+		await goto('/song');
 	}
 </script>
 

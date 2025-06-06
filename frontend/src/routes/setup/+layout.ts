@@ -1,15 +1,9 @@
+import { getApi } from '$lib/api/api';
 import type { PageLoad } from './$types';
-import type { ReaperSettings } from '$lib/models/reaper-settings';
 
 export const load: PageLoad = async ({ fetch, url }: { fetch: any; url: any }) => {
 	try {
-		const response = await fetch('/api/settings');
-
-		if (!response.ok) {
-			throw new Error(`Failed to fetch settings: ${response.status}`);
-		}
-
-		const settings: ReaperSettings = await response.json();
+		const api = getApi(fetch);
 
 		// Determine the active tab from URL
 		let activeTab = 'setup';
@@ -20,21 +14,17 @@ export const load: PageLoad = async ({ fetch, url }: { fetch: any; url: any }) =
 		}
 
 		// Check if installation tab should be accessible
-		const canAccessInstallation = settings.folderPath && settings.reaperUrl;
+		const folderPath = await api.settings.getFolderPath();
+		const canAccessInstallation = folderPath;
 
 		return {
-			settings,
+			folderPath,
 			activeTab,
 			canAccessInstallation
 		};
 	} catch (error) {
 		return {
-			settings: {
-				folderPath: '',
-				reaperUrl: '',
-				reaperUsername: '',
-				reaperPassword: ''
-			} as ReaperSettings,
+			folderPath: '',
 			activeTab: 'setup',
 			canAccessInstallation: false,
 			error: error instanceof Error ? error.message : 'An unknown error occurred.'

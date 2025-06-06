@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
-	import Step from '$lib/components/Step/Step.svelte';
 	import type { StepStatus } from '$lib/components/Step/Step.svelte';
+	import Step from '$lib/components/Step/Step.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
 	import type { PageData } from './$types';
-	import LoadIcon from 'virtual:icons/mdi/playlist-play';
 
 	let { data }: { data: PageData } = $props();
 
@@ -18,14 +19,14 @@
 	let songs = $state<Database<Song>>(data.songs);
 	const errorMessage = data.error;
 
+	const api = getApi();
+
 	interface LoadStep {
 		id: string;
 		title: string;
 		description?: string;
 		status: StepStatus;
-		songId?: string;
-		songName?: string;
-		isNewTab?: boolean;
+		action: () => Promise<boolean>;
 	}
 
 	let steps = $state<LoadStep[]>([]);
@@ -51,31 +52,32 @@
 				id: 'close-all-tabs',
 				title: 'Close All Tabs',
 				description: 'Close all existing tabs in Reaper before loading the setlist',
-				status: 'pending'
+				status: 'pending',
+				action: () => closeAllTabs()
 			});
 		}
 
 		set.songs.forEach((songId, index) => {
-			const songName = songs[songId]?.name || `Unknown Song (${songId})`;
+			const song = songs[songId];
 
 			// Add new tab step for all songs except the first, or for first song if not replacing tabs
 			if (index > 0 || !replaceExistingTabs) {
 				newSteps.push({
 					id: index === 0 ? 'open-new-tab-initial' : `new-tab-${index}`,
 					title: 'Open New Tab',
-					description: index === 0 ? `Create a new tab in Reaper for the setlist` : `Create a new tab in Reaper for ${songName}`,
-					status: 'pending'
+					description: index === 0 ? `Create a new tab in Reaper for the setlist` : `Create a new tab in Reaper for ${song.name}`,
+					status: 'pending',
+					action: () => newTab()
 				});
 			}
 
 			// Add load song step
 			newSteps.push({
 				id: `load-song-${songId}`,
-				title: `Load ${songName}`,
-				description: `Load the project file for ${songName}`,
+				title: `Load ${song.name}`,
+				description: `Load the project file for ${song.name}`,
 				status: 'pending',
-				songId,
-				songName
+				action: () => loadSong(song)
 			});
 
 			// Add go to start step only if movePlayheadToStart is enabled
@@ -83,8 +85,9 @@
 				newSteps.push({
 					id: `go-to-start-${index}`,
 					title: 'Move Playhead to Start',
-					description: `Position the playhead at the beginning of ${songName}`,
-					status: 'pending'
+					description: `Position the playhead at the beginning of ${song.name}`,
+					status: 'pending',
+					action: () => goToStart()
 				});
 			}
 		});
@@ -92,40 +95,44 @@
 		steps = newSteps;
 	}
 
-	async function loadSong(songId: string, name: string): Promise<boolean> {
-		const res = await fetch(`/api/songs/${songId}/load`, { method: 'POST' });
-		if (res.ok) {
-			await res.text(); // wait for the operation to complete
+	async function loadSong(song: Song): Promise<boolean> {
+		try {
+			await api.reaper.loadByFilename(song.path);
 			return true;
+		} catch (error) {
+			notifications.error(`Failed to load song "${song.name}": ${(error as Error).message}`);
+			return false;
 		}
-		return false;
 	}
 
 	async function newTab(): Promise<boolean> {
-		const res = await fetch(`/api/projects/new-tab`, { method: 'POST' });
-		if (res.ok) {
-			await res.text(); // wait for the operation to complete
+		try {
+			await api.reaper.newTab();
 			return true;
+		} catch (error) {
+			notifications.error(`Failed to open new tab: ${(error as Error).message}`);
+			return false;
 		}
-		return false;
 	}
 
 	async function closeAllTabs(): Promise<boolean> {
-		const res = await fetch(`/api/projects/close-all-tabs`, { method: 'POST' });
-		if (res.ok) {
-			await res.text(); // wait for the operation to complete
+		try {
+			await api.reaper.closeAllTabs();
 			return true;
+		} catch (error) {
+			notifications.error(`Failed to close all tabs: ${(error as Error).message}`);
+			return false;
 		}
-		return false;
 	}
 
 	async function goToStart(): Promise<boolean> {
-		const res = await fetch(`/api/projects/current/go-to-start`, { method: 'POST' });
-		if (res.ok) {
-			await res.text(); // wait for the operation to complete
+		try {
+			await api.reaper.goToStart();
 			return true;
+		} catch (error) {
+			notifications.error(`Failed to move playhead to start: ${(error as Error).message}`);
+			return false;
 		}
-		return false;
 	}
 
 	function updateStepStatus(stepId: string, status: StepStatus) {
@@ -140,16 +147,7 @@
 
 		try {
 			let success = false;
-
-			if (step.id === 'close-all-tabs') {
-				success = await closeAllTabs();
-			} else if (step.id === 'open-new-tab-initial' || step.id.startsWith('new-tab-')) {
-				success = await newTab();
-			} else if (step.id.startsWith('load-song-') && step.songId && step.songName) {
-				success = await loadSong(step.songId, step.songName);
-			} else if (step.id.startsWith('go-to-start-')) {
-				success = await goToStart();
-			}
+			success = await step.action();
 
 			updateStepStatus(step.id, success ? 'completed' : 'error');
 			return success;

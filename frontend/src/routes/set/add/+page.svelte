@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
 	import type { Database } from '$lib/models/database';
 	import { type NewSetlist } from '$lib/models/setlist';
@@ -16,21 +17,15 @@
 		songs: []
 	});
 	const errorMessage = data.error;
+	const api = getApi();
 
 	async function onSubmit(set: NewSetlist) {
-		const response = await fetch('/api/sets', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(set)
-		});
-		if (response.ok) {
+		try {
+			const response = await api.sets.add(set);
 			notifications.success('Set added successfully!');
 			await goto('/');
-		} else {
-			const error = await response.json();
-			notifications.error(error.error ? `Failed to add set: ${error.error}` : 'Failed to add set');
+		} catch (error) {
+			notifications.error(`Failed to add set: ${(error as Error).message}`);
 		}
 	}
 </script>
