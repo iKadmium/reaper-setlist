@@ -28,7 +28,7 @@
 			{#each steps as step}
 				<li>
 					{#if step.href}
-						<a href={step.href}>{step.label}</a>
+						<a href={`#${step.href}`}>{step.label}</a>
 					{:else}
 						{step.label}
 					{/if}
@@ -40,7 +40,7 @@
 			{#each steps as step}
 				<li>
 					{#if step.href}
-						<a href={step.href}>{step.label}</a>
+						<a href={`#${step.href}`}>{step.label}</a>
 					{:else}
 						{step.label}
 					{/if}

@@ -3,7 +3,7 @@ import { goto } from '$app/navigation';
 import { getApi } from '$lib/api/api';
 import type { LayoutLoad } from './$types';
 
-export const ssr = false;
+// export const ssr = false;
 
 export const load: LayoutLoad = async ({ fetch, url }) => {
 	try {

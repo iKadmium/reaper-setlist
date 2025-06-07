@@ -92,7 +92,7 @@
 
 	<Form onsubmit={handleSubmit}>
 		<h3>Script</h3>
-		<a class="download-link" href="/lua/reaper-setlist.lua" download="reaper-setlist.lua">
+		<a class="download-link" href="#/lua/reaper-setlist.lua" download="reaper-setlist.lua">
 			<DownloadIcon />
 			Download reaper-setlist.lua
 		</a>

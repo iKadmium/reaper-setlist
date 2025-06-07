@@ -23,7 +23,7 @@
 	<p><strong>{title}</strong></p>
 	<ul>
 		{#each steps as step}
-			<li><a href={step.href}>{step.label}</a></li>
+			<li><a href={`#${step.href}`}>{step.label}</a></li>
 		{/each}
 	</ul>
 </div>
