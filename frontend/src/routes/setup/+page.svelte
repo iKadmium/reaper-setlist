@@ -25,7 +25,7 @@
 	const setupSteps = [
 		{ label: 'Download the Reaper Setlist script from the link below.' },
 		{ label: 'Open Reaper and go to "Actions" > "Show Action List".' },
-		{ label: 'Click "Load" and select the downloaded script file.' },
+		{ label: 'Click "New Action" -> "Load ReaScript" and select the downloaded script file.' },
 		{ label: 'Copy the Action ID of the script from the Action List.' },
 		{ label: 'Click "Test" to ensure the script is working correctly.' },
 
@@ -49,19 +49,6 @@
 
 	function clearScriptTestState() {
 		scriptTestState = null;
-	}
-
-	async function saveActionId(event: Event) {
-		event.preventDefault();
-		const formData = new FormData(event.target as HTMLFormElement);
-		const loadProjectActionIdValue = formData.get('script-action-id');
-
-		try {
-			await api.script.setScriptActionId(loadProjectActionIdValue as string);
-			notifications.success('Action IDs saved successfully!');
-		} catch (error) {
-			notifications.error('Failed to save action IDs');
-		}
 	}
 
 	// Test Script
@@ -90,7 +77,7 @@
 
 	<Form onsubmit={handleSubmit}>
 		<h3>Script</h3>
-		<a class="download-link" href={`${base}/#/lua/reaper-setlist.lua`} download="reaper-setlist.lua">
+		<a class="download-link" href={`${base}/lua/reaper-setlist.lua`} download="reaper-setlist.lua">
 			<DownloadIcon />
 			Download reaper-setlist.lua
 		</a>
