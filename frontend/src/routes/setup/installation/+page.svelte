@@ -24,7 +24,7 @@
 		const loadProjectActionIdValue = formData.get('script-action-id');
 
 		try {
-			await api.settings.setScriptActionId(loadProjectActionIdValue as string);
+			await api.script.setScriptActionId(loadProjectActionIdValue as string);
 			notifications.success('Action IDs saved successfully!');
 		} catch (error) {
 			notifications.error('Failed to save action IDs');
@@ -35,7 +35,7 @@
 	async function testScript() {
 		scriptTestState = null;
 		try {
-			const success = await api.reaper.testActionId(scriptActionId as string);
+			const success = await api.script.testActionId(scriptActionId as string);
 
 			if (success) {
 				scriptTestState = 'success';

@@ -23,7 +23,7 @@
 	async function handleLoadClick(song: Song) {
 		try {
 			await api.reaper.newTab();
-			await api.reaper.loadByFilename(song.path);
+			await api.script.loadByFilename(song.path);
 			notifications.success(`${song.name} loaded successfully in Reaper!`);
 		} catch (error) {
 			notifications.error('Failed to communicate with Reaper');

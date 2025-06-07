@@ -14,7 +14,7 @@ export const load: PageLoad = async ({ fetch, url }: { fetch: any; url: any }) =
 		}
 
 		// Check if installation tab should be accessible
-		const folderPath = await api.settings.getFolderPath();
+		const folderPath = await api.script.getFolderPath();
 		const canAccessInstallation = folderPath;
 
 		return {

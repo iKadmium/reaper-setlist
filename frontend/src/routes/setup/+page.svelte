@@ -29,7 +29,7 @@
 		const folderPathValue = formData.get('backing-tracks-folder') || '';
 
 		try {
-			await api.settings.setFolderPath(folderPathValue as string);
+			await api.script.setFolderPath(folderPathValue as string);
 			notifications.success('Settings saved successfully!');
 			if (!data.scriptActionId) {
 				await goto('/setup/installation');

@@ -97,7 +97,7 @@
 
 	async function loadSong(song: Song): Promise<boolean> {
 		try {
-			await api.reaper.loadByFilename(song.path);
+			await api.script.loadByFilename(song.path);
 			return true;
 		} catch (error) {
 			notifications.error(`Failed to load song "${song.name}": ${(error as Error).message}`);

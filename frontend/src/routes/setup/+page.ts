@@ -2,21 +2,21 @@ import { getApi } from '$lib/api/api';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
-    try {
-        const api = getApi(fetch);
+	try {
+		const api = getApi(fetch);
 
-        const folderPath = await api.settings.getFolderPath();
-        const scriptActionId = await api.settings.getScriptActionId();
+		const folderPath = await api.script.getFolderPath();
+		const scriptActionId = await api.script.getScriptActionId();
 
-        return {
-            folderPath,
-            scriptActionId
-        };
-    } catch (error) {
-        return {
-            folderPath: '',
-            scriptActionId: '',
-            error: error instanceof Error ? error.message : 'An unknown error occurred.'
-        };
-    }
+		return {
+			folderPath,
+			scriptActionId
+		};
+	} catch (error) {
+		return {
+			folderPath: '',
+			scriptActionId: '',
+			error: error instanceof Error ? error.message : 'An unknown error occurred.'
+		};
+	}
 };
