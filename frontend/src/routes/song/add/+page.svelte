@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
@@ -23,7 +24,7 @@
 			return;
 		}
 
-		await goto('/song');
+		await goto(`${base}/#/song`);
 	}
 </script>
 

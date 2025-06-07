@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
@@ -23,7 +24,7 @@
 		try {
 			await api.sets.add(set);
 			notifications.success('Set added successfully!');
-			await goto('/');
+			await goto(`${base}/#/`);
 		} catch (error) {
 			notifications.error(`Failed to add set: ${(error as Error).message}`);
 		}

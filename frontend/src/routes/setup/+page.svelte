@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
@@ -40,9 +41,6 @@
 		try {
 			await api.script.setFolderPath(folderPathValue as string);
 			notifications.success('Settings saved successfully!');
-			if (!data.scriptActionId) {
-				await goto('/setup/installation');
-			}
 		} catch (error) {
 			notifications.error(`Failed to set folder path: ${(error as Error).message}`);
 			return;
@@ -92,7 +90,7 @@
 
 	<Form onsubmit={handleSubmit}>
 		<h3>Script</h3>
-		<a class="download-link" href="#/lua/reaper-setlist.lua" download="reaper-setlist.lua">
+		<a class="download-link" href={`${base}/#/lua/reaper-setlist.lua`} download="reaper-setlist.lua">
 			<DownloadIcon />
 			Download reaper-setlist.lua
 		</a>

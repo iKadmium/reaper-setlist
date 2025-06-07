@@ -15,7 +15,7 @@ const config = {
 			fallback: 'index.html'
 		}),
 		paths: {
-			base: '/setlist'
+			base: process.env.NODE_ENV == 'production' ? '/setlist' : ''
 		}
 	},
 

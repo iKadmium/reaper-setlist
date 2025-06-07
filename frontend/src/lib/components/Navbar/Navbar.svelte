@@ -2,18 +2,20 @@
 	export interface NavbarProps {
 		setupComplete?: boolean;
 	}
+	import { base } from '$app/paths';
 	import { page } from '$app/state';
 
 	let { setupComplete = false }: NavbarProps = $props();
+	console.log({ pathname: page.url });
 </script>
 
 <nav>
 	<ul class="nav">
 		{#if setupComplete}
-			<li><a href="#/" class:active={page.url.pathname === '#/'}>Sets</a></li>
-			<li><a href="#/song" class:active={page.url.pathname === '#/song'}>Songs</a></li>
+			<li><a href={`${base}/#/`} class:active={page.url.hash === `#/`}>Sets</a></li>
+			<li><a href={`${base}/#/song`} class:active={page.url.hash === `#/song`}>Songs</a></li>
 		{/if}
-		<li><a href="#/setup" class:active={page.url.pathname === '#/setup' || page.url.pathname.startsWith('/setup/')}>Setup</a></li>
+		<li><a href={`${base}/#/setup`} class:active={page.url.hash === `#/setup` || page.url.hash.startsWith(`${base}/#/setup/`)}>Setup</a></li>
 	</ul>
 </nav>
 

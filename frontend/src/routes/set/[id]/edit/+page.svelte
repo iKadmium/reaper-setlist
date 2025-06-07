@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';
@@ -18,7 +19,7 @@
 	async function onSubmit(set: Setlist) {
 		try {
 			await api.sets.update(set.id, set);
-			await goto('/');
+			await goto(`${base}/#/`);
 		} catch (error) {
 			notifications.error(`Failed to update set: ${(error as Error).message}`);
 		}

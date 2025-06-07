@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 import { getApi } from '$lib/api/api';
 import type { LayoutLoad } from './$types';
 
@@ -15,7 +16,7 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
 
 		// If setup is not complete, navigate to setup page
 		if (!setupComplete && browser && url.pathname !== '/setup') {
-			goto('/setup');
+			goto(`${base}/#/setup`);
 			return { setupComplete };
 		}
 

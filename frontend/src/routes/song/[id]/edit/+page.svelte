@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import SongEditor from '$lib/components/SongEditor/SongEditor.svelte';
@@ -13,7 +14,7 @@
 		try {
 			api.songs.update(song.id, song);
 			notifications.success('Song updated successfully!');
-			await goto('/song');
+			await goto(`${base}/#/song`);
 		} catch (error) {
 			notifications.error(`Failed to update song: ${(error as Error).message}`);
 			return;

@@ -14,6 +14,7 @@
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import type { PageData } from './$types';
 	import { getApi } from '$lib/api/api';
+	import { base } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
@@ -108,10 +109,10 @@
 		{#snippet actions(item)}
 			<ResponsiveActions>
 				{#snippet primaryAction()}
-					<Button color="primary" elementType="a" href={`#/set/${item.id}/load`} variant="icon"><PlayIcon /></Button>
+					<Button color="primary" elementType="a" href={`${base}/#/set/${item.id}/load`} variant="icon"><PlayIcon /></Button>
 				{/snippet}
 				{#snippet secondaryActions()}
-					<Button elementType="a" color="edit" href={`#/set/${item.id}/edit`} variant="icon"><EditIcon /></Button>
+					<Button elementType="a" color="edit" href={`${base}/#/set/${item.id}/edit`} variant="icon"><EditIcon /></Button>
 					<Button color="delete" onclick={() => handleDeleteClick(item)} variant="icon"><DeleteIcon /></Button>
 					<Button color="success" onclick={() => handleDuplicateClick(item)} variant="icon"><CopyIcon /></Button>
 				{/snippet}
@@ -121,7 +122,7 @@
 {/if}
 
 <div class="action-section">
-	<Button elementType="a" href="#/set/add" color="success">Add Set</Button>
+	<Button elementType="a" href={`${base}/#/set/add`} color="success">Add Set</Button>
 </div>
 
 <style>
