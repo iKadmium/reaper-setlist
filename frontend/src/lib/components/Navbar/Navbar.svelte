@@ -12,7 +12,7 @@
 <nav>
 	<ul class="nav">
 		{#if setupComplete}
-			<li><a href={`${base}/#/`} class:active={page.url.hash === `#/`}>Sets</a></li>
+			<li><a href={`${base}/#/`} class:active={page.url.hash === `#/` || page.url.hash === ''}>Sets</a></li>
 			<li><a href={`${base}/#/song`} class:active={page.url.hash === `#/song`}>Songs</a></li>
 		{/if}
 		<li><a href={`${base}/#/setup`} class:active={page.url.hash === `#/setup` || page.url.hash.startsWith(`${base}/#/setup/`)}>Setup</a></li>
