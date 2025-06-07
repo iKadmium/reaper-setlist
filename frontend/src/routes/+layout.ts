@@ -1,32 +1,28 @@
-import type { ReaperSettings } from '$lib/models/reaper-settings';
-import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
+import { base } from '$app/paths';
+import { getApi } from '$lib/api/api';
 import type { LayoutLoad } from './$types';
 
+// export const ssr = false;
+
 export const load: LayoutLoad = async ({ fetch, url }) => {
+	try {
+		const api = getApi(fetch);
+		const scriptActionId = await api.script.getScriptActionId();
+		const folderPath = await api.script.getFolderPath();
 
+		const setupComplete: boolean = !!folderPath && !!scriptActionId;
 
-    try {
-        const response = await fetch('/api/settings');
+		// If setup is not complete, navigate to setup page
+		if (!setupComplete && browser && url.pathname !== '/setup') {
+			goto(`${base}/#/setup`);
+			return { setupComplete };
+		}
 
-        if (!response.ok) {
-            throw new Error(`Failed to check setup status: ${response.status}`);
-        }
-
-        const setupData = await response.json() as ReaperSettings;
-
-        const setupComplete = setupData.folderPath?.length > 0 && setupData.reaperUrl?.length > 0;
-
-        // If setup is not complete, navigate to setup page
-        if (!setupComplete && browser && url.pathname !== '/setup') {
-            goto('/setup');
-            return { setupComplete };
-        }
-
-        return { setupComplete };
-    } catch (error) {
-        // For errors, log and continue (let pages handle their own error states)
-        console.warn('Setup check failed:', error);
-        return { setupComplete: false };
-    }
+		return { setupComplete };
+	} catch (error) {
+		console.error('Error during setup check:', error);
+		return { setupComplete: false };
+	}
 };

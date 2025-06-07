@@ -1,0 +1,3 @@
+Place the 'reaper-setlist.lua' file in your Reaper Scripts folder. You can find this in Options -> Show REAPER resource path in explorer/finder. From there, open the Scripts folder.
+
+Place the 'setlist' folder in your Reaper web files folder. You can find this in Preferences -> Control/OSC/Web. Add a web interface if you don't already have one, and within the options for it, click the 'User Pages' button.

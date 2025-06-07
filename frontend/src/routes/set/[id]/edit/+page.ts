@@ -2,25 +2,17 @@ import type { PageLoad } from './$types';
 import type { Database } from '$lib/models/database';
 import type { Setlist } from '$lib/models/setlist';
 import type { Song } from '$lib/models/song';
+import { getApi } from '$lib/api/api';
 
 export const load: PageLoad = async ({ fetch, params }) => {
     try {
         const id = params.id;
+        const api = getApi(fetch);
 
-        const [setResponse, songsResponse] = await Promise.all([
-            fetch(`/api/sets/${id}`),
-            fetch('/api/songs')
+        const [set, songs] = await Promise.all([
+            api.sets.get(id),
+            api.songs.list()
         ]);
-
-        if (!setResponse.ok) {
-            throw new Error(`Failed to fetch set: ${setResponse.status}`);
-        }
-        const set: Setlist = await setResponse.json();
-
-        if (!songsResponse.ok) {
-            throw new Error(`Failed to fetch songs: ${songsResponse.status}`);
-        }
-        const songs: Database<Song> = await songsResponse.json();
 
         return {
             set,

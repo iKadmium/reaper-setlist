@@ -1,12 +1,12 @@
-export interface Setlist {
+export interface Setlist extends SetlistCommon {
     id: string;
-    date: string;
-    venue: string;
-    songs: string[]; // Array of song IDs
 }
 
-export interface NewSetlist {
+export interface NewSetlist extends SetlistCommon {
     id?: undefined; // explicitly undefined
+}
+
+interface SetlistCommon {
     date: string;
     venue: string;
     songs: string[]; // Array of song IDs

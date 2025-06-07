@@ -1,6 +1,4 @@
 <script lang="ts">
-	const ssr = false;
-
 	import Navbar from '$lib/components/Navbar/Navbar.svelte';
 	import NotificationContainer from '$lib/components/Notification-Container/Notification-Container.svelte';
 	import '$lib/global.css';
