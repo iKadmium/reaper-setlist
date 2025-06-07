@@ -13,10 +13,13 @@ const config = {
 		},
 		adapter: adapter({
 			fallback: 'index.html'
-		})
+		}),
+		paths: {
+			base: '/setlist'
+		}
 	},
 
-	compilerOptions:{
+	compilerOptions: {
 		runes: true
 	}
 };
