@@ -2,7 +2,7 @@ import { Lazy } from '$lib/util';
 import type { ReaperApiClient, ReaperCommand } from '../api';
 import { ReaperScriptCommandBuilder, type ScriptOperationInput } from './reaper-script-accessor';
 import { StateKeys } from './reaper-state';
-import type { ScriptOperations } from '../../../../../rpc/script-operations';
+import type { ScriptOperations } from '../../../../../rpc/input/script-operations';
 
 type ScriptOperationName = keyof ScriptOperations;
 
@@ -37,7 +37,6 @@ export class ReaperScriptClientImpl implements ScriptOperations {
 		commands.push(this.accessor.setOperation(operation));
 		commands.push(await this.getRunScriptCommand());
 
-
 		commands.push(this.accessor.setInputs(inputs));
 		return this.apiClient.sendCommands(commands);
 	}
@@ -49,7 +48,6 @@ export class ReaperScriptClientImpl implements ScriptOperations {
 		commands.push(this.accessor.getExtState('projects'));
 		const results = await this.apiClient.sendCommands(commands);
 		const ouputIndex = Object.keys(inputs).length + 2;
-
 
 		return results;
 	}
