@@ -1,12 +1,12 @@
-import type { ReaperApiClient } from '../api';
-import { AbstractReaperStateAccessor } from './abstract-reaper-state-accessor';
+import type { ReaperApiClient, ReaperCommand } from '../api';
+import { ReaperStateCommandBuilder } from './abstract-reaper-state-accessor';
 import type { KVStoreName } from './reaper-state';
 
 const CHUNK_SIZE = 500;
 const INDEX_KEY = '__index__';
 const CONTINUATION_MARKER = '|C|';
 
-export class ReaperStoreAccessor<TValue> extends AbstractReaperStateAccessor {
+export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 	constructor(section: KVStoreName, apiClient: ReaperApiClient) {
 		super(section, apiClient);
 	}
@@ -19,7 +19,10 @@ export class ReaperStoreAccessor<TValue> extends AbstractReaperStateAccessor {
 		let chunks: string[] = [];
 		let i = 0;
 		while (true) {
-			const chunk = await this.getExtStateInternal(key + '.' + i);
+			const chunkCommand = this.getExtStateCommand(key + '.' + i);
+			const result = await this.apiClient.sendCommand(chunkCommand);
+			const chunk = this.parseGetExtStateCommandResult(result);
+
 			if (!chunk) break;
 			if (chunk.endsWith(CONTINUATION_MARKER)) {
 				chunks.push(chunk.slice(0, -CONTINUATION_MARKER.length));
@@ -39,19 +42,22 @@ export class ReaperStoreAccessor<TValue> extends AbstractReaperStateAccessor {
 				`Value to be stored contains the reserved continuation marker (${CONTINUATION_MARKER}).`
 			);
 		}
+		const commands: ReaperCommand[] = [];
 		const numChunks = Math.ceil(value.length / CHUNK_SIZE);
 		for (let i = 0; i < numChunks; i++) {
 			let chunk = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
 			if (i < numChunks - 1) chunk += CONTINUATION_MARKER;
-			await this.setExtStateInternal(key + '.' + i, chunk, false);
+			commands.push(this.setExtStateCommand(key + '.' + i, chunk, false));
 		}
 		let cleanupIndex = numChunks;
 		while (true) {
-			const chunk = await this.getExtStateInternal(key + '.' + cleanupIndex);
+			const chunk = await this.getExtStateCommand(key + '.' + cleanupIndex);
 			if (!chunk) break;
-			await this.setExtStateInternal(key + '.' + cleanupIndex, '', false);
+			commands.push(this.setExtStateCommand(key + '.' + cleanupIndex, '', false));
 			cleanupIndex++;
 		}
+		// do not use batch here, as the state was chunked to avoid exceeding the max batch size
+		await Promise.all(commands.map((command) => this.apiClient.sendCommand(command)));
 	}
 
 	async getItem(key: string): Promise<TValue | undefined> {
@@ -71,9 +77,12 @@ export class ReaperStoreAccessor<TValue> extends AbstractReaperStateAccessor {
 		const chunkKey = this.getChunkKey(key, 0).replace(/\.0$/, '');
 		let i = 0;
 		while (true) {
-			const chunk = await this.getExtStateInternal(chunkKey + '.' + i);
+			const getChunkCommand = this.getExtStateCommand(chunkKey + '.' + i);
+			const result = await this.apiClient.sendCommand(getChunkCommand);
+			const chunk = this.parseGetExtStateCommandResult(result);
 			if (!chunk) break;
-			await this.setExtStateInternal(chunkKey + '.' + i, '', false);
+			const deleteChunkCommand = this.setExtStateCommand(chunkKey + '.' + i, '', false);
+			await this.apiClient.sendCommand(deleteChunkCommand);
 			i++;
 		}
 	}
@@ -87,7 +96,9 @@ export class ReaperStoreAccessor<TValue> extends AbstractReaperStateAccessor {
 		// Prepare chunk keys for the first chunk of each key
 		const chunk0Keys = keys.map((key) => this.getChunkKey(key, 0).replace(/\.0$/, ''));
 		const batchKeys = chunk0Keys.map((k) => k + '.0');
-		const chunk0Responses = await this.fetchExtStateInternalBatch(batchKeys);
+		const chunk0Commands = batchKeys.map((k) => this.getExtStateCommand(k));
+		const chunk0ResponsesRaw = await this.apiClient.sendCommands(chunk0Commands);
+		const chunk0Responses = chunk0ResponsesRaw.map((r) => this.parseGetExtStateCommandResult(r));
 
 		for (let idx = 0; idx < keys.length; idx++) {
 			const key = keys[idx];
@@ -100,7 +111,9 @@ export class ReaperStoreAccessor<TValue> extends AbstractReaperStateAccessor {
 						chunks.push(chunk.slice(0, -CONTINUATION_MARKER.length));
 						i++;
 						const nextChunkKey = this.getChunkKey(key, i).replace(/\.0$/, '');
-						chunk = await this.getExtStateInternal(nextChunkKey + '.' + i);
+						const nextChunkCommand = this.getExtStateCommand(nextChunkKey + '.' + i);
+						const chunkRaw = await this.apiClient.sendCommand(nextChunkCommand);
+						chunk = this.parseGetExtStateCommandResult(chunkRaw);
 					} else {
 						chunks.push(chunk);
 						break;

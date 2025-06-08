@@ -1,17 +1,11 @@
-import type { ReaperApiClient } from '../api';
+export const ScriptOperationKey = 'Operation';
 
 export const StateKeys = {
-	Operation: 'Operation',
 	ProjectRoot: 'ProjectRoot',
-	ProjectPath: 'ProjectPath',
-	ScriptOutput: 'ScriptOutput',
-	ScriptActionId: 'ScriptActionId',
-	SongsLength: 'SongsLength',
-	SetsLength: 'SetsLength',
-	TestInput: 'TestInput'
+	ScriptActionId: 'ScriptActionId'
 } as const;
 
-export type StateKey = (typeof StateKeys)[keyof typeof StateKeys];
+export type StateKey = (typeof StateKeys)[keyof typeof StateKeys] | typeof ScriptOperationKey;
 
 export const SectionKeys = {
 	ReaperSetlist: 'ReaperSetlist',
@@ -20,14 +14,6 @@ export const SectionKeys = {
 };
 
 export type SectionKey = (typeof SectionKeys)[keyof typeof SectionKeys];
-
-export const OperationKeys = {
-	ListProjects: 'ListProjects',
-	OpenProject: 'OpenProject',
-	TestActionId: 'TestActionId'
-};
-
-export type OperationKey = (typeof OperationKeys)[keyof typeof OperationKeys];
 
 export const KVStores = {
 	Songs: 'Songs',

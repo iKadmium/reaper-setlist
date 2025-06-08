@@ -1,36 +1,27 @@
-import type { ReaperApiClient } from '../api';
+import type { ReaperApiClient, ReaperCommand } from '../api';
 import type { SectionKey } from './reaper-state';
 
-export abstract class AbstractReaperStateAccessor {
+export abstract class ReaperStateCommandBuilder {
 	protected constructor(
 		protected readonly section: SectionKey,
 		protected readonly apiClient: ReaperApiClient
 	) {}
 
-	protected async getExtStateInternal(key: string): Promise<string> {
-		const command = `GET/EXTSTATE/${this.section}/${key}`;
-		const result = await this.apiClient.sendCommand(command);
-		const lines = result.split('\n').filter((line) => line.trim() !== '');
-		const value = lines[0].split('\t');
-		return value[3];
+	protected getExtStateCommand(key: string): ReaperCommand {
+		const command = `GET/EXTSTATE/${this.section}/${key}` as ReaperCommand;
+		return command;
 	}
 
-	protected async setExtStateInternal(
-		key: string,
-		value: string,
-		temp: boolean = false
-	): Promise<void> {
+	protected setExtStateCommand(key: string, value: string, temp: boolean = false): ReaperCommand {
 		const command = temp
-			? `SET/EXTSTATE/${this.section}/${key}/${value}`
-			: `SET/EXTSTATEPERSIST/${this.section}/${key}/${value}`;
-		await this.apiClient.sendCommand(command);
+			? (`SET/EXTSTATE/${this.section}/${key}/${value}` as ReaperCommand)
+			: (`SET/EXTSTATEPERSIST/${this.section}/${key}/${value}` as ReaperCommand);
+		return command;
 	}
 
-	// Add a batch fetch method to the abstract accessor
-	public async fetchExtStateInternalBatch(keys: string[]): Promise<(string | undefined)[]> {
-		const commands = keys.map((k) => `GET/EXTSTATE/${this.section}/${k}`);
-		const responses = await this.apiClient.sendCommands(commands);
-		const states = responses.map((response) => response.split('\t')[3]);
-		return states;
+	protected parseGetExtStateCommandResult(result: string): string {
+		const lines = result.split('\n');
+		const tabs = lines[0].split('\t');
+		return tabs[3];
 	}
 }

@@ -1,10 +1,10 @@
-import type { ReaperApiClient } from '../api';
+import type { ReaperApiClient, ReaperCommand } from '../api';
 
-const GO_TO_END = '40043';
-const GO_TO_START = '40042';
-const GET_TRANSPORT = 'TRANSPORT';
-const NEW_TAB = '40859';
-const CLOSE_ALL_TABS = '40860';
+const GO_TO_END = '40043' as ReaperCommand;
+const GO_TO_START = '40042' as ReaperCommand;
+const GET_TRANSPORT = 'TRANSPORT' as ReaperCommand;
+const NEW_TAB = '40859' as ReaperCommand;
+const CLOSE_ALL_TABS = '40860' as ReaperCommand;
 
 export class ReaperApiClientImpl implements ReaperApiClient {
 	private readonly urlRoot: string;
@@ -51,7 +51,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		await this.sendCommand(CLOSE_ALL_TABS);
 	}
 
-	public async sendCommand(command: string): Promise<string> {
+	public async sendCommand(command: ReaperCommand): Promise<string> {
 		const result = await this.fetch(`${this.urlRoot}/${command}`, {
 			method: 'GET'
 		});
@@ -61,7 +61,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		return await result.text();
 	}
 
-	public async sendCommands(commands: string[]): Promise<string[]> {
+	public async sendCommands(commands: ReaperCommand[]): Promise<string[]> {
 		const result = await this.fetch(`${this.urlRoot}/${commands.join(';')}`, {
 			method: 'GET'
 		});

@@ -1,60 +1,47 @@
-import { generateUUID } from '$lib/util';
-import type { ReaperApiClient } from '../api';
-import { ReaperMiscStateAccessor } from './reaper-misc-state-accessor';
-import { OperationKeys, SectionKeys, StateKeys } from './reaper-state';
+import { Lazy } from '$lib/util';
+import type { ReaperApiClient, ReaperCommand } from '../api';
+import { ReaperScriptCommandBuilder } from './reaper-script-accessor';
+import { StateKeys } from './reaper-state';
+import type { ScriptOperations } from './script-operations';
 
-export class ReaperScriptClientImpl {
+type ScriptOperationName = keyof ScriptOperations;
+
+export class ReaperScriptClientImpl implements ScriptOperations {
+	private readonly accessor: ReaperScriptCommandBuilder;
 	private readonly apiClient: ReaperApiClient;
-	private readonly accessor: ReaperMiscStateAccessor;
+	private readonly ScriptId: Lazy<string>;
 
-	constructor(apiClient: ReaperApiClient) {
+	constructor(apiClient: ReaperApiClient, accessor: ReaperScriptCommandBuilder) {
 		this.apiClient = apiClient;
-		this.accessor = new ReaperMiscStateAccessor(this.apiClient, SectionKeys.ReaperSetlist);
+		this.accessor = accessor;
+		this.ScriptId = new Lazy(() => {
+			return this.accessor.getExtState(StateKeys.ScriptActionId);
+		});
 	}
 
-	async setProjectRoot(root: string): Promise<void> {
-		this.accessor.setExtState(StateKeys.ProjectPath, root, false);
+	async listProjects(inputs: {}): Promise<{ projects: string[] }> {
+		const commands: ReaperCommand[] = [];
+		commands.push(this.accessor.setOperation('listProjects'));
+		commands.push(await this.getRunScriptCommand());
+		commands.push(this.accessor.getExtState('projects'));
+		const results = await this.apiClient.sendCommands(commands);
+
+		return results;
 	}
 
-	async listProjects(): Promise<string[]> {
-		const actionId = await this.accessor.getExtState(StateKeys.ScriptActionId);
-		await this.accessor.SetOperation(OperationKeys.ListProjects);
-		await this.apiClient.sendCommand(actionId);
-		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
-
-		const lines = result.split('\n').filter((line) => line.trim() !== '');
-		const projects = lines[0].split(',');
-		return projects;
+	async openProject(inputs: { projectPath: string }): Promise<void> {
+		return this.apiClient.sendCommand(this.accessor.openProject(inputs));
 	}
 
-	async loadByFilename(name: string): Promise<void> {
-		const actionId = await this.accessor.getExtState(StateKeys.ScriptActionId);
-		await this.accessor.setExtState(StateKeys.ProjectPath, name, false);
-		await this.accessor.SetOperation(OperationKeys.OpenProject);
-		await this.apiClient.sendCommand(actionId);
+	async testActionId(inputs: { nonce: string }): Promise<{ output: string }> {
+		return this.apiClient.sendCommand(this.accessor.testActionId(inputs));
 	}
 
-	async testActionId(actionId: string): Promise<boolean> {
-		const input = generateUUID();
-		await this.accessor.setExtState(StateKeys.TestInput, input, false);
-		await this.accessor.SetOperation(OperationKeys.TestActionId);
-		await this.apiClient.sendCommand(actionId);
-		const result = await this.accessor.getExtState(StateKeys.ScriptOutput);
-		const expectedOutput = `Test input received: ${input}`;
-
-		return result === expectedOutput;
-	}
-
-	async getFolderPath(): Promise<string | undefined> {
-		return this.accessor.getExtState(StateKeys.ProjectRoot);
-	}
-	async setFolderPath(path: string): Promise<void> {
-		await this.accessor.setExtState(StateKeys.ProjectRoot, path);
-	}
-	async getScriptActionId(): Promise<string | undefined> {
-		return this.accessor.getExtState(StateKeys.ScriptActionId);
-	}
-	async setScriptActionId(id: string): Promise<void> {
-		await this.accessor.setExtState(StateKeys.ScriptActionId, id);
+	async getRunScriptCommand(): Promise<ReaperCommand> {
+		const scriptId = await this.ScriptId.get();
+		if (!scriptId) {
+			throw new Error('Script action ID is not set');
+		}
+		return scriptId as ReaperCommand;
 	}
 }

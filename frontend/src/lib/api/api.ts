@@ -3,9 +3,11 @@ import type { Song } from '../models/song';
 import type { KeyValueStore } from './key-value-store';
 import { ReaperBackend } from './reaper-backend/reaper-backend';
 
+export type ReaperCommand = string & { __brand: 'ReaperCommand' };
+
 export interface ReaperApiClient {
-	sendCommand: (command: string) => Promise<string>;
-	sendCommands: (commands: string[]) => Promise<string[]>;
+	sendCommand: (command: ReaperCommand) => Promise<string>;
+	sendCommands: (commands: ReaperCommand[]) => Promise<string[]>;
 
 	getDuration: () => Promise<number>;
 	goToStart: () => Promise<void>;

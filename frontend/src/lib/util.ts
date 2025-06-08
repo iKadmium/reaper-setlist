@@ -11,8 +11,28 @@ export function generateUUID(): string {
 
 	// Fallback: generate a pseudo-UUID using Math.random()
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-		const r = Math.random() * 16 | 0;
-		const v = c === 'x' ? r : (r & 0x3 | 0x8);
+		const r = (Math.random() * 16) | 0;
+		const v = c === 'x' ? r : (r & 0x3) | 0x8;
 		return v.toString(16);
 	});
+}
+
+export class Lazy<T> {
+	private value: T | undefined;
+	private readonly factory: () => Promise<T>;
+
+	constructor(factory: () => Promise<T>) {
+		this.factory = factory;
+	}
+
+	async get(): Promise<T> {
+		if (this.value === undefined) {
+			this.value = await this.factory();
+		}
+		return Promise.resolve(this.value);
+	}
+
+	reset(): void {
+		this.value = undefined;
+	}
 }
