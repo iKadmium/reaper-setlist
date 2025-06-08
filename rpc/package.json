@@ -1,0 +1,15 @@
+{
+  "name": "rpc",
+  "private": true,
+  "scripts": {
+    "generate": "bun morph.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.15.30",
+    "ts-morph": "^26.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

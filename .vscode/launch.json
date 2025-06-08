@@ -5,16 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb",
+            "command": "bun generate",
+            "name": "Run bun generate",
             "request": "launch",
-            "name": "Cargo launch",
-            "cargo": {
-                "args": [
-                    "build"
-                ],
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "args": []
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}/rpc",
         },
     ]
 }

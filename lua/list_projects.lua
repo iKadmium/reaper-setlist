@@ -1,3 +1,5 @@
+local globals = require "globals"
+
 ---@param path string
 ---@return string
 local function normalize_path(path)
@@ -71,9 +73,9 @@ local function list_rpp_files_recursive(current_dir, base_path_for_relative)
 end
 
 ---Returns a list of .rpp files in the project root folder and its subfolders
----@param project_root_folder string
----@return string[]
-local function ListProjectFiles(project_root_folder)
+---@return string
+local function ListProjects()
+    local project_root_folder = reaper.GetExtState(globals.SECTION, globals.KEYS.project_root_folder)
     if not project_root_folder or project_root_folder == "" then
         error("Project root folder is not set. Cannot list files.")
     end
@@ -87,7 +89,7 @@ local function ListProjectFiles(project_root_folder)
         return a:lower() < b:lower()
     end)
 
-    return project_files
+    return table.concat(project_files, ",")
 end
 
-return ListProjectFiles
+return ListProjects

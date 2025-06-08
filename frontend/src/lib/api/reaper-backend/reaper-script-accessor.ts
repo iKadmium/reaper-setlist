@@ -1,7 +1,7 @@
 import type { ReaperApiClient, ReaperCommand } from '../api';
 import { ReaperStateCommandBuilder } from './abstract-reaper-state-accessor';
 import { ScriptOperationKey, StateKeys, type SectionKey, type StateKey } from './reaper-state';
-import type { ScriptOperations } from './script-operations';
+import type { ScriptOperations } from '../../../../../rpc/script-operations';
 
 type ScriptOperation = keyof ScriptOperations;
 
