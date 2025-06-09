@@ -1,4 +1,4 @@
-local Globals = require "globals"
+require "globals"
 
 ---@param path string
 ---@return string
@@ -75,7 +75,7 @@ end
 ---Returns a list of .rpp files in the project root folder and its subfolders
 ---@return string
 local function ListProjects()
-    local project_root_folder = reaper.GetExtState(Globals.SECTION, Globals.KEYS.project_root_folder)
+    local project_root_folder = reaper.GetExtState(SECTION, PROJECT_ROOT_FOLDER_KEY)
     if not project_root_folder or project_root_folder == "" then
         error("Project root folder is not set. Cannot list files.")
     end
