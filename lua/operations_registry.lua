@@ -3,18 +3,18 @@
 ---@param func function
 ---@return function
 local function safe_operation(func)
-	return function()
-		local success, err = pcall(func)
-		if not success then
-			reaper.ShowConsoleMsg("Error: " .. tostring(err) .. "\n")
-		end
-	end
+    return function()
+        local success, err = pcall(func)
+        if not success then
+            reaper.ShowConsoleMsg("Error: " .. tostring(err) .. "\n")
+        end
+    end
 end
 
 local globals = require "globals"
-local ListProjects = require "operations.list_projects"
-local OpenProject = require "operations.open_project"
-local TestActionId = require "operations.test_action_id"
+local ListProjects = require "operations/list_projects"
+local OpenProject = require "operations/open_project"
+local TestActionId = require "operations/test_action_id"
 
 
 local Operations = {

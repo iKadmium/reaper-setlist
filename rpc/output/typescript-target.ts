@@ -90,12 +90,13 @@ export class TypeScriptTarget extends Target {
 
 		for (let i = 0; i < outputs.length; i++) {
 			const output = outputs[i]!;
-			const resultIndex = i + inputs.length + 2;
+			const resultIndex = i;
+			operationLines.push(`\tconst ${output.name}Raw = result[${resultIndex}];`);
+			operationLines.push(`\tconst ${output.name}Parts = ${output.name}Raw.split('\\t');`);
 			if (output.type.isString()) {
-				operationLines.push(`\tconst ${output.name} = result[${resultIndex}];`);
+				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3];`);
 			} else if (output.type.isArray()) {
-				operationLines.push(`\tconst ${output.name}Raw = result[${resultIndex}];`);
-				operationLines.push(`\tconst ${output.name} = ${output.name}Raw.split(',');`);
+				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3].split(',');`);
 			} else {
 
 			}

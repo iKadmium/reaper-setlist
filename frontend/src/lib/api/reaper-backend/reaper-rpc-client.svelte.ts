@@ -26,8 +26,9 @@ export class ReaperRpcClient {
 		commands.push(actionId); 
 		commands.push(this.commandBuilder.getExtState("projects")); 
 		const result = await this.apiClient.sendCommands(commands); 
-		const projectsRaw = result[2];
-		const projects = projectsRaw.split(',');
+		const projectsRaw = result[0];
+		const projectsParts = projectsRaw.split('\t');
+		const projects = projectsParts[3].split(',');
 		return { projects }; 
 	}
 
@@ -48,7 +49,9 @@ export class ReaperRpcClient {
 		commands.push(actionId); 
 		commands.push(this.commandBuilder.getExtState("testOutput")); 
 		const result = await this.apiClient.sendCommands(commands); 
-		const testOutput = result[3];
+		const testOutputRaw = result[0];
+		const testOutputParts = testOutputRaw.split('\t');
+		const testOutput = testOutputParts[3];
 		return { testOutput }; 
 	}
 }

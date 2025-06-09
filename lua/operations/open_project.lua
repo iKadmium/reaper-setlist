@@ -13,9 +13,10 @@ local function OpenProject(project_path)
 
     -- Get the project root folder from Reaper's project settings
     local project_root_folder = reaper.GetExtState(Globals.SECTION, Globals.KEYS.project_root_folder)
+    local full_project_path = project_root_folder .. "/" .. project_path
 
     -- Open the project
-    local success = reaper.Main_openProject(project_path)
+    local success = reaper.Main_openProject(full_project_path)
     if not success then
         reaper.ShowConsoleMsg("Failed to open project: " .. project_path .. "\n")
     else
