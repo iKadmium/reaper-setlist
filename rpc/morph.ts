@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Project } from 'ts-morph';
 import { LuaTarget } from './output/lua-target';
-import type { OperationOptions } from './output/target';
+import type { Argument, OperationOptions } from './output/target';
 import { TypeScriptTarget } from './output/typescript-target';
 
 const project = new Project({
@@ -28,21 +28,22 @@ for (const prop of scriptOperationsInterface.getProperties()) {
 		const returnType = signature.getReturnType();
 
 		// Get parameters from state
-		const inputs: string[] = [];
+		const inputs: Argument[] = [];
 		for (const param of parameters) {
 			const paramName = param.getName();
 			const paramType = param.getTypeAtLocation(sourceFile);
-			inputs.push(paramName);
+			inputs.push({ name: paramName, type: paramType });
 		}
 
-		// Call the function
-		const outputs: string[] = [];
+		const outputs: Argument[] = [];
 		if (returnType.isVoid() || returnType.getText(sourceFile) === 'Promise<void>') {
 			// No return value
 		} else {
+			// Check if it's a Promise type and extract the awaited type
 			for (const prop of returnType.getProperties()) {
 				const outputName = prop.getName();
-				outputs.push(outputName);
+				const outputType = prop.getTypeAtLocation(sourceFile);
+				outputs.push({ name: outputName, type: outputType });
 			}
 		}
 

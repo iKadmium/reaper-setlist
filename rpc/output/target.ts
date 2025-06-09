@@ -1,3 +1,5 @@
+import type { ts, Type } from 'ts-morph';
+
 export abstract class Target {
 	protected operations: OperationOptions[] = [];
 	protected imports: string[] = [];
@@ -5,6 +7,14 @@ export abstract class Target {
 	protected abstract renderHeader(): string[];
 	protected abstract renderImports(): string[];
 	protected abstract renderOperations(): string[];
+
+	protected renderClassDefinition(): string[] {
+		return [];
+	}
+
+	protected renderClassEnd(): string[] {
+		return [];
+	}
 
 	abstract getOutputPathParts(): string[];
 
@@ -18,7 +28,11 @@ export abstract class Target {
 		lines.push('');
 		lines.push(...this.renderImports());
 		lines.push('');
+		lines.push(...this.renderClassDefinition());
+		lines.push('');
 		lines.push(...this.renderOperations());
+		lines.push('');
+		lines.push(...this.renderClassEnd());
 
 		return lines.join('\n');
 	}
@@ -26,6 +40,11 @@ export abstract class Target {
 
 export interface OperationOptions {
 	name: string;
-	inputs: string[];
-	outputs: string[];
+	inputs: Argument[];
+	outputs: Argument[];
+}
+
+export interface Argument {
+	name: string;
+	type: Type<ts.Type>;
 }

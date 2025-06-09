@@ -1,7 +1,7 @@
+import type { ScriptOperations } from '../../../../../rpc/input/script-operations';
 import type { ReaperApiClient, ReaperCommand } from '../api';
 import { ReaperStateCommandBuilder } from './abstract-reaper-state-accessor';
-import { ScriptOperationKey, StateKeys, type SectionKey, type StateKey } from './reaper-state';
-import type { ScriptOperations } from '../../../../../rpc/input/script-operations';
+import { ScriptOperationKey, StateKeys, type SectionKey } from './reaper-state';
 
 type ScriptOperation = keyof ScriptOperations;
 
@@ -21,19 +21,15 @@ export class ReaperScriptCommandBuilder extends ReaperStateCommandBuilder {
 		super(section, apiClient);
 	}
 
-	getExtState(key: ScriptOperationOutput | typeof StateKeys.ScriptActionId): ReaperCommand {
+	getExtState(key: string): ReaperCommand {
 		return this.getExtStateCommand(key);
 	}
 
-	setExtState(
-		key: ScriptOperationInput | typeof ScriptOperationKey,
-		value: string,
-		temp: boolean = false
-	): ReaperCommand {
+	setExtState(key: string, value: string, temp: boolean = false): ReaperCommand {
 		return this.setExtStateCommand(key, value, temp);
 	}
 
-	setOperation(operation: ScriptOperation): ReaperCommand {
+	setOperation(operation: string): ReaperCommand {
 		return this.setExtState(ScriptOperationKey, operation, false);
 	}
 }

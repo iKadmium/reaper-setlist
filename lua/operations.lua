@@ -18,8 +18,13 @@ local TestActionId = require "operations/test_action_id"
 
 local Operations = {
 	["listProjects"] = safe_operation(function()
-		local result = ListProjects()
-		if result then reaper.SetExtState(globals.SECTION, globals.KEYS.script_output, result, false) end
+		local projects = ListProjects()
+
+		if not projects or projects == '' then
+			error("Operation projects failed to return required output: projects")
+		end
+
+		reaper.SetExtState(globals.SECTION, "projects", projects, true)
 	end),
 
 	["openProject"] = safe_operation(function()
@@ -29,6 +34,7 @@ local Operations = {
 		end
 
 		OpenProject(projectPath)
+
 		reaper.DeleteExtState(globals.SECTION, "projectPath", true)
 	end),
 
@@ -38,8 +44,13 @@ local Operations = {
 			error("Missing required parameter: testNonce")
 		end
 
-		local result = TestActionId(testNonce)
-		if result then reaper.SetExtState(globals.SECTION, globals.KEYS.script_output, result, false) end
+		local testOutput = TestActionId(testNonce)
+
+		if not testOutput or testOutput == '' then
+			error("Operation testOutput failed to return required output: testOutput")
+		end
+
+		reaper.SetExtState(globals.SECTION, "testOutput", testOutput, true)
 		reaper.DeleteExtState(globals.SECTION, "testNonce", true)
 	end),
 }

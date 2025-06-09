@@ -1,6 +1,9 @@
 import { Lazy } from '$lib/util';
 import type { ReaperApiClient, ReaperCommand } from '../api';
-import { ReaperScriptCommandBuilder, type ScriptOperationInput } from './reaper-script-accessor';
+import {
+	ReaperScriptCommandBuilder,
+	type ScriptOperationInput
+} from './reaper-script-command-builder';
 import { StateKeys } from './reaper-state';
 import type { ScriptOperations } from '../../../../../rpc/input/script-operations';
 

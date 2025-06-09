@@ -3,7 +3,7 @@ import type { Song } from '$lib/models/song';
 import type { Api, ReaperApiClient, ReaperScriptClient, SetlistsStore, SongsStore } from '../api';
 import { ReaperApiClientImpl } from './reaper-api';
 import { ReaperKVS } from './reaper-kvs';
-import { ReaperScriptCommandBuilder } from './reaper-script-accessor';
+import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';
 import { ReaperScriptClientImpl } from './reaper-script-client';
 import { ReaperSetlistStoreImpl } from './reaper-setlist-store';
 import { SectionKeys } from './reaper-state';

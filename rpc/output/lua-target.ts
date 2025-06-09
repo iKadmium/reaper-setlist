@@ -1,5 +1,5 @@
 import { Target } from './target';
-import type { OperationOptions } from './target';
+import type { Argument, OperationOptions } from './target';
 
 // Helper function to convert camelCase to snake_case
 function camelToSnakeCase(str: string): string {
@@ -67,31 +67,43 @@ export class LuaTarget extends Target {
 		return lines;
 	}
 
-	private renderOperation(name: string, inputs: string[], outputs: string[]): string[] {
+	private renderOperation(name: string, inputs: Argument[], outputs: Argument[]): string[] {
 		const operationLines: string[] = [];
 		const functionName = name.charAt(0).toUpperCase() + name.slice(1);
 		operationLines.push(`\t["${name}"] = safe_operation(function()`);
 		if (inputs.length > 0) {
-			for (const param of inputs) {
-				operationLines.push(`\t\tlocal ${param} = reaper.GetExtState(globals.SECTION, "${param}")`);
-				operationLines.push(`\t\tif not ${param} or ${param} == "" then`);
-				operationLines.push(`\t\t\terror("Missing required parameter: ${param}")`);
+			for (const { name: name, type } of inputs) {
+				operationLines.push(`\t\tlocal ${name} = reaper.GetExtState(globals.SECTION, "${name}")`);
+				operationLines.push(`\t\tif not ${name} or ${name} == "" then`);
+				operationLines.push(`\t\t\terror("Missing required parameter: ${name}")`);
 				operationLines.push(`\t\tend`);
 				operationLines.push('');
 			}
 		}
-		const argsList = inputs.join(', ');
+		const argsList = inputs.map((input) => input.name).join(', ');
 		if (outputs.length === 0) {
 			operationLines.push(`\t\t${functionName}(${argsList})`);
+			operationLines.push('');
 		} else {
-			operationLines.push(`\t\tlocal result = ${functionName}(${argsList})`);
 			operationLines.push(
-				`\t\tif result then reaper.SetExtState(globals.SECTION, globals.KEYS.script_output, result, false) end`
+				`\t\tlocal ${outputs
+					.map((output) => output.name)
+					.join(', ')} = ${functionName}(${argsList})`
 			);
+			operationLines.push('');
+			for (const { name, type } of outputs) {
+				operationLines.push(`\t\tif not ${name} or ${name} == '' then`);
+				operationLines.push(
+					`\t\t\terror("Operation ${name} failed to return required output: ${name}")`
+				);
+				operationLines.push(`\t\tend`);
+				operationLines.push('');
+				operationLines.push(`\t\treaper.SetExtState(globals.SECTION, "${name}", ${name}, true)`);
+			}
 		}
 		if (inputs.length > 0) {
 			for (const param of inputs) {
-				operationLines.push(`\t\treaper.DeleteExtState(globals.SECTION, "${param}", true)`);
+				operationLines.push(`\t\treaper.DeleteExtState(globals.SECTION, "${param.name}", true)`);
 			}
 		}
 		operationLines.push(`\tend),`);
