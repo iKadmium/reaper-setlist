@@ -3,15 +3,15 @@
 ---@param func function
 ---@return function
 local function safe_operation(func)
-	return function()
-		local success, err = pcall(func)
-		if not success then
-			reaper.ShowConsoleMsg("Error: " .. tostring(err) .. "\n")
-		end
-	end
+    return function()
+        local success, err = pcall(func)
+        if not success then
+            reaper.ShowConsoleMsg("Error: " .. tostring(err) .. "\n")
+        end
+    end
 end
 
-require "globals"
+local globals = require "globals"
 local ListProjects = require "operations/list_projects"
 local OpenProject = require "operations/open_project"
 local TestActionId = require "operations/test_action_id"
@@ -25,22 +25,22 @@ local Operations = {
 			error("Operation projects failed to return required output: projects")
 		end
 
-		reaper.SetExtState(SECTION, "projects", projects, true)
+		reaper.SetExtState(globals.SECTION, "projects", projects, true)
 	end),
 
 	["openProject"] = safe_operation(function()
-		local projectPath = reaper.GetExtState(SECTION, "projectPath")
+		local projectPath = reaper.GetExtState(globals.SECTION, "projectPath")
 		if not projectPath or projectPath == "" then
 			error("Missing required parameter: projectPath")
 		end
 
 		OpenProject(projectPath)
 
-		reaper.DeleteExtState(SECTION, "projectPath", true)
+		reaper.DeleteExtState(globals.SECTION, "projectPath", true)
 	end),
 
 	["testActionId"] = safe_operation(function()
-		local testNonce = reaper.GetExtState(SECTION, "testNonce")
+		local testNonce = reaper.GetExtState(globals.SECTION, "testNonce")
 		if not testNonce or testNonce == "" then
 			error("Missing required parameter: testNonce")
 		end
@@ -51,8 +51,8 @@ local Operations = {
 			error("Operation testOutput failed to return required output: testOutput")
 		end
 
-		reaper.SetExtState(SECTION, "testOutput", testOutput, true)
-		reaper.DeleteExtState(SECTION, "testNonce", true)
+		reaper.SetExtState(globals.SECTION, "testOutput", testOutput, true)
+		reaper.DeleteExtState(globals.SECTION, "testNonce", true)
 	end),
 }
 
