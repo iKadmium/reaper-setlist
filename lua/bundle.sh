@@ -1,0 +1,1 @@
+bun x luabundler bundle main.lua -p "?.lua" -p "?/?.lua" -o reaper-setlist.lua

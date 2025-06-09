@@ -14,7 +14,10 @@
 			"extensions": [
 				"esbenp.prettier-vscode",
 				"svelte.svelte-vscode",
-				"GitHub.copilot"
+				"GitHub.copilot",
+				"sumneko.lua",
+				"oven.bun-vscode",
+				"github.vscode-github-actions"
 			]
 		}
 	},
@@ -23,7 +26,7 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bun install -g luabundler && sudo ln -s /usr/local/bin/bun /usr/local/bin/node"
+	// "postCreateCommand": ""
 	// Configure tool-specific properties.
 	// "customizations": {},
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
