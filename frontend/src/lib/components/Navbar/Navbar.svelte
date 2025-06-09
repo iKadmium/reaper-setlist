@@ -12,8 +12,6 @@
 
 	// Use the store value if available, otherwise fall back to prop
 	const setupComplete = $derived(configuration.isSetupComplete ?? propSetupComplete ?? false);
-
-	console.log({ pathname: page.url });
 </script>
 
 <nav>
