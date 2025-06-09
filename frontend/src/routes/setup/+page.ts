@@ -1,16 +1,14 @@
-import { getApi } from '$lib/api/api';
+import { configuration } from '$lib';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {
-		const api = getApi(fetch);
-
-		const folderPath = await api.scriptSettings.getProjectRoot();
-		const scriptActionId = await api.scriptSettings.getScriptActionId();
+		// Ensure configuration is initialized before accessing values
+		await configuration.ensureInitialized(fetch);
 
 		return {
-			folderPath,
-			scriptActionId
+			folderPath: configuration.folderPath || '',
+			scriptActionId: configuration.scriptActionId || ''
 		};
 	} catch (error) {
 		return {

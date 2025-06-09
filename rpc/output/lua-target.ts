@@ -13,7 +13,7 @@ function capitalise(str: string): string {
 
 export class LuaTarget extends Target {
 	override getOutputPathParts(): string[] {
-		return ['..', 'lua', 'operations.lua'];
+		return ['..', 'lua', 'operations_registry.lua'];
 	}
 
 	override renderHeader(): string[] {

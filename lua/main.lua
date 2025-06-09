@@ -1,5 +1,5 @@
 local Globals = require "globals"
-local Operations = require "operations"
+local Operations = require "operations_registry"
 
 -- Main execution logic
 local operation = reaper.GetExtState(Globals.SECTION, Globals.KEYS.operation)

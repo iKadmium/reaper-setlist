@@ -57,7 +57,7 @@ jobs:
       - name: Bundle Lua script
         working-directory: ./lua
         run: |
-          bun x luabundler bundle main.lua -p *.lua -o reaper-setlist.lua
+          bun x luabundler bundle main.lua -p **/*.lua -o reaper-setlist.lua
 
       - name: Prepare release package
         run: |

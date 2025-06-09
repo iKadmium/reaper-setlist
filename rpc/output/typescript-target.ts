@@ -4,13 +4,14 @@ export class TypeScriptTarget extends Target {
 	constructor() {
 		super();
 		this.imports.push(
+			`import { configuration } from "$lib/stores/configuration.svelte";`,
 			`import type { ReaperCommand, ReaperApiClient } from "../api";`,
 			`import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';`
 		);
 	}
 
 	override getOutputPathParts(): string[] {
-		return ['..', 'frontend', 'src', 'lib', 'api', 'reaper-backend', 'reaper-rpc-client.ts'];
+		return ['..', 'frontend', 'src', 'lib', 'api', 'reaper-backend', 'reaper-rpc-client.svelte.ts'];
 	}
 
 	override renderHeader(): string[] {
@@ -27,7 +28,16 @@ export class TypeScriptTarget extends Target {
 			`export class ReaperRpcClient {`,
 			`\tconstructor(`,
 			`\t\t${constructorArgs.join(', \n\t\t')}`,
-			`\t) { }`
+			`\t) { }`,
+			``,
+			`\tprivate async getScriptActionId(): Promise<ReaperCommand> {`,
+			`\t\tawait configuration.ensureInitialized();`,
+			`\t\tconst actionId = $derived(configuration.scriptActionId);`,
+			`\t\tif (!actionId) {`,
+			`\t\t\tthrow new Error("Script action ID is not set. Please configure it in the settings.");`,
+			`\t\t}`,
+			`\treturn actionId as ReaperCommand;`,
+			`\t}`,
 		];
 	}
 
@@ -59,12 +69,14 @@ export class TypeScriptTarget extends Target {
 				.join(', ')
 			}): Promise<${outputsStr}> {`
 		);
+		operationLines.push(`\tconst actionId = await this.getScriptActionId();`);
 		operationLines.push(`\tconst commands: ReaperCommand[] = []; `);
 		for (const { name, type } of inputs) {
 			operationLines.push(`\tcommands.push(this.commandBuilder.setExtState("${name}", ${name}, true)); `);
 		}
 
 		operationLines.push(`\tcommands.push(this.commandBuilder.setOperation("${name}")); `);
+		operationLines.push(`\tcommands.push(actionId); `);
 
 		for (const { name, type } of outputs) {
 			operationLines.push(`\tcommands.push(this.commandBuilder.getExtState("${name}")); `);
@@ -78,7 +90,7 @@ export class TypeScriptTarget extends Target {
 
 		for (let i = 0; i < outputs.length; i++) {
 			const output = outputs[i]!;
-			const resultIndex = i + inputs.length + 1; // +1 for the operation command
+			const resultIndex = i + inputs.length + 2;
 			if (output.type.isString()) {
 				operationLines.push(`\tconst ${output.name} = result[${resultIndex}];`);
 			} else if (output.type.isArray()) {

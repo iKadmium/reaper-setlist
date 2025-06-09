@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
-	import { notifications } from '$lib';
+	import { notifications, configuration } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
 	import Form from '$lib/components/Form/Form.svelte';
@@ -37,12 +37,20 @@
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
 		const folderPathValue = formData.get('backing-tracks-folder') || '';
+		const scriptActionIdValue = formData.get('script-action-id') || '';
 
 		try {
-			await api.scriptSettings.setProjectRoot(folderPathValue as string);
+			// Update both values in the store
+			await configuration.updateFolderPath(folderPathValue as string);
+			await configuration.updateScriptActionId(scriptActionIdValue as string);
+
 			notifications.success('Settings saved successfully!');
+
+			// Update local state to reflect the saved values
+			folderPath = folderPathValue as string;
+			scriptActionId = scriptActionIdValue as string;
 		} catch (error) {
-			notifications.error(`Failed to set folder path: ${(error as Error).message}`);
+			notifications.error(`Failed to save settings: ${(error as Error).message}`);
 			return;
 		}
 	}

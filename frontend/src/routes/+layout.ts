@@ -1,18 +1,16 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 import { base } from '$app/paths';
-import { getApi } from '$lib/api/api';
+import { configuration } from '$lib';
 import type { LayoutLoad } from './$types';
 
 // export const ssr = false;
 
 export const load: LayoutLoad = async ({ fetch, url }) => {
 	try {
-		const api = getApi(fetch);
-		const scriptActionId = await api.scriptSettings.getScriptActionId();
-		const folderPath = await api.scriptSettings.getProjectRoot();
-
-		const setupComplete: boolean = !!folderPath && !!scriptActionId;
+		// Ensure configuration is initialized
+		await configuration.ensureInitialized(fetch);
+		const setupComplete = configuration.isSetupComplete;
 
 		// If setup is not complete, navigate to setup page
 		if (!setupComplete && browser && url.pathname !== '/setup') {

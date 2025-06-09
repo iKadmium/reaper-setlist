@@ -1,11 +1,18 @@
 <script lang="ts">
+	import { base } from '$app/paths';
+	import { page } from '$app/state';
+	import { configuration } from '$lib';
+
+	// Optional prop for backward compatibility, but prefer using the store
 	export interface NavbarProps {
 		setupComplete?: boolean;
 	}
-	import { base } from '$app/paths';
-	import { page } from '$app/state';
 
-	let { setupComplete = false }: NavbarProps = $props();
+	let { setupComplete: propSetupComplete }: NavbarProps = $props();
+
+	// Use the store value if available, otherwise fall back to prop
+	const setupComplete = $derived(configuration.isSetupComplete ?? propSetupComplete ?? false);
+
 	console.log({ pathname: page.url });
 </script>
 
