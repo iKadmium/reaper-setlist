@@ -16,12 +16,7 @@ local function OpenProject(project_path)
     local full_project_path = project_root_folder .. "/" .. project_path
 
     -- Open the project
-    local success = reaper.Main_openProject(full_project_path)
-    if not success then
-        reaper.ShowConsoleMsg("Failed to open project: " .. project_path .. "\n")
-    else
-        reaper.ShowConsoleMsg("Project opened successfully: " .. project_path .. "\n")
-    end
+    reaper.Main_openProject(full_project_path)
 end
 
 return OpenProject
