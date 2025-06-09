@@ -9,8 +9,8 @@ import type { LayoutLoad } from './$types';
 export const load: LayoutLoad = async ({ fetch, url }) => {
 	try {
 		const api = getApi(fetch);
-		const scriptActionId = await api.script.getScriptActionId();
-		const folderPath = await api.script.getFolderPath();
+		const scriptActionId = await api.scriptSettings.getScriptActionId();
+		const folderPath = await api.scriptSettings.getProjectRoot();
 
 		const setupComplete: boolean = !!folderPath && !!scriptActionId;
 

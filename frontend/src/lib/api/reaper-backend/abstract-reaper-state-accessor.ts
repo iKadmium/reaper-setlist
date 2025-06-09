@@ -1,11 +1,10 @@
-import type { ReaperApiClient, ReaperCommand } from '../api';
+import type { ReaperCommand } from '../api';
 import type { SectionKey } from './reaper-state';
 
 export abstract class ReaperStateCommandBuilder {
 	protected constructor(
-		protected readonly section: SectionKey,
-		protected readonly apiClient: ReaperApiClient
-	) {}
+		protected readonly section: SectionKey
+	) { }
 
 	protected getExtStateCommand(key: string): ReaperCommand {
 		const command = `GET/EXTSTATE/${this.section}/${key}` as ReaperCommand;

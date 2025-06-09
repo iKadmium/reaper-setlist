@@ -7,8 +7,10 @@ const INDEX_KEY = '__index__';
 const CONTINUATION_MARKER = '|C|';
 
 export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
+	private readonly apiClient: ReaperApiClient;
 	constructor(section: KVStoreName, apiClient: ReaperApiClient) {
-		super(section, apiClient);
+		super(section);
+		this.apiClient = apiClient;
 	}
 
 	private getChunkKey(key: string, index: number): string {

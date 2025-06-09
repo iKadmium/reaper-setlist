@@ -5,8 +5,11 @@ export abstract class Target {
 	protected imports: string[] = [];
 
 	protected abstract renderHeader(): string[];
-	protected abstract renderImports(): string[];
 	protected abstract renderOperations(): string[];
+
+	protected renderImports(): string[] {
+		return this.imports;
+	}
 
 	protected renderClassDefinition(): string[] {
 		return [];
@@ -31,7 +34,6 @@ export abstract class Target {
 		lines.push(...this.renderClassDefinition());
 		lines.push('');
 		lines.push(...this.renderOperations());
-		lines.push('');
 		lines.push(...this.renderClassEnd());
 
 		return lines.join('\n');

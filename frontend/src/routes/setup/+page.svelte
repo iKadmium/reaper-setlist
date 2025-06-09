@@ -39,7 +39,7 @@
 		const folderPathValue = formData.get('backing-tracks-folder') || '';
 
 		try {
-			await api.script.setFolderPath(folderPathValue as string);
+			await api.scriptSettings.setProjectRoot(folderPathValue as string);
 			notifications.success('Settings saved successfully!');
 		} catch (error) {
 			notifications.error(`Failed to set folder path: ${(error as Error).message}`);

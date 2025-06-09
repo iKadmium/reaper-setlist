@@ -10,11 +10,9 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		return {
 			song: songs[id],
 			songs: songs,
-			projects: projects
+			projects: projects.projects
 		};
 	} catch (error) {
-		throw new Error(
-			`Error loading song data: ${error instanceof Error ? error.message : 'An unknown error occurred.'}`
-		);
+		throw error;
 	}
 };

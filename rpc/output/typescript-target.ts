@@ -1,16 +1,16 @@
-import { Target, type Argument, type OperationOptions } from './target';
+import { Target, type Argument } from './target';
 
 export class TypeScriptTarget extends Target {
 	constructor() {
 		super();
 		this.imports.push(
-			`import type { ReaperCommand } from "../api";`,
-			`import type { ReaperScriptCommandBuilder } from './reaper-script-command-builder';`
+			`import type { ReaperCommand, ReaperApiClient } from "../api";`,
+			`import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';`
 		);
 	}
 
 	override getOutputPathParts(): string[] {
-		return ['..', 'frontend', 'src', 'lib', 'api', 'reaper-backend', 'rpc_definitions.ts'];
+		return ['..', 'frontend', 'src', 'lib', 'api', 'reaper-backend', 'reaper-rpc-client.ts'];
 	}
 
 	override renderHeader(): string[] {
@@ -19,19 +19,20 @@ export class TypeScriptTarget extends Target {
 	}
 
 	override renderClassDefinition(): string[] {
+		const constructorArgs = [
+			`private readonly commandBuilder: ReaperScriptCommandBuilder`,
+			`private readonly apiClient: ReaperApiClient`
+		]
 		return [
-			`export class ReaperRpc {`,
-			`\tconstructor(private readonly commandBuilder: ReaperScriptCommandBuilder) {}`,
-			``
+			`export class ReaperRpcClient {`,
+			`\tconstructor(`,
+			`\t\t${constructorArgs.join(', \n\t\t')}`,
+			`\t) { }`
 		];
 	}
 
 	override renderClassEnd(): string[] {
 		return [`}`];
-	}
-
-	override renderImports(): string[] {
-		return [`import type { ReaperCommand } from "../api";`];
 	}
 
 	override renderOperations(): string[] {
@@ -53,25 +54,45 @@ export class TypeScriptTarget extends Target {
 			outputsStr = `{ ${outputs.map((o) => `${o.name}: ${o.type.getText()}`).join(', ')} }`;
 		}
 		operationLines.push(
-			`export async function ${name}(${inputs
-				.map((input) => input.name)
-				.join(', ')}): Promise<${outputsStr}> {`
+			`public async ${name}(${inputs
+				.map((input) => `${input.name}: ${input.type.getText()}`)
+				.join(', ')
+			}): Promise<${outputsStr}> {`
 		);
-		operationLines.push(`\tconst commands: ReaperCommand[] = [];`);
+		operationLines.push(`\tconst commands: ReaperCommand[] = []; `);
 		for (const { name, type } of inputs) {
-			operationLines.push(`\tcommands.push(this.commandBuilder.setExtState("${name}"));`);
+			operationLines.push(`\tcommands.push(this.commandBuilder.setExtState("${name}", ${name}, true)); `);
+		}
+
+		operationLines.push(`\tcommands.push(this.commandBuilder.setOperation("${name}")); `);
+
+		for (const { name, type } of outputs) {
+			operationLines.push(`\tcommands.push(this.commandBuilder.getExtState("${name}")); `);
 		}
 
 		if (outputs.length === 0) {
-			operationLines.push(`\tawait ${name}(${inputs.map((input) => input.name).join(', ')});`);
-			operationLines.push(`}`);
+			operationLines.push(`\tawait this.apiClient.sendCommands(commands);`);
 		} else {
-			operationLines.push(
-				`\tconst result = await ${name}(${inputs.map((input) => input.name).join(', ')});`
-			);
-			operationLines.push(`\treturn { ${outputs.map((o) => o.name + ': result').join(', ')} };`);
-			operationLines.push(`}`);
+			operationLines.push(`\tconst result = await this.apiClient.sendCommands(commands); `);
 		}
-		return operationLines;
+
+		for (let i = 0; i < outputs.length; i++) {
+			const output = outputs[i]!;
+			const resultIndex = i + inputs.length + 1; // +1 for the operation command
+			if (output.type.isString()) {
+				operationLines.push(`\tconst ${output.name} = result[${resultIndex}];`);
+			} else if (output.type.isArray()) {
+				operationLines.push(`\tconst ${output.name}Raw = result[${resultIndex}];`);
+				operationLines.push(`\tconst ${output.name} = ${output.name}Raw.split(',');`);
+			} else {
+
+			}
+		}
+
+		if (outputs.length > 0) {
+			operationLines.push(`\treturn { ${outputs.map((o) => o.name).join(', ')} }; `);
+		}
+		operationLines.push(`}`);
+		return operationLines.map(x => `\t${x}`);
 	}
 }

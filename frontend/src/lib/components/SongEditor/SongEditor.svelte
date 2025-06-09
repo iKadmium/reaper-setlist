@@ -61,8 +61,8 @@
 
 	async function handleLoadClick() {
 		try {
-			await api.script.loadByFilename(song.path);
-			notifications.success(`${song.name} loaded in Reaper!`);
+			await api.script.openProject(song.path);
+			notifications.success(`scriptSettings.name} loaded in Reaper!`);
 		} catch (error) {
 			notifications.error(`Failed to load song in Reaper: ${(error as Error).message}`);
 		}

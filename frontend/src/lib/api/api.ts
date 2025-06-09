@@ -16,22 +16,21 @@ export interface ReaperApiClient {
 	closeAllTabs: () => Promise<void>;
 }
 
-export interface ReaperScriptClient {
-	listProjects: () => Promise<string[]>;
-	loadByFilename: (name: string) => Promise<void>;
+export interface ReaperRpcClient {
+	listProjects: () => Promise<{ projects: string[] }>;
+	openProject: (projectPath: string) => Promise<void>;
+	testActionId: (testNonce: string) => Promise<{ testOutput: string }>;
+}
 
-	testActionId(actionId: string): Promise<boolean>;
-
+export interface ReaperScriptSettingsClient {
 	setProjectRoot: (root: string) => Promise<void>;
-
-	getFolderPath: () => Promise<string | undefined>;
-	setFolderPath: (path: string) => Promise<void>;
+	getProjectRoot: () => Promise<string | undefined>;
 
 	getScriptActionId: () => Promise<string | undefined>;
 	setScriptActionId: (id: string) => Promise<void>;
 }
 
-export interface SongsStore extends KeyValueStore<string, Song> {}
+export interface SongsStore extends KeyValueStore<string, Song> { }
 
 export interface SetlistsStore extends KeyValueStore<string, Setlist> {
 	deleteSongFromSets(id: string): unknown;
@@ -41,7 +40,8 @@ export interface Api {
 	reaper: ReaperApiClient;
 	songs: SongsStore;
 	sets: SetlistsStore;
-	script: ReaperScriptClient;
+	script: ReaperRpcClient;
+	scriptSettings: ReaperScriptSettingsClient;
 }
 
 export function getApi(fetch?: typeof globalThis.fetch): Api {

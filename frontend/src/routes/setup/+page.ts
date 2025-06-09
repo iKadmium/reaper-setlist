@@ -5,8 +5,8 @@ export const load: PageLoad = async ({ fetch }) => {
 	try {
 		const api = getApi(fetch);
 
-		const folderPath = await api.script.getFolderPath();
-		const scriptActionId = await api.script.getScriptActionId();
+		const folderPath = await api.scriptSettings.getProjectRoot();
+		const scriptActionId = await api.scriptSettings.getScriptActionId();
 
 		return {
 			folderPath,

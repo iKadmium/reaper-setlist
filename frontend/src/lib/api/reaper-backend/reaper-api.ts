@@ -58,7 +58,9 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		if (!result.ok) {
 			throw new Error(`Failed to send command ${command}: ${result.statusText}`);
 		}
-		return await result.text();
+		const content = await result.text();
+		const lines = content.split('\n').filter((line) => line.trim() !== '');
+		return lines[0];
 	}
 
 	public async sendCommands(commands: ReaperCommand[]): Promise<string[]> {

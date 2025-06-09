@@ -16,6 +16,7 @@ local ListProjects = require "operations/list_projects"
 local OpenProject = require "operations/open_project"
 local TestActionId = require "operations/test_action_id"
 
+
 local Operations = {
 	["listProjects"] = safe_operation(function()
 		local projects = ListProjects()

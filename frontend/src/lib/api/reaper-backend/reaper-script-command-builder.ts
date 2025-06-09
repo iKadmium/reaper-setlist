@@ -15,10 +15,9 @@ export type ScriptOperationOutput = {
 
 export class ReaperScriptCommandBuilder extends ReaperStateCommandBuilder {
 	constructor(
-		protected readonly apiClient: ReaperApiClient,
 		section: SectionKey
 	) {
-		super(section, apiClient);
+		super(section);
 	}
 
 	getExtState(key: string): ReaperCommand {
