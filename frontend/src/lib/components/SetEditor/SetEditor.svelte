@@ -26,9 +26,14 @@
 	let { setlist: initialSetlist, songs, onSubmit }: SetEditorProps<T> = $props();
 
 	let setlist = $state({ ...initialSetlist });
-	let newSongId = $state<string | null>(Object.keys(songs)[0] || null);
 
-	let remainingSongs = $derived(Object.values(songs).filter((s) => !setlist.songs.includes(s.id)));
+	let remainingSongs = $derived(
+		Object.values(songs)
+			.filter((s) => !setlist.songs.includes(s.id))
+			.toSorted((a, b) => a.name.localeCompare(b.name))
+	);
+
+	let newSongId = $state<string | null>(remainingSongs[0]?.id || null);
 	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (songs[songId]?.length ?? 0) || 0, 0));
 
 	let draggingIndex: number | undefined = $state(undefined);

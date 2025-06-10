@@ -32,7 +32,7 @@ export class TypeScriptTarget extends Target {
 			``,
 			`\tprivate async getScriptActionId(): Promise<ReaperCommand> {`,
 			`\t\tawait configuration.ensureInitialized();`,
-			`\t\tconst actionId = $derived(configuration.scriptActionId);`,
+			`\t\tconst actionId = configuration.scriptActionId;`,
 			`\t\tif (!actionId) {`,
 			`\t\t\tthrow new Error("Script action ID is not set. Please configure it in the settings.");`,
 			`\t\t}`,

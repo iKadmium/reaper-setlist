@@ -81,24 +81,19 @@ class ConfigurationStore {
         return this.initialize(fetch);
     }
 
-    async updateScriptActionId(id: string, fetch?: typeof globalThis.fetch) {
-        try {
-            const api = getApi(fetch);
-            await api.scriptSettings.setScriptActionId(id);
-            this.configuration.scriptActionId = id;
-            this.updateSetupComplete();
-        } catch (error) {
-            console.error('Error updating script action ID:', error);
-            throw error;
-        }
-    }
-
     async updateFolderPath(path: string, fetch?: typeof globalThis.fetch) {
         try {
             const api = getApi(fetch);
             await api.scriptSettings.setProjectRoot(path);
+
+            // Update the folder path
             this.configuration.folderPath = path;
-            this.updateSetupComplete();
+
+            // Only update setup complete if it's not already true to prevent reactive loops
+            const newSetupComplete = !!(path && this.configuration.scriptActionId);
+            if (this.configuration.setupComplete !== newSetupComplete) {
+                this.configuration.setupComplete = newSetupComplete;
+            }
         } catch (error) {
             console.error('Error updating folder path:', error);
             throw error;

@@ -12,7 +12,7 @@
 
 	async function onSubmit(song: Song) {
 		try {
-			api.songs.update(song.id, song);
+			await api.songs.update(song.id, song);
 			notifications.success('Song updated successfully!');
 			await goto(`${base}/#/song`);
 		} catch (error) {

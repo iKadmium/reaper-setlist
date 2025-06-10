@@ -53,7 +53,9 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		}
 		let cleanupIndex = numChunks;
 		while (true) {
-			const chunk = await this.getExtStateCommand(key + '.' + cleanupIndex);
+			const chunkCommand = this.getExtStateCommand(key + '.' + cleanupIndex);
+			const chunkRaw = await this.apiClient.sendCommand(chunkCommand);
+			const chunk = chunkRaw.split('\n')[0].split('\t')[3];
 			if (!chunk) break;
 			commands.push(this.setExtStateCommand(key + '.' + cleanupIndex, '', false));
 			cleanupIndex++;

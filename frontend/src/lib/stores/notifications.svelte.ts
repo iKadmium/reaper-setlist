@@ -26,7 +26,8 @@ class NotificationStore {
             timestamp: new Date()
         };
 
-        this.notifications.push(notification);
+        // Use array assignment instead of push to ensure reactivity
+        this.notifications = [...this.notifications, notification];
 
         // Auto-remove after duration if specified
         if (duration !== undefined) {
@@ -39,14 +40,11 @@ class NotificationStore {
     }
 
     remove(id: string) {
-        const index = this.notifications.findIndex(n => n.id === id);
-        if (index > -1) {
-            this.notifications.splice(index, 1);
-        }
+        this.notifications = this.notifications.filter(n => n.id !== id);
     }
 
     clear() {
-        this.notifications.splice(0, this.notifications.length);
+        this.notifications = [];
     }
 
     // Convenience methods

@@ -6,9 +6,14 @@
 	}
 
 	let { children, onsubmit, class: className = '' }: FormProps = $props();
+
+	function handleSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		onsubmit?.(event);
+	}
 </script>
 
-<form class="form-card {className}" {onsubmit}>
+<form class="form-card {className}" onsubmit={handleSubmit}>
 	{@render children()}
 </form>
 

@@ -6,26 +6,26 @@ import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';
 
 export class ReaperRpcClient {
 	constructor(
-		private readonly commandBuilder: ReaperScriptCommandBuilder, 
+		private readonly commandBuilder: ReaperScriptCommandBuilder,
 		private readonly apiClient: ReaperApiClient
 	) { }
 
 	private async getScriptActionId(): Promise<ReaperCommand> {
 		await configuration.ensureInitialized();
-		const actionId = $derived(configuration.scriptActionId);
+		const actionId = configuration.scriptActionId;
 		if (!actionId) {
 			throw new Error("Script action ID is not set. Please configure it in the settings.");
 		}
-	return actionId as ReaperCommand;
+		return actionId as ReaperCommand;
 	}
 
 	public async listProjects(): Promise<string[]> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = []; 
-		commands.push(this.commandBuilder.setOperation("listProjects")); 
-		commands.push(actionId); 
-		commands.push(this.commandBuilder.getExtState("projects")); 
-		const result = await this.apiClient.sendCommands(commands); 
+		const commands: ReaperCommand[] = [];
+		commands.push(this.commandBuilder.setOperation("listProjects"));
+		commands.push(actionId);
+		commands.push(this.commandBuilder.getExtState("projects"));
+		const result = await this.apiClient.sendCommands(commands);
 		const projectsRaw = result[0];
 		const projectsParts = projectsRaw.split('\t');
 		const projects = projectsParts[3].split(',');
@@ -34,21 +34,21 @@ export class ReaperRpcClient {
 
 	public async openProject(projectPath: string): Promise<void> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = []; 
-		commands.push(this.commandBuilder.setExtState("projectPath", projectPath, true)); 
-		commands.push(this.commandBuilder.setOperation("openProject")); 
-		commands.push(actionId); 
+		const commands: ReaperCommand[] = [];
+		commands.push(this.commandBuilder.setExtState("projectPath", projectPath, true));
+		commands.push(this.commandBuilder.setOperation("openProject"));
+		commands.push(actionId);
 		await this.apiClient.sendCommands(commands);
 	}
 
 	public async testActionId(testNonce: string): Promise<string> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = []; 
-		commands.push(this.commandBuilder.setExtState("testNonce", testNonce, true)); 
-		commands.push(this.commandBuilder.setOperation("testActionId")); 
-		commands.push(actionId); 
-		commands.push(this.commandBuilder.getExtState("testOutput")); 
-		const result = await this.apiClient.sendCommands(commands); 
+		const commands: ReaperCommand[] = [];
+		commands.push(this.commandBuilder.setExtState("testNonce", testNonce, true));
+		commands.push(this.commandBuilder.setOperation("testActionId"));
+		commands.push(actionId);
+		commands.push(this.commandBuilder.getExtState("testOutput"));
+		const result = await this.apiClient.sendCommands(commands);
 		const testOutputRaw = result[0];
 		const testOutputParts = testOutputRaw.split('\t');
 		const testOutput = testOutputParts[3];
@@ -57,11 +57,11 @@ export class ReaperRpcClient {
 
 	public async getProjectLength(): Promise<number> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = []; 
-		commands.push(this.commandBuilder.setOperation("getProjectLength")); 
-		commands.push(actionId); 
-		commands.push(this.commandBuilder.getExtState("projectLength")); 
-		const result = await this.apiClient.sendCommands(commands); 
+		const commands: ReaperCommand[] = [];
+		commands.push(this.commandBuilder.setOperation("getProjectLength"));
+		commands.push(actionId);
+		commands.push(this.commandBuilder.getExtState("projectLength"));
+		const result = await this.apiClient.sendCommands(commands);
 		const projectLengthRaw = result[0];
 		const projectLengthParts = projectLengthRaw.split('\t');
 		const projectLength = parseFloat(projectLengthParts[3]);

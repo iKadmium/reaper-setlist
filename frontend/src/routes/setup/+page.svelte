@@ -39,8 +39,8 @@
 	// Only check script installation status once on initial load if not already completed
 	$effect(() => {
 		if (!hasCheckedInitially && scriptInstallationStatus !== 'completed') {
-			checkScriptInstallation();
 			hasCheckedInitially = true;
+			checkScriptInstallation();
 		}
 	});
 
@@ -96,7 +96,7 @@
 			<DownloadIcon />
 			Download reaper-setlist.lua
 		</a>
-	{:else if scriptInstallationStatus === 'completed'}
+	{:else}
 		<InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
 	{/if}
 

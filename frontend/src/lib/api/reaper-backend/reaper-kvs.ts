@@ -33,11 +33,6 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
 	}
 
 	async update(key: string, value: TValue): Promise<void> {
-		const ids = await this.fetchIndex();
-		if (!ids.includes(key)) {
-			ids.push(key);
-			await this.saveIndex(ids);
-		}
 		await this.saveById(key, value);
 	}
 
