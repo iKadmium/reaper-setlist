@@ -11,10 +11,11 @@ local function safe_operation(func)
     end
 end
 
-local globals = require "globals"
+local Globals = require "globals"
 local ListProjects = require "operations/list_projects"
 local OpenProject = require "operations/open_project"
 local TestActionId = require "operations/test_action_id"
+local GetProjectLength = require "operations/get_project_length"
 
 
 local Operations = {
@@ -25,22 +26,22 @@ local Operations = {
 			error("Operation projects failed to return required output: projects")
 		end
 
-		reaper.SetExtState(globals.SECTION, "projects", projects, true)
+		reaper.SetExtState(Globals.SECTION, "projects", projects, true)
 	end),
 
 	["openProject"] = safe_operation(function()
-		local projectPath = reaper.GetExtState(globals.SECTION, "projectPath")
+		local projectPath = reaper.GetExtState(Globals.SECTION, "projectPath")
 		if not projectPath or projectPath == "" then
 			error("Missing required parameter: projectPath")
 		end
 
 		OpenProject(projectPath)
 
-		reaper.DeleteExtState(globals.SECTION, "projectPath", true)
+		reaper.DeleteExtState(Globals.SECTION, "projectPath", true)
 	end),
 
 	["testActionId"] = safe_operation(function()
-		local testNonce = reaper.GetExtState(globals.SECTION, "testNonce")
+		local testNonce = reaper.GetExtState(Globals.SECTION, "testNonce")
 		if not testNonce or testNonce == "" then
 			error("Missing required parameter: testNonce")
 		end
@@ -51,8 +52,18 @@ local Operations = {
 			error("Operation testOutput failed to return required output: testOutput")
 		end
 
-		reaper.SetExtState(globals.SECTION, "testOutput", testOutput, true)
-		reaper.DeleteExtState(globals.SECTION, "testNonce", true)
+		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, true)
+		reaper.DeleteExtState(Globals.SECTION, "testNonce", true)
+	end),
+
+	["getProjectLength"] = safe_operation(function()
+		local projectLength = GetProjectLength()
+
+		if not projectLength or projectLength == '' then
+			error("Operation projectLength failed to return required output: projectLength")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "projectLength", projectLength, true)
 	end),
 }
 

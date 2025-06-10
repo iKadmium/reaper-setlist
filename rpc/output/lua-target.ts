@@ -35,7 +35,7 @@ export class LuaTarget extends Target {
 
 	override renderImports(): string[] {
 		const lines: string[] = [];
-		lines.push(`local globals = require "globals"`);
+		lines.push(`local Globals = require "globals"`);
 		for (const imp of this.imports) {
 			lines.push(imp);
 		}
@@ -73,7 +73,7 @@ export class LuaTarget extends Target {
 		operationLines.push(`\t["${name}"] = safe_operation(function()`);
 		if (inputs.length > 0) {
 			for (const { name: name, type } of inputs) {
-				operationLines.push(`\t\tlocal ${name} = reaper.GetExtState(globals.SECTION, "${name}")`);
+				operationLines.push(`\t\tlocal ${name} = reaper.GetExtState(Globals.SECTION, "${name}")`);
 				operationLines.push(`\t\tif not ${name} or ${name} == "" then`);
 				operationLines.push(`\t\t\terror("Missing required parameter: ${name}")`);
 				operationLines.push(`\t\tend`);
@@ -98,12 +98,12 @@ export class LuaTarget extends Target {
 				);
 				operationLines.push(`\t\tend`);
 				operationLines.push('');
-				operationLines.push(`\t\treaper.SetExtState(globals.SECTION, "${name}", ${name}, true)`);
+				operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${name}", ${name}, true)`);
 			}
 		}
 		if (inputs.length > 0) {
 			for (const param of inputs) {
-				operationLines.push(`\t\treaper.DeleteExtState(globals.SECTION, "${param.name}", true)`);
+				operationLines.push(`\t\treaper.DeleteExtState(Globals.SECTION, "${param.name}", true)`);
 			}
 		}
 		operationLines.push(`\tend),`);

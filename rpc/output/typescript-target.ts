@@ -60,6 +60,8 @@ export class TypeScriptTarget extends Target {
 		let outputsStr;
 		if (outputs.length === 0) {
 			outputsStr = 'void';
+		} else if (outputs.length === 1) {
+			outputsStr = outputs[0]!.type.getText();
 		} else {
 			outputsStr = `{ ${outputs.map((o) => `${o.name}: ${o.type.getText()}`).join(', ')} }`;
 		}
@@ -93,16 +95,20 @@ export class TypeScriptTarget extends Target {
 			const resultIndex = i;
 			operationLines.push(`\tconst ${output.name}Raw = result[${resultIndex}];`);
 			operationLines.push(`\tconst ${output.name}Parts = ${output.name}Raw.split('\\t');`);
-			if (output.type.isString()) {
-				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3];`);
-			} else if (output.type.isArray()) {
+			if (output.type.isArray()) {
 				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3].split(',');`);
+			} else if (output.type.isString()) {
+				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3];`);
+			} else if (output.type.isNumber()) {
+				operationLines.push(`\tconst ${output.name} = parseFloat(${output.name}Parts[3]);`);
 			} else {
-
+				throw new Error(`Unsupported output type: ${output.type.getText()}`);
 			}
 		}
 
-		if (outputs.length > 0) {
+		if (outputs.length === 1) {
+			operationLines.push(`\treturn ${outputs[0]!.name};`);
+		} else if (outputs.length > 1) {
 			operationLines.push(`\treturn { ${outputs.map((o) => o.name).join(', ')} }; `);
 		}
 		operationLines.push(`}`);

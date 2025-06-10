@@ -15,17 +15,6 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		this.fetch = fetch;
 	}
 
-	async getDuration(): Promise<number> {
-		await this.goToEnd();
-		const transport = await this.getTransport();
-		console.log();
-		const seconds = parseInt(transport);
-		if (isNaN(seconds)) {
-			throw new Error(`Invalid transport value: ${transport}`);
-		}
-		return seconds;
-	}
-
 	private async getTransport(): Promise<string> {
 		const result = await this.sendCommand(GET_TRANSPORT);
 		const parts = result.split('\t');

@@ -11,7 +11,7 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		return {
 			songs,
-			projects: projects.projects
+			projects
 		};
 	} catch (error) {
 		return {

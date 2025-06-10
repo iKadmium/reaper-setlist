@@ -19,7 +19,7 @@ export class ReaperRpcClient {
 	return actionId as ReaperCommand;
 	}
 
-	public async listProjects(): Promise<{ projects: string[] }> {
+	public async listProjects(): Promise<string[]> {
 		const actionId = await this.getScriptActionId();
 		const commands: ReaperCommand[] = []; 
 		commands.push(this.commandBuilder.setOperation("listProjects")); 
@@ -29,7 +29,7 @@ export class ReaperRpcClient {
 		const projectsRaw = result[0];
 		const projectsParts = projectsRaw.split('\t');
 		const projects = projectsParts[3].split(',');
-		return { projects }; 
+		return projects;
 	}
 
 	public async openProject(projectPath: string): Promise<void> {
@@ -41,7 +41,7 @@ export class ReaperRpcClient {
 		await this.apiClient.sendCommands(commands);
 	}
 
-	public async testActionId(testNonce: string): Promise<{ testOutput: string }> {
+	public async testActionId(testNonce: string): Promise<string> {
 		const actionId = await this.getScriptActionId();
 		const commands: ReaperCommand[] = []; 
 		commands.push(this.commandBuilder.setExtState("testNonce", testNonce, true)); 
@@ -52,6 +52,19 @@ export class ReaperRpcClient {
 		const testOutputRaw = result[0];
 		const testOutputParts = testOutputRaw.split('\t');
 		const testOutput = testOutputParts[3];
-		return { testOutput }; 
+		return testOutput;
+	}
+
+	public async getProjectLength(): Promise<number> {
+		const actionId = await this.getScriptActionId();
+		const commands: ReaperCommand[] = []; 
+		commands.push(this.commandBuilder.setOperation("getProjectLength")); 
+		commands.push(actionId); 
+		commands.push(this.commandBuilder.getExtState("projectLength")); 
+		const result = await this.apiClient.sendCommands(commands); 
+		const projectLengthRaw = result[0];
+		const projectLengthParts = projectLengthRaw.split('\t');
+		const projectLength = parseFloat(projectLengthParts[3]);
+		return projectLength;
 	}
 }

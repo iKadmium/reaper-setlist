@@ -55,14 +55,14 @@
 	}
 
 	async function handleGetDurationClick() {
-		song.length = await api.reaper.getDuration();
+		song.length = await api.script.getProjectLength();
 		notifications.success('Duration retrieved from Reaper!');
 	}
 
 	async function handleLoadClick() {
 		try {
 			await api.script.openProject(song.path);
-			notifications.success(`scriptSettings.name} loaded in Reaper!`);
+			notifications.success(`${song.name} loaded in Reaper!`);
 		} catch (error) {
 			notifications.error(`Failed to load song in Reaper: ${(error as Error).message}`);
 		}

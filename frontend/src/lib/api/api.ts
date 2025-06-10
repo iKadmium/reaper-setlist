@@ -9,7 +9,6 @@ export interface ReaperApiClient {
 	sendCommand: (command: ReaperCommand) => Promise<string>;
 	sendCommands: (commands: ReaperCommand[]) => Promise<string[]>;
 
-	getDuration: () => Promise<number>;
 	goToStart: () => Promise<void>;
 	goToEnd: () => Promise<void>;
 	newTab: () => Promise<void>;
@@ -17,9 +16,10 @@ export interface ReaperApiClient {
 }
 
 export interface ReaperRpcClient {
-	listProjects: () => Promise<{ projects: string[] }>;
+	listProjects: () => Promise<string[]>;
 	openProject: (projectPath: string) => Promise<void>;
-	testActionId: (testNonce: string) => Promise<{ testOutput: string }>;
+	testActionId: (testNonce: string) => Promise<string>;
+	getProjectLength(): Promise<number>;
 }
 
 export interface ReaperScriptSettingsClient {
