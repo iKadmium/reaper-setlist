@@ -169,7 +169,6 @@
 			const setlists = Object.values(setsData);
 			if (setlists.length > 0) {
 				currentSetlist = setlists[0];
-				notifications.success(`Loaded setlist: ${currentSetlist.venue}`);
 			}
 		} catch (error) {
 			notifications.error(`Failed to load data: ${(error as Error).message}`);
