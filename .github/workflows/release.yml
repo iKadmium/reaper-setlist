@@ -66,10 +66,10 @@ jobs:
 
           # Copy frontend build output
           cp -r frontend/build/* package/web
-          cp lua/reaper-setlist.lua package/web/lua
+          cp lua/build/reaper-setlist.lua package/web/lua
 
           # Copy Lua bundle
-          cp lua/reaper-setlist.lua package/script/
+          cp lua/build/reaper-setlist.lua package/script/
 
           # Copy Installation.txt
           cp Installation.txt package/

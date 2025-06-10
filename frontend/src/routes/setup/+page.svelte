@@ -9,7 +9,10 @@
 	import Step from '$lib/components/Step/Step.svelte';
 	import DownloadIcon from 'virtual:icons/mdi/download';
 	import RefreshIcon from 'virtual:icons/mdi/refresh';
+	import ExportIcon from 'virtual:icons/mdi/export';
+	import ImportIcon from 'virtual:icons/mdi/import';
 	import type { PageProps } from './$types';
+	import type { Backup } from '$lib/models/backup';
 
 	let { data }: PageProps = $props();
 
@@ -84,6 +87,66 @@
 			isRefreshing = false;
 		}
 	}
+
+	async function exportData() {
+		const allSongs = await api.songs.list();
+		const allSetlists = await api.sets.list();
+		const dataToExport: Backup = {
+			songs: allSongs,
+			sets: allSetlists
+		};
+		const jsonData = JSON.stringify(dataToExport, null, 2);
+		const blob = new Blob([jsonData], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = 'reaper-setlist-data.json';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+		notifications.success('Data exported successfully!');
+	}
+
+	async function importData() {
+		const fileInput = document.createElement('input');
+		fileInput.type = 'file';
+		fileInput.accept = '.json';
+		fileInput.onchange = async (event: Event) => {
+			const target = event.target as HTMLInputElement;
+			if (target.files && target.files.length > 0) {
+				const file = target.files[0];
+				try {
+					const text = await file.text();
+					const importedData = JSON.parse(text) as Backup;
+
+					// Step 1: Import songs and create ID mapping
+					const oldToNewSongIdMap = new Map<string, string>();
+
+					for (const song of Object.values(importedData.songs)) {
+						const { id, ...songWithoutId } = song;
+						const newSong = await api.songs.add(songWithoutId);
+						oldToNewSongIdMap.set(id, newSong.id);
+					}
+
+					// Step 2: Import setlists with updated song IDs
+					for (const setlist of Object.values(importedData.sets)) {
+						const { id, ...setlistWithoutId } = setlist;
+						const updatedSetlist = {
+							...setlistWithoutId,
+							songs: setlist.songs.map((oldSongId) => oldToNewSongIdMap.get(oldSongId) || oldSongId)
+						};
+						await api.sets.add(updatedSetlist);
+					}
+
+					notifications.success('Data imported successfully!');
+				} catch (error) {
+					notifications.error(`Failed to import data: ${(error as Error).message}`);
+				}
+			}
+		};
+		fileInput.click();
+	}
 </script>
 
 <div class="content">
@@ -126,6 +189,20 @@
 			<Button elementType="submit" color="success">Save</Button>
 		</div>
 	</Form>
+
+	<div class="import-export">
+		<h3>Data Management</h3>
+		<div class="import-export-buttons">
+			<Button elementType="button" onclick={exportData} variant="text">
+				<ExportIcon />
+				Export Data
+			</Button>
+			<Button elementType="button" onclick={importData} variant="text">
+				<ImportIcon />
+				Import Data
+			</Button>
+		</div>
+	</div>
 </div>
 
 <style>
@@ -168,5 +245,17 @@
 
 	.script-status :global(.step) {
 		margin: 0;
+	}
+
+	.import-export {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-top: 2rem;
+	}
+
+	.import-export-buttons {
+		display: flex;
+		gap: 1rem;
 	}
 </style>
