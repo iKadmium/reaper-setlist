@@ -55,7 +55,7 @@
 	}
 
 	async function handleGetDurationClick() {
-		song.length = await api.script.getProjectLength();
+		song.length = Math.ceil(await api.script.getProjectLength());
 		notifications.success('Duration retrieved from Reaper!');
 	}
 

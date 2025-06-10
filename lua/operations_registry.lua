@@ -3,12 +3,12 @@
 ---@param func function
 ---@return function
 local function safe_operation(func)
-    return function()
-        local success, err = pcall(func)
-        if not success then
-            reaper.ShowConsoleMsg("Error: " .. tostring(err) .. "\n")
-        end
-    end
+	return function()
+		local success, err = pcall(func)
+		if not success then
+			reaper.ShowConsoleMsg("Error: " .. tostring(err) .. "\n")
+		end
+	end
 end
 
 local Globals = require "globals"
@@ -63,7 +63,7 @@ local Operations = {
 			error("Operation projectLength failed to return required output: projectLength")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projectLength", projectLength, true)
+		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), true)
 	end),
 }
 
