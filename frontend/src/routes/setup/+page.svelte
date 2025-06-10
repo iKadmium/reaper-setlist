@@ -1,21 +1,25 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
-	import { notifications, configuration } from '$lib';
+	import { configuration, notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
 	import Form from '$lib/components/Form/Form.svelte';
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
-	import type { PageProps } from './$types';
+	import type { StepStatus } from '$lib/components/Step/Step.svelte';
+	import Step from '$lib/components/Step/Step.svelte';
 	import DownloadIcon from 'virtual:icons/mdi/download';
+	import RefreshIcon from 'virtual:icons/mdi/refresh';
+	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const api = getApi();
 
 	let folderPath = $state<string | undefined>(data.folderPath);
-	let scriptActionId = $state<string | undefined>(data.scriptActionId);
-	let scriptTestState = $state<'success' | 'error' | null>(null);
+	// Initialize status based on existing script action ID
+	let scriptInstallationStatus = $state<StepStatus>(data.scriptActionId && data.scriptActionId.trim() !== '' ? 'completed' : 'pending');
+	let isRefreshing = $state<boolean>(false);
+	let hasCheckedInitially = $state<boolean>(false);
 
 	const nextSteps = [
 		{ label: 'Add your songs', href: '/song' },
@@ -25,55 +29,59 @@
 	const setupSteps = [
 		{ label: 'Download the Reaper Setlist script from the link below.' },
 		{ label: 'Open Reaper and go to "Actions" > "Show Action List".' },
-		{ label: 'Click "New Action" -> "Load ReaScript" and select the downloaded script file.' },
-		{ label: 'Copy the Action ID of the script from the Action List.' },
-		{ label: 'Click "Test" to ensure the script is working correctly.' },
-
+		{ label: 'Search for "ReaScript: Run Script" (the one with command ID 41060) ' },
+		{ label: 'Locate the script you downloaded and click "Load" to install it into Reaper.' },
+		{ label: 'The script will automatically register itself. Use the refresh button below to check installation status.' },
 		{ label: 'Enter the root folder path where your backing tracks are stored in the form below.' },
 		{ label: 'Click "Save" to store these settings.' }
 	];
+
+	// Only check script installation status once on initial load if not already completed
+	$effect(() => {
+		if (!hasCheckedInitially && scriptInstallationStatus !== 'completed') {
+			checkScriptInstallation();
+			hasCheckedInitially = true;
+		}
+	});
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
 		const folderPathValue = formData.get('backing-tracks-folder') || '';
-		const scriptActionIdValue = formData.get('script-action-id') || '';
 
 		try {
-			// Update both values in the store
+			// Update folder path in the store
 			await configuration.updateFolderPath(folderPathValue as string);
-			await configuration.updateScriptActionId(scriptActionIdValue as string);
 
 			notifications.success('Settings saved successfully!');
 
 			// Update local state to reflect the saved values
 			folderPath = folderPathValue as string;
-			scriptActionId = scriptActionIdValue as string;
 		} catch (error) {
 			notifications.error(`Failed to save settings: ${(error as Error).message}`);
 			return;
 		}
 	}
 
-	function clearScriptTestState() {
-		scriptTestState = null;
-	}
+	async function checkScriptInstallation() {
+		if (isRefreshing) return;
 
-	// Test Script
-	async function testScript() {
-		scriptTestState = null;
+		isRefreshing = true;
+		scriptInstallationStatus = 'running';
+
 		try {
-			const success = await api.script.testActionId(scriptActionId as string);
+			// Try to get the script action ID from the backend
+			const actionId = await api.scriptSettings.getScriptActionId();
 
-			if (success) {
-				scriptTestState = 'success';
+			if (actionId && actionId.trim() !== '') {
+				scriptInstallationStatus = 'completed';
 			} else {
-				scriptTestState = 'error';
-				notifications.error(`Load Project Script test failed`);
+				scriptInstallationStatus = 'error';
 			}
 		} catch (error) {
-			scriptTestState = 'error';
-			notifications.error(`Load Project Script test failed: ${(error as Error).message}`);
+			scriptInstallationStatus = 'error';
+		} finally {
+			isRefreshing = false;
 		}
 	}
 </script>
@@ -81,32 +89,34 @@
 <div class="content">
 	<h1>Setup</h1>
 
-	<InstructionBox title="Setup Steps" steps={setupSteps} variant="help" listType="ordered" />
+	{#if scriptInstallationStatus === 'error'}
+		<InstructionBox title="Script Installation" steps={setupSteps} variant="help" listType="ordered" />
 
-	<Form onsubmit={handleSubmit}>
-		<h3>Script</h3>
 		<a class="download-link" href={`${base}/lua/reaper-setlist.lua`} download="reaper-setlist.lua">
 			<DownloadIcon />
 			Download reaper-setlist.lua
 		</a>
-		<div class="form-group">
-			<label for="script-action-id">Action ID:</label>
-			<div class="input-with-button">
-				<input
-					bind:value={scriptActionId}
-					type="text"
-					id="script-action-id"
-					name="script-action-id"
-					placeholder="e.g., _RS4a7b2c8d9e1f3a5b6c7d8e9f0a1b2c3d4e5f6a7b"
-					required
-					class:success={scriptTestState === 'success'}
-					class:error={scriptTestState === 'error'}
-					oninput={clearScriptTestState}
-				/>
-				<Button variant="text" elementType="button" onclick={testScript}>Test</Button>
-			</div>
-		</div>
+	{:else if scriptInstallationStatus === 'completed'}
+		<InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
+	{/if}
 
+	<div class="script-status">
+		<Step
+			title="Script Installation Status"
+			description={scriptInstallationStatus === 'completed'
+				? 'Script is installed and ready to use'
+				: scriptInstallationStatus === 'running'
+					? 'Checking installation status...'
+					: 'Script not detected. Please install the script in Reaper and refresh.'}
+			status={scriptInstallationStatus}
+		/>
+		<Button elementType="button" onclick={checkScriptInstallation} disabled={isRefreshing} variant="text">
+			<RefreshIcon />
+			Refresh Status
+		</Button>
+	</div>
+
+	<Form onsubmit={handleSubmit}>
 		<div class="form-group">
 			<label for="backing-tracks-folder">Backing Tracks Root Folder:</label>
 			<input bind:value={folderPath} type="text" id="backing-tracks-folder" name="backing-tracks-folder" placeholder="e.g., /path/to/your/backing/tracks" />
@@ -118,41 +128,17 @@
 	</Form>
 </div>
 
-<div class="mobile-warning">
-	<h2>Mobile Warning</h2>
-	<p>
-		This will be an annoying and error-prone process if you can't copy and paste these values. It's strongly recommended to perform this step on the same
-		computer that runs Reaper.
-	</p>
-</div>
-
-<InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
-
 <style>
 	.content {
-		max-width: 800px;
 		margin: 0 auto;
 		padding: 2rem;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	@media (max-width: 768px) {
 		.content {
 			padding: 1rem;
-		}
-	}
-
-	.mobile-warning {
-		display: none;
-		background-color: hsla(from var(--red) h s l / 25%);
-		border: 1px solid var(--current-line);
-		border-radius: 0.5rem;
-		padding: 1rem;
-		margin-bottom: 2rem;
-	}
-
-	@media (max-width: 768px) {
-		.mobile-warning {
-			display: block;
 		}
 	}
 
@@ -171,5 +157,16 @@
 	.download-link:hover {
 		color: hsl(from var(--purple) h s calc(l * 0.9));
 		text-decoration: underline;
+	}
+
+	.script-status {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin: 1rem 0;
+	}
+
+	.script-status :global(.step) {
+		margin: 0;
 	}
 </style>
