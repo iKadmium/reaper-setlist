@@ -3,7 +3,7 @@ local Globals = require "globals"
 ---@return nil
 local function Install()
     -- Get the script filename
-    local _is_new_value, filename, _sectionID, _cmdID, _mode, _resolution, _val, _contextstr = reaper.get_action_context()
+    local _, filename, _, _, _, _, _, _ = reaper.get_action_context()
     if not filename or filename == "" then
         reaper.ShowConsoleMsg("No script filename found. Exiting installation.\n")
         return
