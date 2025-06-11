@@ -1,5 +1,7 @@
+import { SyntaxKind, type ts, type Type } from 'ts-morph';
 import { Target } from './target';
 import type { Argument, OperationOptions } from './target';
+import { getMembers } from '../util';
 
 // Helper function to convert camelCase to snake_case
 function camelToSnakeCase(str: string): string {
@@ -12,6 +14,12 @@ function capitalise(str: string): string {
 }
 
 export class LuaTarget extends Target {
+	constructor() {
+		super();
+		this.imports.push(`local Globals = require "globals"`);
+		this.imports.push(`local json = require "json"`);
+	}
+
 	override getOutputPathParts(): string[] {
 		return ['..', 'lua', 'operations_registry.lua'];
 	}
@@ -33,12 +41,33 @@ export class LuaTarget extends Target {
 		];
 	}
 
-	override renderImports(): string[] {
-		const lines: string[] = [];
-		lines.push(`local Globals = require "globals"`);
-		for (const imp of this.imports) {
-			lines.push(imp);
+	protected override renderTypeDefinitions(): string[] {
+		const typeDefs: string[][] = [];
+		for (const type of Object.values(this.types)) {
+			const typeLines: string[] = [];
+			let trueType: Type<ts.Type> | undefined = type;
+			if (type.isArray()) {
+				trueType = type.getArrayElementType();
+			}
+
+			if (trueType?.isClassOrInterface()) {
+				const members = getMembers(trueType);
+				typeLines.push(`---@class ${trueType.getText()}`);
+
+				// Get properties from the interface declaration
+				for (const node of Object.values(members)) {
+					const propSig = node.asKindOrThrow(SyntaxKind.PropertySignature);
+					const propName = propSig.getName();
+					const typeNode = propSig.getTypeNode();
+					const propType = typeNode ? typeNode.getText() : 'any';
+					typeLines.push(`---@field ${propName} ${propType}`);
+				}
+			}
+
+			typeDefs.push(typeLines);
 		}
+		const lines = typeDefs.map(definition => definition.join('\n'));
+
 		return lines;
 	}
 
@@ -91,14 +120,21 @@ export class LuaTarget extends Target {
 					.join(', ')} = ${functionName}(${argsList})`
 			);
 			operationLines.push('');
-			for (const { name, type } of outputs) {
-				operationLines.push(`\t\tif not ${name} or ${name} == '' then`);
+			for (const { name: outputName, type } of outputs) {
+				operationLines.push(`\t\tif not ${outputName} or ${outputName} == '' then`);
 				operationLines.push(
-					`\t\t\terror("Operation ${name} failed to return required output: ${name}")`
+					`\t\t\terror("Operation ${name} failed to return required output: ${outputName}")`
 				);
 				operationLines.push(`\t\tend`);
 				operationLines.push('');
-				operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${name}", ${name}, true)`);
+				if (type.isNumber()) {
+					operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", tostring(${outputName}), true)`);
+				}
+				else if (type.isString()) {
+					operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName}, true)`);
+				} else {
+					operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", json.encode(${outputName}), true)`);
+				}
 			}
 		}
 		if (inputs.length > 0) {

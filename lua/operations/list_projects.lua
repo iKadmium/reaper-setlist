@@ -1,24 +1,11 @@
 local Globals = require "globals"
+local GetRelativePath = require "relative_path"
 
 ---@param path string
 ---@return string
 local function normalize_path(path)
     local normalized = path:gsub("\\", "/")
     return normalized
-end
-
----@param full_path string
----@param base_path string
----@return string
-local function get_relative_path(full_path, base_path)
-    -- Ensure both paths end consistently for proper matching
-    local normalized_base = base_path:gsub("/$", "") .. "/"
-    local normalized_full = full_path:gsub("\\", "/")
-
-    if normalized_full:sub(1, #normalized_base) == normalized_base then
-        return normalized_full:sub(#normalized_base + 1)
-    end
-    return normalized_full -- fallback to full path if base not found
 end
 
 ---@param current_dir string
@@ -42,7 +29,7 @@ local function list_rpp_files_recursive(current_dir, base_path_for_relative)
         -- Check if it's an .rpp file (case-insensitive)
         if filename:lower():match("%.rpp$") then
             local full_path = current_dir .. "/" .. filename
-            local relative_path = get_relative_path(full_path, base_path_for_relative)
+            local relative_path = GetRelativePath(full_path, base_path_for_relative)
             table.insert(project_files, relative_path)
         end
         file_index = file_index + 1
@@ -73,7 +60,7 @@ local function list_rpp_files_recursive(current_dir, base_path_for_relative)
 end
 
 ---Returns a list of .rpp files in the project root folder and its subfolders
----@return string
+---@return string[]
 local function ListProjects()
     local project_root_folder = reaper.GetExtState(Globals.SECTION, Globals.KEYS.project_root_folder)
     if not project_root_folder or project_root_folder == "" then
@@ -89,7 +76,7 @@ local function ListProjects()
         return a:lower() < b:lower()
     end)
 
-    return table.concat(project_files, ",")
+    return project_files
 end
 
 return ListProjects

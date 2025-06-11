@@ -12,21 +12,30 @@ local function safe_operation(func)
 end
 
 local Globals = require "globals"
+local json = require "json"
 local ListProjects = require "operations/list_projects"
 local OpenProject = require "operations/open_project"
 local TestActionId = require "operations/test_action_id"
 local GetProjectLength = require "operations/get_project_length"
+local GetOpenTabs = require "operations/get_open_tabs"
 
+
+
+
+---@class ReaperTab
+---@field index number
+---@field name string
+---@field length number
 
 local Operations = {
 	["listProjects"] = safe_operation(function()
 		local projects = ListProjects()
 
 		if not projects or projects == '' then
-			error("Operation projects failed to return required output: projects")
+			error("Operation listProjects failed to return required output: projects")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projects", projects, true)
+		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), true)
 	end),
 
 	["openProject"] = safe_operation(function()
@@ -49,7 +58,7 @@ local Operations = {
 		local testOutput = TestActionId(testNonce)
 
 		if not testOutput or testOutput == '' then
-			error("Operation testOutput failed to return required output: testOutput")
+			error("Operation testActionId failed to return required output: testOutput")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, true)
@@ -60,10 +69,20 @@ local Operations = {
 		local projectLength = GetProjectLength()
 
 		if not projectLength or projectLength == '' then
-			error("Operation projectLength failed to return required output: projectLength")
+			error("Operation getProjectLength failed to return required output: projectLength")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), true)
+	end),
+
+	["getOpenTabs"] = safe_operation(function()
+		local tabs = GetOpenTabs()
+
+		if not tabs or tabs == '' then
+			error("Operation getOpenTabs failed to return required output: tabs")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), true)
 	end),
 }
 

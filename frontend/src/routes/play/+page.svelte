@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
+	import { type PlayState, PLAYSTATE_PAUSED, PLAYSTATE_PLAYING, PLAYSTATE_RECORDING, PLAYSTATE_STOPPED } from '$lib/api/reaper-backend/reaper-api';
 	import Button from '$lib/components/Button/Button.svelte';
-	import type { Database } from '$lib/models/database';
-	import type { Setlist } from '$lib/models/setlist';
-	import type { Song } from '$lib/models/song';
+	import type { ReaperTab } from '$lib/models/reaper-tab';
 	import { formatDuration } from '$lib/util';
 	import { onDestroy, onMount } from 'svelte';
 	// Icons
@@ -19,22 +18,16 @@
 	const api = getApi();
 
 	// Player state
-	let currentSetlist = $state<Setlist | null>(null);
-	let allSongs = $state<Database<Song>>({});
+	let allTabs = $state<ReaperTab[] | null>(null);
 	let currentSongIndex = $state<number>(0);
-	let isPlaying = $state<boolean>(false);
-	let isPaused = $state<boolean>(false);
-	let isRecording = $state<boolean>(false);
+	let playState = $state<PlayState>(PLAYSTATE_STOPPED);
 	let currentSongTime = $state<number>(0);
 	let totalSetTime = $state<number>(0);
-	let playbackPosition = $state<number>(0);
 	let bpm = $state<number>(120);
-	let showMetronome = $state<boolean>(false);
+	let transportUpdateHandle = $state<number | null>(null);
 
 	// Current song data
-	const currentSong = $derived(
-		!currentSetlist || currentSongIndex < 0 || currentSongIndex >= currentSetlist.songs.length ? null : allSongs[currentSetlist.songs[currentSongIndex]] || null
-	);
+	const currentTab = $derived(!allTabs || currentSongIndex < 0 || currentSongIndex >= allTabs.length ? null : allTabs[currentSongIndex] || null);
 
 	// Song markers (placeholder data - would come from Reaper)
 	let songMarkers = $state([
@@ -49,23 +42,23 @@
 	]);
 
 	// Time calculations
-	const totalSongDuration = $derived(currentSong?.length || 0);
+	const totalSongDuration = $derived(currentTab?.length || 0);
 	const remainingSongTime = $derived(Math.max(0, totalSongDuration - currentSongTime));
 	const totalSetDuration = $derived(
-		!currentSetlist
+		!allTabs
 			? 0
-			: currentSetlist.songs.reduce((total, songId) => {
-					return total + (allSongs[songId]?.length || 0);
+			: allTabs.reduce((total, tab) => {
+					return total + (tab.length || 0);
 				}, 0)
 	);
 	const remainingSetTime = $derived(
-		!currentSetlist
+		!allTabs
 			? 0
 			: (() => {
 					let remaining = 0;
-					for (let i = currentSongIndex; i < currentSetlist.songs.length; i++) {
-						const songId = currentSetlist.songs[i];
-						const songDuration = allSongs[songId]?.length || 0;
+					for (let i = currentSongIndex; i < allTabs.length; i++) {
+						const tab = allTabs[i];
+						const songDuration = tab.length || 0;
 						if (i === currentSongIndex) {
 							remaining += Math.max(0, songDuration - currentSongTime);
 						} else {
@@ -78,7 +71,6 @@
 
 	// Progress percentages
 	const songProgress = $derived(totalSongDuration === 0 ? 0 : Math.min(100, (currentSongTime / totalSongDuration) * 100));
-
 	const setProgress = $derived(totalSetDuration === 0 ? 0 : Math.min(100, (totalSetTime / totalSetDuration) * 100));
 
 	// Format time for display
@@ -91,14 +83,10 @@
 	// Player controls
 	async function togglePlayPause() {
 		try {
-			if (isPlaying) {
-				// Pause functionality would go here
-				isPlaying = false;
-				isPaused = true;
-			} else {
-				// Play functionality would go here
-				isPlaying = true;
-				isPaused = false;
+			if (playState === PLAYSTATE_PLAYING) {
+				await api.reaper.pause();
+			} else if (playState === PLAYSTATE_PAUSED) {
+				await api.reaper.play();
 			}
 		} catch (error) {
 			notifications.error(`Failed to toggle playback: ${(error as Error).message}`);
@@ -107,11 +95,7 @@
 
 	async function stop() {
 		try {
-			// Stop functionality would go here
-			isPlaying = false;
-			isPaused = false;
-			currentSongTime = 0;
-			playbackPosition = 0;
+			await api.reaper.stop();
 		} catch (error) {
 			notifications.error(`Failed to stop playback: ${(error as Error).message}`);
 		}
@@ -120,25 +104,20 @@
 	async function previousTrack() {
 		if (currentSongIndex > 0) {
 			currentSongIndex--;
-			currentSongTime = 0;
-			// Load previous song logic would go here
+			await api.reaper.previousTab();
 		}
 	}
 
 	async function nextTrack() {
-		if (currentSetlist && currentSongIndex < currentSetlist.songs.length - 1) {
+		if (allTabs && currentSongIndex < allTabs.length - 1) {
 			currentSongIndex++;
-			currentSongTime = 0;
-			// Load next song logic would go here
+			await api.reaper.nextTab();
 		}
 	}
 
 	async function goToMarker(markerTime: number) {
 		try {
-			currentSongTime = markerTime;
-			playbackPosition = markerTime;
-			// Seek to marker functionality would go here
-			await api.reaper.goToStart(); // Placeholder - would seek to specific time
+			await api.reaper.goToMarker(markerTime);
 		} catch (error) {
 			notifications.error(`Failed to jump to marker: ${(error as Error).message}`);
 		}
@@ -146,30 +125,27 @@
 
 	async function startRecording() {
 		try {
-			isRecording = !isRecording;
-			if (isRecording) {
-				notifications.success('Recording started');
-			} else {
-				notifications.success('Recording stopped');
-			}
+			await api.reaper.record();
 		} catch (error) {
 			notifications.error(`Failed to toggle recording: ${(error as Error).message}`);
+		}
+	}
+
+	async function updateTransport() {
+		try {
+			const state = await api.reaper.getTransport();
+			playState = state.playState;
+			currentSongTime = state.positionSeconds;
+		} catch (error) {
+			console.error(`Failed to update transport: ${(error as Error).message}`);
 		}
 	}
 
 	// Load sample data (in real app, this would come from route params)
 	onMount(async () => {
 		try {
-			// Load songs and setlists
-			const [songsData, setsData] = await Promise.all([api.songs.list(), api.sets.list()]);
-
-			allSongs = songsData;
-
-			// Use first setlist as example
-			const setlists = Object.values(setsData);
-			if (setlists.length > 0) {
-				currentSetlist = setlists[0];
-			}
+			allTabs = await api.script.getOpenTabs();
+			transportUpdateHandle = window.setInterval(updateTransport, 1000); // Update transport every second
 		} catch (error) {
 			notifications.error(`Failed to load data: ${(error as Error).message}`);
 		}
@@ -177,7 +153,9 @@
 
 	// Cleanup
 	onDestroy(() => {
-		// Clear any intervals or cleanup
+		if (transportUpdateHandle) {
+			window.clearInterval(transportUpdateHandle);
+		}
 	});
 </script>
 
@@ -188,14 +166,13 @@
 <div class="player-container">
 	<h1>Live Player</h1>
 
-	{#if currentSetlist && currentSong}
+	{#if allTabs && currentTab}
 		<!-- Current Song Display -->
 		<div class="current-song-section">
 			<div class="song-info">
-				<h2 class="song-title">{currentSong.name}</h2>
+				<h2 class="song-title">{currentTab.name}</h2>
 				<div class="song-meta">
-					<span class="song-number">Track {currentSongIndex + 1} of {currentSetlist.songs.length}</span>
-					<span class="setlist-info">{currentSetlist.venue} • {new Date(currentSetlist.date).toLocaleDateString()}</span>
+					<span class="song-number">Track {currentSongIndex + 1} of {allTabs.length}</span>
 				</div>
 			</div>
 
@@ -215,23 +192,23 @@
 					<SkipPreviousIcon />
 				</Button>
 
-				<Button variant="icon" onclick={stop} color={isPlaying || isPaused ? 'delete' : 'primary'}>
+				<Button variant="icon" onclick={stop} color={playState === PLAYSTATE_PLAYING || playState === PLAYSTATE_PAUSED ? 'delete' : 'primary'}>
 					<StopIcon />
 				</Button>
 
 				<Button variant="icon" onclick={togglePlayPause} color="success">
-					{#if isPlaying}
+					{#if playState === PLAYSTATE_PLAYING}
 						<PauseIcon />
 					{:else}
 						<PlayIcon />
 					{/if}
 				</Button>
 
-				<Button variant="icon" onclick={nextTrack} disabled={!currentSetlist || currentSongIndex >= currentSetlist.songs.length - 1}>
+				<Button variant="icon" onclick={nextTrack} disabled={!allTabs || currentSongIndex >= allTabs.length - 1}>
 					<SkipNextIcon />
 				</Button>
 
-				<Button variant="icon" onclick={startRecording} color={isRecording ? 'delete' : 'primary'}>
+				<Button variant="icon" onclick={startRecording} color={playState === PLAYSTATE_RECORDING ? 'delete' : 'primary'}>
 					<RecordIcon />
 				</Button>
 			</div>
@@ -257,13 +234,12 @@
 		<!-- Additional Live Performance Features -->
 		<div class="live-features">
 			<h4>Next Up</h4>
-			{#if currentSongIndex < currentSetlist.songs.length - 1}
-				{@const nextSongId = currentSetlist.songs[currentSongIndex + 1]}
-				{@const nextSong = allSongs[nextSongId]}
-				{#if nextSong}
+			{#if currentSongIndex < allTabs.length - 1}
+				{@const nextTab = allTabs[currentSongIndex + 1]}
+				{#if nextTab}
 					<div class="next-song">
-						<div class="next-song-name">{nextSong.name}</div>
-						<div class="next-song-duration">{formatDuration(nextSong.length)}</div>
+						<div class="next-song-name">{nextTab.name}</div>
+						<div class="next-song-duration">{formatDuration(nextTab.length)}</div>
 					</div>
 				{/if}
 			{:else}

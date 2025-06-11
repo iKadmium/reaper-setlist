@@ -4,9 +4,18 @@ import { configuration } from "$lib/stores/configuration.svelte";
 import type { ReaperCommand, ReaperApiClient } from "../api";
 import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';
 
+
+
+
+export interface ReaperTab {
+	index: number;
+	name: string;
+	length: number;
+}
+
 export class ReaperRpcClient {
 	constructor(
-		private readonly commandBuilder: ReaperScriptCommandBuilder,
+		private readonly commandBuilder: ReaperScriptCommandBuilder, 
 		private readonly apiClient: ReaperApiClient
 	) { }
 
@@ -21,34 +30,34 @@ export class ReaperRpcClient {
 
 	public async listProjects(): Promise<string[]> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = [];
-		commands.push(this.commandBuilder.setOperation("listProjects"));
-		commands.push(actionId);
-		commands.push(this.commandBuilder.getExtState("projects"));
-		const result = await this.apiClient.sendCommands(commands);
+		const commands: ReaperCommand[] = []; 
+		commands.push(this.commandBuilder.setOperation("listProjects")); 
+		commands.push(actionId); 
+		commands.push(this.commandBuilder.getExtState("projects")); 
+		const result = await this.apiClient.sendCommands(commands); 
 		const projectsRaw = result[0];
 		const projectsParts = projectsRaw.split('\t');
-		const projects = projectsParts[3].split(',');
+		const projects = JSON.parse(projectsParts[3]);
 		return projects;
 	}
 
 	public async openProject(projectPath: string): Promise<void> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = [];
-		commands.push(this.commandBuilder.setExtState("projectPath", projectPath, true));
-		commands.push(this.commandBuilder.setOperation("openProject"));
-		commands.push(actionId);
+		const commands: ReaperCommand[] = []; 
+		commands.push(this.commandBuilder.setExtState("projectPath", projectPath, true)); 
+		commands.push(this.commandBuilder.setOperation("openProject")); 
+		commands.push(actionId); 
 		await this.apiClient.sendCommands(commands);
 	}
 
 	public async testActionId(testNonce: string): Promise<string> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = [];
-		commands.push(this.commandBuilder.setExtState("testNonce", testNonce, true));
-		commands.push(this.commandBuilder.setOperation("testActionId"));
-		commands.push(actionId);
-		commands.push(this.commandBuilder.getExtState("testOutput"));
-		const result = await this.apiClient.sendCommands(commands);
+		const commands: ReaperCommand[] = []; 
+		commands.push(this.commandBuilder.setExtState("testNonce", testNonce, true)); 
+		commands.push(this.commandBuilder.setOperation("testActionId")); 
+		commands.push(actionId); 
+		commands.push(this.commandBuilder.getExtState("testOutput")); 
+		const result = await this.apiClient.sendCommands(commands); 
 		const testOutputRaw = result[0];
 		const testOutputParts = testOutputRaw.split('\t');
 		const testOutput = testOutputParts[3];
@@ -57,14 +66,27 @@ export class ReaperRpcClient {
 
 	public async getProjectLength(): Promise<number> {
 		const actionId = await this.getScriptActionId();
-		const commands: ReaperCommand[] = [];
-		commands.push(this.commandBuilder.setOperation("getProjectLength"));
-		commands.push(actionId);
-		commands.push(this.commandBuilder.getExtState("projectLength"));
-		const result = await this.apiClient.sendCommands(commands);
+		const commands: ReaperCommand[] = []; 
+		commands.push(this.commandBuilder.setOperation("getProjectLength")); 
+		commands.push(actionId); 
+		commands.push(this.commandBuilder.getExtState("projectLength")); 
+		const result = await this.apiClient.sendCommands(commands); 
 		const projectLengthRaw = result[0];
 		const projectLengthParts = projectLengthRaw.split('\t');
 		const projectLength = parseFloat(projectLengthParts[3]);
 		return projectLength;
+	}
+
+	public async getOpenTabs(): Promise<ReaperTab[]> {
+		const actionId = await this.getScriptActionId();
+		const commands: ReaperCommand[] = []; 
+		commands.push(this.commandBuilder.setOperation("getOpenTabs")); 
+		commands.push(actionId); 
+		commands.push(this.commandBuilder.getExtState("tabs")); 
+		const result = await this.apiClient.sendCommands(commands); 
+		const tabsRaw = result[0];
+		const tabsParts = tabsRaw.split('\t');
+		const tabs = JSON.parse(tabsParts[3]);
+		return tabs;
 	}
 }

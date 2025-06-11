@@ -1,4 +1,8 @@
+import * as ts from 'typescript';
+import type { Type } from 'ts-morph';
+import { SyntaxKind } from 'ts-morph';
 import { Target, type Argument } from './target';
+import { getMembers } from '../util';
 
 export class TypeScriptTarget extends Target {
 	constructor() {
@@ -9,6 +13,38 @@ export class TypeScriptTarget extends Target {
 			`import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';`
 		);
 	}
+
+	protected override renderTypeDefinitions(): string[] {
+		const typeDefs: string[][] = [];
+		for (const type of Object.values(this.types)) {
+			const typeLines: string[] = [];
+			let trueType: Type<ts.Type> | undefined = type;
+			if (type.isArray()) {
+				trueType = type.getArrayElementType();
+			}
+
+			if (trueType?.isClassOrInterface()) {
+				const members = getMembers(trueType);
+				typeLines.push(`export interface ${trueType.getText()} {`);
+
+				// Get properties from the interface declaration
+				for (const node of Object.values(members)) {
+					const propSig = node.asKindOrThrow(SyntaxKind.PropertySignature);
+					const propName = propSig.getName();
+					const typeNode = propSig.getTypeNode();
+					const propType = typeNode ? typeNode.getText() : 'any';
+					typeLines.push(`\t${propName}: ${propType};`);
+				}
+				typeLines.push(`}`);
+			}
+
+			typeDefs.push(typeLines);
+		}
+		const lines = typeDefs.map(definition => definition.join('\n'));
+
+		return lines;
+	}
+
 
 	override getOutputPathParts(): string[] {
 		return ['..', 'frontend', 'src', 'lib', 'api', 'reaper-backend', 'reaper-rpc-client.svelte.ts'];
@@ -36,7 +72,7 @@ export class TypeScriptTarget extends Target {
 			`\t\tif (!actionId) {`,
 			`\t\t\tthrow new Error("Script action ID is not set. Please configure it in the settings.");`,
 			`\t\t}`,
-			`\treturn actionId as ReaperCommand;`,
+			`\t\treturn actionId as ReaperCommand;`,
 			`\t}`,
 		];
 	}
@@ -95,14 +131,12 @@ export class TypeScriptTarget extends Target {
 			const resultIndex = i;
 			operationLines.push(`\tconst ${output.name}Raw = result[${resultIndex}];`);
 			operationLines.push(`\tconst ${output.name}Parts = ${output.name}Raw.split('\\t');`);
-			if (output.type.isArray()) {
-				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3].split(',');`);
-			} else if (output.type.isString()) {
+			if (output.type.isString()) {
 				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3];`);
 			} else if (output.type.isNumber()) {
 				operationLines.push(`\tconst ${output.name} = parseFloat(${output.name}Parts[3]);`);
 			} else {
-				throw new Error(`Unsupported output type: ${output.type.getText()}`);
+				operationLines.push(`\tconst ${output.name} = JSON.parse(${output.name}Parts[3]);`);
 			}
 		}
 

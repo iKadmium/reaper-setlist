@@ -14,8 +14,6 @@ const scriptOperationsInterface = sourceFile.getInterfaceOrThrow('ScriptOperatio
 
 const targets = [new LuaTarget(), new TypeScriptTarget()];
 
-const operations: OperationOptions[] = [];
-
 for (const prop of scriptOperationsInterface.getProperties()) {
 	const operationName = prop.getName();
 	const propType = prop.getType();

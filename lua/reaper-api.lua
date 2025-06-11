@@ -3,7 +3,6 @@
 -- REAPER API LuaDoc Type Definitions
 -- Auto-generated from REAPER API documentation
 -- Generated from REAPER v7.39
--- Generated on: 2025-06-10T04:59:22.074Z
 --
 -- This file provides type definitions for VS Code autocompletion
 -- when working with REAPER Lua scripts.
