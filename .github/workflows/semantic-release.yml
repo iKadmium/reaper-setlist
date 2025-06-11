@@ -43,14 +43,14 @@ jobs:
           ref: ${{ github.event.after || github.sha }}
           timeoutSeconds: 1800
 
-      - name: Wait for Backend CI
+      - name: Wait for Lua CI
         if: github.event_name == 'push'
         uses: fountainhead/action-wait-for-check@v1.2.0
-        id: wait-for-backend
+        id: wait-for-lua
         continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          checkName: "Backend"
+          checkName: "Lua"
           ref: ${{ github.event.after || github.sha }}
           timeoutSeconds: 1800
 
