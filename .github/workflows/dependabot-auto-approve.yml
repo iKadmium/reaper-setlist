@@ -28,12 +28,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           timeoutSeconds: 1800
 
-      - name: Wait for Backend CI
+      - name: Wait for Lua CI
         uses: fountainhead/action-wait-for-check@v1.2.0
-        id: wait-for-backend
+        id: wait-for-lua
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          checkName: "Backend"
+          checkName: "Lua"
           ref: ${{ github.event.pull_request.head.sha }}
           timeoutSeconds: 1800
 
