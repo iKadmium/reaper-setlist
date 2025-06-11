@@ -1,16 +1,16 @@
-import * as ts from 'typescript';
 import type { Type } from 'ts-morph';
 import { SyntaxKind } from 'ts-morph';
+import * as ts from 'typescript';
+import { capitalizeFirstLetter, getMembers } from '../util';
 import { Target, type Argument } from './target';
-import { getMembers } from '../util';
 
 export class TypeScriptTarget extends Target {
 	constructor() {
 		super();
 		this.imports.push(
-			`import { configuration } from "$lib/stores/configuration.svelte";`,
-			`import type { ReaperCommand, ReaperApiClient } from "../api";`,
-			`import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';`
+			`import type { ReaperApiClient } from "../api";`,
+			`import { GetStateCommand, RunScriptCommand, SetOperationCommand, SetStateCommand } from "./commands";`,
+			`import { SectionKeys } from "./reaper-state";`
 		);
 	}
 
@@ -57,23 +57,11 @@ export class TypeScriptTarget extends Target {
 
 	override renderClassDefinition(): string[] {
 		const constructorArgs = [
-			`private readonly commandBuilder: ReaperScriptCommandBuilder`,
 			`private readonly apiClient: ReaperApiClient`
 		]
 		return [
 			`export class ReaperRpcClient {`,
-			`\tconstructor(`,
-			`\t\t${constructorArgs.join(', \n\t\t')}`,
-			`\t) { }`,
-			``,
-			`\tprivate async getScriptActionId(): Promise<ReaperCommand> {`,
-			`\t\tawait configuration.ensureInitialized();`,
-			`\t\tconst actionId = configuration.scriptActionId;`,
-			`\t\tif (!actionId) {`,
-			`\t\t\tthrow new Error("Script action ID is not set. Please configure it in the settings.");`,
-			`\t\t}`,
-			`\t\treturn actionId as ReaperCommand;`,
-			`\t}`,
+			`\tconstructor(${constructorArgs.join(', ')}) { }`,
 		];
 	}
 
@@ -107,45 +95,57 @@ export class TypeScriptTarget extends Target {
 				.join(', ')
 			}): Promise<${outputsStr}> {`
 		);
-		operationLines.push(`\tconst actionId = await this.getScriptActionId();`);
-		operationLines.push(`\tconst commands: ReaperCommand[] = []; `);
+		operationLines.push(`\tconst commands = [`);
 		for (const { name, type } of inputs) {
-			operationLines.push(`\tcommands.push(this.commandBuilder.setExtState("${name}", ${name}, true)); `);
+			operationLines.push(`\t\tnew SetStateCommand(SectionKeys.ReaperSetlist, "${name}", ${name}),`);
 		}
 
-		operationLines.push(`\tcommands.push(this.commandBuilder.setOperation("${name}")); `);
-		operationLines.push(`\tcommands.push(actionId); `);
+		operationLines.push(`\t\tnew SetOperationCommand("${name}"),`);
+		operationLines.push(`\t\tnew RunScriptCommand(),`);
 
 		for (const { name, type } of outputs) {
-			operationLines.push(`\tcommands.push(this.commandBuilder.getExtState("${name}")); `);
+			operationLines.push(`\t\tnew GetStateCommand(SectionKeys.ReaperSetlist, "${name}"),`);
 		}
 
-		if (outputs.length === 0) {
-			operationLines.push(`\tawait this.apiClient.sendCommands(commands);`);
+		operationLines.push(`\t] as const;`)
+
+		if (outputs.length > 0) {
+			const inputReturns = inputs.map((input) => `_set${capitalizeFirstLetter(input.name)}`);
+			const setOperationReturn = `_setOperation`;
+			const runScriptReturn = '_runScript';
+			const outputReturns = outputs.map((output) => `${output.name}Raw`);
+			const allReturns = [...inputReturns, setOperationReturn, runScriptReturn, ...outputReturns];
+
+			operationLines.push(`\tconst [${allReturns.join(', ')}] = await this.apiClient.executeCommands(commands); `);
 		} else {
-			operationLines.push(`\tconst result = await this.apiClient.sendCommands(commands); `);
+			operationLines.push(`\tawait this.apiClient.executeCommands(commands); `);
 		}
 
-		for (let i = 0; i < outputs.length; i++) {
-			const output = outputs[i]!;
-			const resultIndex = i;
-			operationLines.push(`\tconst ${output.name}Raw = result[${resultIndex}];`);
-			operationLines.push(`\tconst ${output.name}Parts = ${output.name}Raw.split('\\t');`);
-			if (output.type.isString()) {
-				operationLines.push(`\tconst ${output.name} = ${output.name}Parts[3];`);
+		for (const output of outputs) {
+			operationLines.push(`\tif (${output.name}Raw === undefined) {`);
+			operationLines.push(`\t\tthrow new Error("Failed to retrieve ${output.name}. Please check the script configuration.");`);
+			operationLines.push(`\t}`);
+
+			if (output.type.isArray() || output.type.isClassOrInterface()) {
+				operationLines.push(`\tconst ${output.name} = JSON.parse(${output.name}Raw) as ${output.type.getText()}; `);
+			} else if (output.type.isString()) {
+				operationLines.push(`\tconst ${output.name} = ${output.name}Raw; `);
 			} else if (output.type.isNumber()) {
-				operationLines.push(`\tconst ${output.name} = parseFloat(${output.name}Parts[3]);`);
+				operationLines.push(`\tconst ${output.name} = parseFloat(${output.name}Raw); `);
+			} else if (output.type.isBoolean()) {
+				operationLines.push(`\tconst ${output.name} = ${output.name}Raw === 'true'; `);
 			} else {
-				operationLines.push(`\tconst ${output.name} = JSON.parse(${output.name}Parts[3]);`);
+				throw new Error(`Unsupported output type: ${output.type.getText()}`);
 			}
+
 		}
 
 		if (outputs.length === 1) {
-			operationLines.push(`\treturn ${outputs[0]!.name};`);
+			operationLines.push(`\treturn ${outputs[0]!.name}; `);
 		} else if (outputs.length > 1) {
 			operationLines.push(`\treturn { ${outputs.map((o) => o.name).join(', ')} }; `);
 		}
-		operationLines.push(`}`);
-		return operationLines.map(x => `\t${x}`);
+		operationLines.push(`} `);
+		return operationLines.map(x => `\t${x} `);
 	}
 }

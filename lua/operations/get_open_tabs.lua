@@ -24,7 +24,8 @@ local GetOpenTabs = function()
         local tab = {
             index = tab_index,
             name = normalized_tab_name,
-            length = duration
+            length = duration,
+            tempo = reaper.Master_GetTempo()
         }
 
         table.insert(tabs, tab)

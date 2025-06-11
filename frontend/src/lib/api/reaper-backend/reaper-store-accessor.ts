@@ -1,5 +1,6 @@
 import type { ReaperApiClient, ReaperCommand } from '../api';
 import { ReaperStateCommandBuilder } from './abstract-reaper-state-accessor';
+import type { GetStateCommand, SetStateCommand } from './commands';
 import type { KVStoreName } from './reaper-state';
 
 const CHUNK_SIZE = 500;
@@ -22,8 +23,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		let i = 0;
 		while (true) {
 			const chunkCommand = this.getExtStateCommand(key + '.' + i);
-			const result = await this.apiClient.sendCommand(chunkCommand);
-			const chunk = this.parseGetExtStateCommandResult(result[0]);
+			const chunk = await this.apiClient.executeCommand(chunkCommand);
 
 			if (!chunk) break;
 			if (chunk.endsWith(CONTINUATION_MARKER)) {
@@ -44,7 +44,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 				`Value to be stored contains the reserved continuation marker (${CONTINUATION_MARKER}).`
 			);
 		}
-		const commands: ReaperCommand[] = [];
+		const commands: SetStateCommand[] = [];
 		const numChunks = Math.ceil(value.length / CHUNK_SIZE);
 		for (let i = 0; i < numChunks; i++) {
 			let chunk = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
@@ -54,14 +54,13 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		let cleanupIndex = numChunks;
 		while (true) {
 			const chunkCommand = this.getExtStateCommand(key + '.' + cleanupIndex);
-			const chunkRaw = await this.apiClient.sendCommand(chunkCommand);
-			const chunk = chunkRaw[0].split('\t')[3];
+			const chunk = await this.apiClient.executeCommand(chunkCommand);
 			if (!chunk) break;
 			commands.push(this.setExtStateCommand(key + '.' + cleanupIndex, '', false));
 			cleanupIndex++;
 		}
 		// do not use batch here, as the state was chunked to avoid exceeding the max batch size
-		await Promise.all(commands.map((command) => this.apiClient.sendCommand(command)));
+		await Promise.all(commands.map((command) => this.apiClient.executeCommand(command)));
 	}
 
 	async getItem(key: string): Promise<TValue | undefined> {
@@ -82,11 +81,10 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		let i = 0;
 		while (true) {
 			const getChunkCommand = this.getExtStateCommand(chunkKey + '.' + i);
-			const result = await this.apiClient.sendCommand(getChunkCommand);
-			const chunk = this.parseGetExtStateCommandResult(result[0]);
+			const chunk = await this.apiClient.executeCommand(getChunkCommand);
 			if (!chunk) break;
 			const deleteChunkCommand = this.setExtStateCommand(chunkKey + '.' + i, '', false);
-			await this.apiClient.sendCommand(deleteChunkCommand);
+			await this.apiClient.executeCommand(deleteChunkCommand);
 			i++;
 		}
 	}
@@ -101,8 +99,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		const chunk0Keys = keys.map((key) => this.getChunkKey(key, 0).replace(/\.0$/, ''));
 		const batchKeys = chunk0Keys.map((k) => k + '.0');
 		const chunk0Commands = batchKeys.map((k) => this.getExtStateCommand(k));
-		const chunk0ResponsesRaw = await this.apiClient.sendCommands(chunk0Commands);
-		const chunk0Responses = chunk0ResponsesRaw.map((r) => this.parseGetExtStateCommandResult(r));
+		const chunk0Responses = await this.apiClient.executeCommands(chunk0Commands);
 
 		for (let idx = 0; idx < keys.length; idx++) {
 			const key = keys[idx];
@@ -116,8 +113,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 						i++;
 						const nextChunkKey = this.getChunkKey(key, i).replace(/\.0$/, '');
 						const nextChunkCommand = this.getExtStateCommand(nextChunkKey + '.' + i);
-						const chunkRaw = await this.apiClient.sendCommand(nextChunkCommand);
-						chunk = this.parseGetExtStateCommandResult(chunkRaw[0]);
+						chunk = await this.apiClient.executeCommand(nextChunkCommand);
 					} else {
 						chunks.push(chunk);
 						break;

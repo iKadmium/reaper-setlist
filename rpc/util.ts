@@ -5,6 +5,10 @@ export function indent(level: number, str: string): string {
     return str.split('\n').map(line => line.trim() === '' ? '' : indentation + line).join('\n');
 }
 
+export function capitalizeFirstLetter(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export function getMembers(type: Type<ts.Type>): Record<string, Node<ts.Node>> {
     const members: Record<string, Node<ts.Node>> = {};
     for (const member of type.getProperties()) {

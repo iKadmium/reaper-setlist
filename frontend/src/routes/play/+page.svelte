@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
-	import { type PlayState, PLAYSTATE_PAUSED, PLAYSTATE_PLAYING, PLAYSTATE_RECORDING, PLAYSTATE_STOPPED } from '$lib/api/reaper-backend/reaper-api';
+
 	import Button from '$lib/components/Button/Button.svelte';
 	import type { ReaperMarker } from '$lib/models/reaper-marker';
 	import type { ReaperTab } from '$lib/models/reaper-tab';
+	import {
+		PLAYSTATE_PAUSED,
+		PLAYSTATE_PLAYING,
+		PLAYSTATE_RECORDING,
+		PLAYSTATE_STOPPED,
+		type PlayState,
+		type ReaperTransport
+	} from '$lib/models/reaper-transport';
 	import { formatDuration } from '$lib/util';
 	import { onDestroy, onMount } from 'svelte';
 	// Icons
@@ -23,7 +31,13 @@
 	let currentSongIndex = $state<number>(0);
 	let playState = $state<PlayState>(PLAYSTATE_STOPPED);
 	let currentSongTime = $state<number>(0);
-	let totalSetTime = $state<number>(0);
+	let totalSetTime = $derived<number>(
+		!allTabs
+			? 0
+			: allTabs.slice(0, currentSongIndex).reduce((total, tab) => {
+					return total + (tab.length || 0);
+				}, 0) + currentSongTime
+	);
 	let bpm = $state<number>(120);
 	let transportUpdateHandle = $state<number | null>(null);
 
@@ -72,15 +86,19 @@
 		return `${mins}:${secs.toString().padStart(2, '0')}`;
 	}
 
+	function formatTitle(title: string): string {
+		// strip file extension and trim whitespace
+		return title.replace(/\.[^/.]+$/, ''); // Remove file extension
+	}
+
 	// Player controls
 	async function togglePlayPause() {
 		try {
 			if (playState === PLAYSTATE_PLAYING) {
 				await api.reaper.pause();
-				await updateTransport();
 			} else if (playState === PLAYSTATE_PAUSED || playState === PLAYSTATE_STOPPED) {
 				await api.reaper.play();
-				await updateTransport();
+				await refreshTransport();
 			}
 		} catch (error) {
 			notifications.error(`Failed to toggle playback: ${(error as Error).message}`);
@@ -90,7 +108,7 @@
 	async function stop() {
 		try {
 			await api.reaper.stop();
-			await updateTransport();
+			await refreshTransport();
 		} catch (error) {
 			notifications.error(`Failed to stop playback: ${(error as Error).message}`);
 		}
@@ -99,54 +117,70 @@
 	async function previousTrack() {
 		if (currentSongIndex > 0) {
 			currentSongIndex--;
-			await api.reaper.previousTab();
-			await updateSong();
-			await updateTransport();
+			const result = await api.reaper.previousTab();
+			updateMarkers(result.markers);
+			updateTransport(result.transport);
 		}
 	}
 
 	async function nextTrack() {
 		if (allTabs && currentSongIndex < allTabs.length - 1) {
 			currentSongIndex++;
-			await api.reaper.nextTab();
-			await updateSong();
-			await updateTransport();
+			const result = await api.reaper.nextTab();
+			updateMarkers(result.markers);
+			updateTransport(result.transport);
 		}
 	}
 
 	async function goToMarker(marker: ReaperMarker) {
 		try {
 			await api.reaper.goToMarker(marker.id);
-			await updateTransport();
+			await refreshTransport();
 		} catch (error) {
 			notifications.error(`Failed to jump to marker: ${(error as Error).message}`);
+			console.error(`Failed to jump to marker:`, error);
 		}
 	}
 
 	async function startRecording() {
 		try {
 			await api.reaper.record();
-			await updateTransport();
+			await refreshTransport();
 		} catch (error) {
 			notifications.error(`Failed to toggle recording: ${(error as Error).message}`);
+			console.error(`Failed to toggle recording:`, error);
 		}
 	}
 
-	async function updateTransport() {
+	function updateTransport(transport: ReaperTransport) {
+		if (transport) {
+			playState = transport.playState;
+			currentSongTime = transport.positionSeconds;
+		} else {
+			playState = PLAYSTATE_STOPPED;
+			currentSongTime = 0;
+		}
+	}
+
+	function updateMarkers(markers: ReaperMarker[]) {
+		songMarkers = markers;
+	}
+
+	async function refreshTransport() {
 		try {
 			const state = await api.reaper.getTransport();
-			playState = state.playState;
-			currentSongTime = state.positionSeconds;
+			updateTransport(state);
 		} catch (error) {
-			console.error(`Failed to update transport: ${(error as Error).message}`);
+			console.error(`Failed to update transport:`, error);
 		}
 	}
 
-	async function updateSong() {
+	async function refreshMarkers() {
 		try {
-			songMarkers = await api.reaper.getMarkers();
+			const markers = await api.reaper.getMarkers();
+			updateMarkers(markers);
 		} catch (error) {
-			notifications.error(`Failed to load markers: ${(error as Error).message}`);
+			console.error(`Failed to load markers:`, error);
 		}
 	}
 
@@ -154,10 +188,10 @@
 	onMount(async () => {
 		try {
 			allTabs = await api.script.getOpenTabs();
-			transportUpdateHandle = window.setInterval(updateTransport, 1000); // Update transport every second
-			await updateSong(); // Load initial song markers
+			transportUpdateHandle = window.setInterval(refreshTransport, 1000); // Update transport every second
+			await refreshMarkers(); // Load initial song markers
 		} catch (error) {
-			notifications.error(`Failed to load data: ${(error as Error).message}`);
+			console.error(`Failed to load data: ${(error as Error).message}`);
 		}
 	});
 
@@ -180,7 +214,7 @@
 		<!-- Current Song Display -->
 		<div class="current-song-section">
 			<div class="song-info">
-				<h2 class="song-title">{currentTab.name}</h2>
+				<h2 class="song-title">{formatTitle(currentTab.name)}</h2>
 				<div class="song-meta">
 					<span class="song-number">Track {currentSongIndex + 1} of {allTabs.length}</span>
 				</div>
@@ -382,7 +416,6 @@
 	}
 
 	.progress-bar-container {
-		cursor: pointer;
 		padding: 0.5rem 0;
 	}
 
@@ -414,7 +447,6 @@
 		background: var(--foreground);
 		border-radius: 50%;
 		border: 2px solid var(--background);
-		cursor: pointer;
 		transition: left 0.3s ease;
 	}
 

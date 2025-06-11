@@ -1,40 +1,11 @@
 import type { ReaperMarker } from '$lib/models/reaper-marker';
-import type { ReaperApiClient, ReaperCommand } from '../api';
-
-const GO_TO_START = '40042' as ReaperCommand;
-const GET_TRANSPORT = 'TRANSPORT' as ReaperCommand;
-
-const NEW_TAB = '40859' as ReaperCommand;
-const CLOSE_ALL_TABS = '40860' as ReaperCommand;
-const NEXT_TAB = '40861' as ReaperCommand;
-const PREVIOUS_TAB = '40862' as ReaperCommand;
-
-const PLAY = '1007' as ReaperCommand;
-const PAUSE = '1008' as ReaperCommand;
-const STOP = '1016' as ReaperCommand;
-const RECORD = '1013' as ReaperCommand;
-
-const GET_MARKERS = 'MARKER' as ReaperCommand;
-
-export const PLAYSTATE_STOPPED = 0;
-export const PLAYSTATE_PLAYING = 1;
-export const PLAYSTATE_PAUSED = 2;
-export const PLAYSTATE_RECORDING = 5;
-export const PLAYSTATE_RECORD_PAUSED = 6;
-export type PlayState =
-	| typeof PLAYSTATE_STOPPED
-	| typeof PLAYSTATE_PLAYING
-	| typeof PLAYSTATE_PAUSED
-	| typeof PLAYSTATE_RECORDING
-	| typeof PLAYSTATE_RECORD_PAUSED;
-
-export interface Transport {
-	playState: PlayState;
-	positionSeconds: number; // in seconds
-	repeatOn: boolean; // true if repeat is on
-	positionString: string; // formatted position string (e.g. "1.1.00")
-	positionStringBeats: string; // formatted position in beats (e.g. "1.1.00")
-}
+import type { ReaperTransport } from '$lib/models/reaper-transport';
+import type { ReaperApiClient } from '../api';
+import {
+	Commands,
+	type CommandResults,
+	type ReaperCommand
+} from './commands';
 
 export class ReaperApiClientImpl implements ReaperApiClient {
 	private readonly urlRoot: string;
@@ -45,87 +16,171 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		this.fetch = fetch;
 	}
 
-	async getTransport(): Promise<Transport> {
-		const result = await this.sendCommand(GET_TRANSPORT);
-		const parts = result[0].split('\t');
-		if (parts.length !== 6) {
-			throw new Error(`Unexpected transport format: ${result}`);
+	// New type-safe command execution
+	async executeCommand<TReturn, TInput, TResponse extends string | undefined>(command: ReaperCommand<TReturn, TInput, TResponse>): Promise<TReturn> {
+		const [response] = await this.executeCommands([command] as const);
+		return response;
+	}
+
+	async executeCommands<T extends readonly ReaperCommand<any, any, any>[]>(commands: T): Promise<CommandResults<T>> {
+		const commandStrings = await Promise.all(commands.map(cmd => cmd.getCommandString()));
+		const response = await this.sendRawCommands(commandStrings);
+
+		// Parse responses for each command, preserving type information
+		const results = this.parseMultiCommandResponse(commands, response);
+		return results;
+	}
+
+	private parseMultiCommandResponse<T extends readonly ReaperCommand<any, any, any>[]>(
+		commands: T,
+		response: string[]
+	): CommandResults<T> {
+		const results: unknown[] = [];
+		let responseIndex = 0;
+
+		for (const command of commands) {
+			if (!command.getResponseMarker()) {
+				results.push(void 0);
+				continue; // Skip commands without a response type
+			}
+
+			const commandResponse = response[responseIndex];
+			if (commandResponse.length === 0) {
+				throw new Error(`Empty response for command: ${command.getCommandString()}`);
+			}
+
+			const commandResponseType = commandResponse.split('\t')[0];
+			if (commandResponseType !== command.getResponseMarker()) {
+				throw new Error(`Unexpected response type for command ${command.getCommandString()}: expected ${command.getResponseMarker()}, got ${commandResponseType}`);
+			}
+
+			if (command.getResponseMarker() === 'MARKER_LIST') {
+				const result = command.parseResponse(response.slice(responseIndex));
+				const markers = result as ReaperMarker[];
+				results.push(result);
+				responseIndex += markers.length + 1;
+			} else {
+				const result = command.parseResponse(commandResponse);
+				results.push(result);
+			}
+
+			responseIndex++;
 		}
 
-		const transport: Transport = {
-			playState: parseInt(parts[1], 10) as PlayState,
-			positionSeconds: parseFloat(parts[2]),
-			repeatOn: parts[3] === '1',
-			positionString: parts[4],
-			positionStringBeats: parts[5]
-		};
+		// TypeScript can now properly infer the tuple type
+		return results as CommandResults<T>;
+	}
 
-		return transport;
+	// Legacy methods for backward compatibility
+	async sendCommand(command: string): Promise<string[]> {
+		return this.sendRawCommand(command);
+	}
+
+	async sendCommands(commands: string[]): Promise<string[]> {
+		return this.sendRawCommands(commands);
+	}
+
+	// High-level API methods using new command system
+	async getTransport(): Promise<ReaperTransport> {
+		return this.executeCommand(Commands.transport());
 	}
 
 	async goToStart(): Promise<void> {
-		await this.sendCommand(GO_TO_START);
+		await this.executeCommand(Commands.goToStart());
 	}
 
-	async play(): Promise<void> {
-		await this.sendCommand(PLAY);
+	async play(): Promise<ReaperTransport> {
+		const [, transport] = await this.executeCommands([
+			Commands.play(),
+			Commands.transport()
+		] as const);
+		return transport;
 	}
 
-	async pause(): Promise<void> {
-		await this.sendCommand(PAUSE);
+	async pause(): Promise<ReaperTransport> {
+		const [, transport] = await this.executeCommands([
+			Commands.pause(),
+			Commands.transport()
+		] as const);
+		return transport;
 	}
 
-	async stop(): Promise<void> {
-		await this.sendCommand(STOP);
+	async stop(): Promise<ReaperTransport> {
+		const [, transport] = await this.executeCommands([
+			Commands.stop(),
+			Commands.transport()
+		] as const);
+		return transport;
 	}
 
-	async record(): Promise<void> {
-		await this.sendCommand(RECORD);
+	async record(): Promise<ReaperTransport> {
+		const [, transport] = await this.executeCommands([
+			Commands.record(),
+			Commands.transport()
+		] as const);
+		return transport;
 	}
 
 	async newTab(): Promise<void> {
-		await this.sendCommand(NEW_TAB);
+		await this.executeCommand(Commands.newTab());
 	}
 
 	async closeAllTabs(): Promise<void> {
-		await this.sendCommand(CLOSE_ALL_TABS);
+		await this.executeCommand(Commands.closeAllTabs());
 	}
 
-	public async nextTab(): Promise<void> {
-		await this.sendCommand(NEXT_TAB);
+	async nextTab(): Promise<{ markers: ReaperMarker[], transport: ReaperTransport }> {
+		const [, transport, markers] = await this.executeCommands([
+			Commands.nextTab(),
+			Commands.transport(),
+			Commands.markers()
+		] as const);
+		return { markers, transport };
 	}
 
-	public async previousTab(): Promise<void> {
-		await this.sendCommand(PREVIOUS_TAB);
+	async previousTab(): Promise<{ markers: ReaperMarker[], transport: ReaperTransport }> {
+		const [, transport, markers] = await this.executeCommands([
+			Commands.previousTab(),
+			Commands.transport(),
+			Commands.markers()
+		] as const);
+		return { markers, transport };
 	}
 
-	public async getMarkers(): Promise<ReaperMarker[]> {
-		const result = await this.sendCommand(GET_MARKERS);
-		const markers: ReaperMarker[] = [];
-		for (const line of result) {
-			if (line === 'MARKER_LIST' || line === 'MARKER_LIST_END') {
-				continue; // Skip header and footer
-			}
-			const parts = line.split('\t');
-			if (parts.length < 4) {
-				continue; // Skip invalid lines
-			}
-			const marker: ReaperMarker = {
-				id: parseInt(parts[2], 10),
-				name: parts[1],
-				position: parseFloat(parts[3])
-			};
-			markers.push(marker);
-		}
-		return markers;
+	async getMarkers(): Promise<ReaperMarker[]> {
+		return this.executeCommand(Commands.markers());
 	}
 
-	public async goToMarker(markerId: number): Promise<void> {
-		const command = `SET/POS_STR/m${markerId}` as ReaperCommand;
-		await this.sendCommand(command);
+	async goToMarker(markerId: number): Promise<void> {
+		await this.executeCommand(Commands.goToMarker(markerId));
 	}
 
-	public async sendCommand(command: ReaperCommand): Promise<string[]> {
+	/**
+	 * Demonstration method showing Promise.all style typing with mixed return types
+	 * Each element in the returned tuple has its specific type, not a union type
+	 */
+	async playAndGetFullState(): Promise<{
+		playResult: void;
+		transport: ReaperTransport;
+		markers: ReaperMarker[];
+	}> {
+		// Execute multiple commands with different return types
+		const [playResult, transport, markers] = await this.executeCommands([
+			Commands.play(),      // Returns void
+			Commands.transport(), // Returns ReaperTransport  
+			Commands.markers()    // Returns ReaperMarker[]
+		] as const);
+
+		// TypeScript now knows the exact type of each element:
+		// playResult is void (not void | ReaperTransport | ReaperMarker[])
+		// transport is ReaperTransport (not void | ReaperTransport | ReaperMarker[])
+		// markers is ReaperMarker[] (not void | ReaperTransport | ReaperMarker[])
+
+		return { playResult, transport, markers };
+	}
+
+	// Private helper methods for raw HTTP communication
+	private async sendRawCommand(command: string): Promise<string[]> {
 		const result = await this.fetch(`${this.urlRoot}/${command}`, {
 			method: 'GET'
 		});
@@ -137,7 +192,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		return lines;
 	}
 
-	public async sendCommands(commands: ReaperCommand[]): Promise<string[]> {
+	private async sendRawCommands(commands: string[]): Promise<string[]> {
 		const result = await this.fetch(`${this.urlRoot}/${commands.join(';')}`, {
 			method: 'GET'
 		});

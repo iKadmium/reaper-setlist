@@ -4,7 +4,6 @@ import type { Api, ReaperApiClient, ReaperScriptSettingsClient, SetlistsStore, S
 import { ReaperApiClientImpl } from './reaper-api';
 import { ReaperKVS } from './reaper-kvs';
 import { ReaperRpcClient } from './reaper-rpc-client.svelte';
-import { ReaperScriptCommandBuilder } from './reaper-script-command-builder';
 import { ReaperScriptSettingsImpl } from './reaper-script-settings';
 import { ReaperSetlistStoreImpl } from './reaper-setlist-store';
 import { SectionKeys } from './reaper-state';
@@ -25,8 +24,8 @@ export class ReaperBackend implements Api {
 	) {
 		const apiClient = new ReaperApiClientImpl(this.urlRoot, fetch);
 		this.reaper = apiClient;
-		this.script = new ReaperRpcClient(new ReaperScriptCommandBuilder(SectionKeys.ReaperSetlist), apiClient);
-		this.scriptSettings = new ReaperScriptSettingsImpl(apiClient, new ReaperScriptCommandBuilder(SectionKeys.ReaperSetlist));
+		this.script = new ReaperRpcClient(apiClient);
+		this.scriptSettings = new ReaperScriptSettingsImpl(apiClient);
 		this.songs = new ReaperKVS<Song>(new ReaperStoreAccessor<Song>(SectionKeys.Songs, apiClient));
 		this.sets = new ReaperSetlistStoreImpl(
 			new ReaperStoreAccessor<Setlist>(SectionKeys.Sets, apiClient)

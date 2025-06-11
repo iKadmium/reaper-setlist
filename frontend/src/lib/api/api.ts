@@ -1,29 +1,33 @@
 import type { ReaperMarker } from '$lib/models/reaper-marker';
+import type { ReaperTransport } from '$lib/models/reaper-transport';
 import type { Setlist } from '../models/setlist';
 import type { Song } from '../models/song';
 import type { KeyValueStore } from './key-value-store';
-import type { Transport } from './reaper-backend/reaper-api';
+import type { ReaperCommand, CommandResults } from './reaper-backend/commands';
 import { ReaperBackend } from './reaper-backend/reaper-backend';
 
-export type ReaperCommand = string & { __brand: 'ReaperCommand' };
+// Re-export for backward compatibility
+export type { ReaperCommand, CommandResults } from './reaper-backend/commands';
 
 export interface ReaperApiClient {
-	sendCommand: (command: ReaperCommand) => Promise<string[]>;
-	sendCommands: (commands: ReaperCommand[]) => Promise<string[]>;
+	// New type-safe command methods
+	executeCommand: <TReturn, TInput, TResponse extends string | undefined>(command: ReaperCommand<TReturn, TInput, TResponse>) => Promise<TReturn>;
+	executeCommands: <T extends readonly ReaperCommand<any, any, any>[]>(commands: T) => Promise<CommandResults<T>>;
 
+	// High-level API methods
 	goToStart: () => Promise<void>;
 	goToMarker: (markerId: number) => Promise<void>;
 
 	newTab: () => Promise<void>;
 	closeAllTabs: () => Promise<void>;
-	nextTab: () => Promise<void>;
-	previousTab: () => Promise<void>;
+	nextTab: () => Promise<{ markers: ReaperMarker[], transport: ReaperTransport }>;
+	previousTab: () => Promise<{ markers: ReaperMarker[], transport: ReaperTransport }>;
 
-	play: () => Promise<void>;
-	pause: () => Promise<void>;
-	stop: () => Promise<void>;
-	record: () => Promise<void>;
-	getTransport: () => Promise<Transport>;
+	play: () => Promise<ReaperTransport>;
+	pause: () => Promise<ReaperTransport>;
+	stop: () => Promise<ReaperTransport>;
+	record: () => Promise<ReaperTransport>;
+	getTransport: () => Promise<ReaperTransport>;
 
 	getMarkers: () => Promise<ReaperMarker[]>;
 }
@@ -44,7 +48,7 @@ export interface ReaperScriptSettingsClient {
 	setScriptActionId: (id: string) => Promise<void>;
 }
 
-export interface SongsStore extends KeyValueStore<string, Song> {}
+export interface SongsStore extends KeyValueStore<string, Song> { }
 
 export interface SetlistsStore extends KeyValueStore<string, Setlist> {
 	deleteSongFromSets(id: string): unknown;
