@@ -23,7 +23,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		while (true) {
 			const chunkCommand = this.getExtStateCommand(key + '.' + i);
 			const result = await this.apiClient.sendCommand(chunkCommand);
-			const chunk = this.parseGetExtStateCommandResult(result);
+			const chunk = this.parseGetExtStateCommandResult(result[0]);
 
 			if (!chunk) break;
 			if (chunk.endsWith(CONTINUATION_MARKER)) {
@@ -55,7 +55,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		while (true) {
 			const chunkCommand = this.getExtStateCommand(key + '.' + cleanupIndex);
 			const chunkRaw = await this.apiClient.sendCommand(chunkCommand);
-			const chunk = chunkRaw.split('\n')[0].split('\t')[3];
+			const chunk = chunkRaw[0].split('\t')[3];
 			if (!chunk) break;
 			commands.push(this.setExtStateCommand(key + '.' + cleanupIndex, '', false));
 			cleanupIndex++;
@@ -83,7 +83,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 		while (true) {
 			const getChunkCommand = this.getExtStateCommand(chunkKey + '.' + i);
 			const result = await this.apiClient.sendCommand(getChunkCommand);
-			const chunk = this.parseGetExtStateCommandResult(result);
+			const chunk = this.parseGetExtStateCommandResult(result[0]);
 			if (!chunk) break;
 			const deleteChunkCommand = this.setExtStateCommand(chunkKey + '.' + i, '', false);
 			await this.apiClient.sendCommand(deleteChunkCommand);
@@ -117,7 +117,7 @@ export class ReaperStoreAccessor<TValue> extends ReaperStateCommandBuilder {
 						const nextChunkKey = this.getChunkKey(key, i).replace(/\.0$/, '');
 						const nextChunkCommand = this.getExtStateCommand(nextChunkKey + '.' + i);
 						const chunkRaw = await this.apiClient.sendCommand(nextChunkCommand);
-						chunk = this.parseGetExtStateCommandResult(chunkRaw);
+						chunk = this.parseGetExtStateCommandResult(chunkRaw[0]);
 					} else {
 						chunks.push(chunk);
 						break;

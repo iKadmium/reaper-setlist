@@ -3,6 +3,7 @@
 	import { getApi } from '$lib/api/api';
 	import { type PlayState, PLAYSTATE_PAUSED, PLAYSTATE_PLAYING, PLAYSTATE_RECORDING, PLAYSTATE_STOPPED } from '$lib/api/reaper-backend/reaper-api';
 	import Button from '$lib/components/Button/Button.svelte';
+	import type { ReaperMarker } from '$lib/models/reaper-marker';
 	import type { ReaperTab } from '$lib/models/reaper-tab';
 	import { formatDuration } from '$lib/util';
 	import { onDestroy, onMount } from 'svelte';
@@ -30,16 +31,7 @@
 	const currentTab = $derived(!allTabs || currentSongIndex < 0 || currentSongIndex >= allTabs.length ? null : allTabs[currentSongIndex] || null);
 
 	// Song markers (placeholder data - would come from Reaper)
-	let songMarkers = $state([
-		{ name: 'Intro', time: 0 },
-		{ name: 'Verse 1', time: 15 },
-		{ name: 'Chorus 1', time: 45 },
-		{ name: 'Verse 2', time: 75 },
-		{ name: 'Chorus 2', time: 105 },
-		{ name: 'Bridge', time: 135 },
-		{ name: 'Final Chorus', time: 165 },
-		{ name: 'Outro', time: 195 }
-	]);
+	let songMarkers = $state<ReaperMarker[]>([]);
 
 	// Time calculations
 	const totalSongDuration = $derived(currentTab?.length || 0);
@@ -85,8 +77,10 @@
 		try {
 			if (playState === PLAYSTATE_PLAYING) {
 				await api.reaper.pause();
-			} else if (playState === PLAYSTATE_PAUSED) {
+				await updateTransport();
+			} else if (playState === PLAYSTATE_PAUSED || playState === PLAYSTATE_STOPPED) {
 				await api.reaper.play();
+				await updateTransport();
 			}
 		} catch (error) {
 			notifications.error(`Failed to toggle playback: ${(error as Error).message}`);
@@ -96,6 +90,7 @@
 	async function stop() {
 		try {
 			await api.reaper.stop();
+			await updateTransport();
 		} catch (error) {
 			notifications.error(`Failed to stop playback: ${(error as Error).message}`);
 		}
@@ -105,6 +100,8 @@
 		if (currentSongIndex > 0) {
 			currentSongIndex--;
 			await api.reaper.previousTab();
+			await updateSong();
+			await updateTransport();
 		}
 	}
 
@@ -112,12 +109,15 @@
 		if (allTabs && currentSongIndex < allTabs.length - 1) {
 			currentSongIndex++;
 			await api.reaper.nextTab();
+			await updateSong();
+			await updateTransport();
 		}
 	}
 
-	async function goToMarker(markerTime: number) {
+	async function goToMarker(marker: ReaperMarker) {
 		try {
-			await api.reaper.goToMarker(markerTime);
+			await api.reaper.goToMarker(marker.id);
+			await updateTransport();
 		} catch (error) {
 			notifications.error(`Failed to jump to marker: ${(error as Error).message}`);
 		}
@@ -126,6 +126,7 @@
 	async function startRecording() {
 		try {
 			await api.reaper.record();
+			await updateTransport();
 		} catch (error) {
 			notifications.error(`Failed to toggle recording: ${(error as Error).message}`);
 		}
@@ -141,11 +142,20 @@
 		}
 	}
 
+	async function updateSong() {
+		try {
+			songMarkers = await api.reaper.getMarkers();
+		} catch (error) {
+			notifications.error(`Failed to load markers: ${(error as Error).message}`);
+		}
+	}
+
 	// Load sample data (in real app, this would come from route params)
 	onMount(async () => {
 		try {
 			allTabs = await api.script.getOpenTabs();
 			transportUpdateHandle = window.setInterval(updateTransport, 1000); // Update transport every second
+			await updateSong(); // Load initial song markers
 		} catch (error) {
 			notifications.error(`Failed to load data: ${(error as Error).message}`);
 		}
@@ -270,9 +280,9 @@
 				<h3>Song Markers</h3>
 				<div class="markers-grid">
 					{#each songMarkers as marker}
-						<button class="marker-button" onclick={() => goToMarker(marker.time)}>
+						<button class="marker-button" onclick={() => goToMarker(marker)}>
 							<div class="marker-name">{marker.name}</div>
-							<div class="marker-time">{formatTime(marker.time)}</div>
+							<div class="marker-time">{formatTime(marker.position)}</div>
 						</button>
 					{/each}
 				</div>

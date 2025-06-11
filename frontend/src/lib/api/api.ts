@@ -8,7 +8,7 @@ import { ReaperBackend } from './reaper-backend/reaper-backend';
 export type ReaperCommand = string & { __brand: 'ReaperCommand' };
 
 export interface ReaperApiClient {
-	sendCommand: (command: ReaperCommand) => Promise<string>;
+	sendCommand: (command: ReaperCommand) => Promise<string[]>;
 	sendCommands: (commands: ReaperCommand[]) => Promise<string[]>;
 
 	goToStart: () => Promise<void>;
@@ -23,7 +23,7 @@ export interface ReaperApiClient {
 	pause: () => Promise<void>;
 	stop: () => Promise<void>;
 	record: () => Promise<void>;
-	getTransport: () => Promise<Transport>
+	getTransport: () => Promise<Transport>;
 
 	getMarkers: () => Promise<ReaperMarker[]>;
 }
@@ -44,7 +44,7 @@ export interface ReaperScriptSettingsClient {
 	setScriptActionId: (id: string) => Promise<void>;
 }
 
-export interface SongsStore extends KeyValueStore<string, Song> { }
+export interface SongsStore extends KeyValueStore<string, Song> {}
 
 export interface SetlistsStore extends KeyValueStore<string, Setlist> {
 	deleteSongFromSets(id: string): unknown;

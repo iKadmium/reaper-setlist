@@ -9,20 +9,24 @@ const CLOSE_ALL_TABS = '40860' as ReaperCommand;
 const NEXT_TAB = '40861' as ReaperCommand;
 const PREVIOUS_TAB = '40862' as ReaperCommand;
 
-const PLAY = '40044' as ReaperCommand;
-const PAUSE = '40045' as ReaperCommand;
-const STOP = '40046' as ReaperCommand;
-const RECORD = '40023' as ReaperCommand;
+const PLAY = '1007' as ReaperCommand;
+const PAUSE = '1008' as ReaperCommand;
+const STOP = '1016' as ReaperCommand;
+const RECORD = '1013' as ReaperCommand;
 
 const GET_MARKERS = 'MARKER' as ReaperCommand;
-
 
 export const PLAYSTATE_STOPPED = 0;
 export const PLAYSTATE_PLAYING = 1;
 export const PLAYSTATE_PAUSED = 2;
 export const PLAYSTATE_RECORDING = 5;
 export const PLAYSTATE_RECORD_PAUSED = 6;
-export type PlayState = typeof PLAYSTATE_STOPPED | typeof PLAYSTATE_PLAYING | typeof PLAYSTATE_PAUSED | typeof PLAYSTATE_RECORDING | typeof PLAYSTATE_RECORD_PAUSED;
+export type PlayState =
+	| typeof PLAYSTATE_STOPPED
+	| typeof PLAYSTATE_PLAYING
+	| typeof PLAYSTATE_PAUSED
+	| typeof PLAYSTATE_RECORDING
+	| typeof PLAYSTATE_RECORD_PAUSED;
 
 export interface Transport {
 	playState: PlayState;
@@ -43,7 +47,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 
 	async getTransport(): Promise<Transport> {
 		const result = await this.sendCommand(GET_TRANSPORT);
-		const parts = result.split('\t');
+		const parts = result[0].split('\t');
 		if (parts.length !== 6) {
 			throw new Error(`Unexpected transport format: ${result}`);
 		}
@@ -54,7 +58,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 			repeatOn: parts[3] === '1',
 			positionString: parts[4],
 			positionStringBeats: parts[5]
-		}
+		};
 
 		return transport;
 	}
@@ -98,13 +102,12 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 	public async getMarkers(): Promise<ReaperMarker[]> {
 		const result = await this.sendCommand(GET_MARKERS);
 		const markers: ReaperMarker[] = [];
-		const lines = result.split('\n').filter((line) => line.trim() !== '');
-		for (const line of lines) {
+		for (const line of result) {
 			if (line === 'MARKER_LIST' || line === 'MARKER_LIST_END') {
 				continue; // Skip header and footer
 			}
 			const parts = line.split('\t');
-			if (parts.length !== 3 && parts.length !== 4) {
+			if (parts.length < 4) {
 				continue; // Skip invalid lines
 			}
 			const marker: ReaperMarker = {
@@ -118,12 +121,11 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 	}
 
 	public async goToMarker(markerId: number): Promise<void> {
-		const command = `SET/POS/m${markerId}` as ReaperCommand;
+		const command = `SET/POS_STR/m${markerId}` as ReaperCommand;
 		await this.sendCommand(command);
 	}
 
-
-	public async sendCommand(command: ReaperCommand): Promise<string> {
+	public async sendCommand(command: ReaperCommand): Promise<string[]> {
 		const result = await this.fetch(`${this.urlRoot}/${command}`, {
 			method: 'GET'
 		});
@@ -132,7 +134,7 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		}
 		const content = await result.text();
 		const lines = content.split('\n').filter((line) => line.trim() !== '');
-		return lines[0];
+		return lines;
 	}
 
 	public async sendCommands(commands: ReaperCommand[]): Promise<string[]> {
