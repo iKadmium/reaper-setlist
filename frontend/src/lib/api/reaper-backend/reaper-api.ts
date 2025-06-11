@@ -85,8 +85,9 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		return this.executeCommand(Commands.transport());
 	}
 
-	async goToStart(): Promise<void> {
-		await this.executeCommand(Commands.goToStart());
+	async goToStart(): Promise<ReaperTransport> {
+		const [_, transport] = await this.executeCommands([Commands.goToStart(), Commands.transport()] as const);
+		return transport;
 	}
 
 	async play(): Promise<ReaperTransport> {
@@ -151,8 +152,9 @@ export class ReaperApiClientImpl implements ReaperApiClient {
 		return this.executeCommand(Commands.markers());
 	}
 
-	async goToMarker(markerId: number): Promise<void> {
-		await this.executeCommand(Commands.goToMarker(markerId));
+	async goToMarker(markerId: number): Promise<ReaperTransport> {
+		const [_, transport] = await this.executeCommands([Commands.goToMarker(markerId), Commands.transport()] as const);
+		return transport;
 	}
 
 	/**

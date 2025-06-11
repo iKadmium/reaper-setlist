@@ -16,7 +16,6 @@
 	import { formatDuration } from '$lib/util';
 	import { onDestroy, onMount } from 'svelte';
 	// Icons
-	import MetronomeIcon from 'virtual:icons/mdi/metronome';
 	import PauseIcon from 'virtual:icons/mdi/pause';
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import RecordIcon from 'virtual:icons/mdi/record';
@@ -38,7 +37,6 @@
 					return total + (tab.length || 0);
 				}, 0) + currentSongTime
 	);
-	let bpm = $state<number>(120);
 	let transportUpdateHandle = $state<number | null>(null);
 
 	// Current song data
@@ -95,10 +93,11 @@
 	async function togglePlayPause() {
 		try {
 			if (playState === PLAYSTATE_PLAYING) {
-				await api.reaper.pause();
+				const transport = await api.reaper.pause();
+				updateTransport(transport);
 			} else if (playState === PLAYSTATE_PAUSED || playState === PLAYSTATE_STOPPED) {
-				await api.reaper.play();
-				await refreshTransport();
+				const transport = await api.reaper.play();
+				updateTransport(transport);
 			}
 		} catch (error) {
 			notifications.error(`Failed to toggle playback: ${(error as Error).message}`);
@@ -214,97 +213,95 @@
 		<!-- Current Song Display -->
 		<div class="current-song-section">
 			<div class="song-info">
-				<h2 class="song-title">{formatTitle(currentTab.name)}</h2>
 				<div class="song-meta">
 					<span class="song-number">Track {currentSongIndex + 1} of {allTabs.length}</span>
 				</div>
+				<h2 class="song-title">{formatTitle(currentTab.name)}</h2>
 			</div>
 
-			<!-- Tempo and Volume -->
-			<div class="tempo-volume">
-				<div class="tempo-display">
-					<MetronomeIcon />
-					<span>{bpm} BPM</span>
-				</div>
-			</div>
-		</div>
-
-		<!-- Transport Controls -->
-		<div class="transport-controls">
-			<div class="main-controls">
+			<div class="track-navigation">
 				<Button variant="icon" onclick={previousTrack} disabled={currentSongIndex === 0}>
 					<SkipPreviousIcon />
-				</Button>
-
-				<Button variant="icon" onclick={stop} color={playState === PLAYSTATE_PLAYING || playState === PLAYSTATE_PAUSED ? 'delete' : 'primary'}>
-					<StopIcon />
-				</Button>
-
-				<Button variant="icon" onclick={togglePlayPause} color="success">
-					{#if playState === PLAYSTATE_PLAYING}
-						<PauseIcon />
-					{:else}
-						<PlayIcon />
-					{/if}
 				</Button>
 
 				<Button variant="icon" onclick={nextTrack} disabled={!allTabs || currentSongIndex >= allTabs.length - 1}>
 					<SkipNextIcon />
 				</Button>
+			</div>
 
-				<Button variant="icon" onclick={startRecording} color={playState === PLAYSTATE_RECORDING ? 'delete' : 'primary'}>
-					<RecordIcon />
-				</Button>
+			<div class="next-up-info">
+				<div class="next-up-header">
+					<h4>Next Up</h4>
+					{#if currentSongIndex < allTabs.length - 1}
+						{@const nextTab = allTabs[currentSongIndex + 1]}
+						{#if nextTab}
+							<div class="next-song">
+								<div class="next-song-name">{formatTitle(nextTab.name)}</div>
+								<div class="next-song-duration">{formatDuration(nextTab.length)}</div>
+							</div>
+						{/if}
+					{:else}
+						<div class="set-complete">Set Complete!</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 
-		<!-- Song Progress -->
-		<div class="progress-section">
-			<div class="progress-group">
-				<div class="progress-label">
-					<span>Song Progress</span>
-					<span class="time-display">{formatTime(currentSongTime)} / {formatTime(totalSongDuration)}</span>
-				</div>
-				<div class="progress-bar-container">
-					<div class="progress-bar">
-						<div class="progress-fill" style="width: {songProgress}%"></div>
-						<div class="progress-handle" style="left: {songProgress}%"></div>
-					</div>
-				</div>
-				<div class="remaining-time">-{formatTime(remainingSongTime)}</div>
-			</div>
-		</div>
+		<!-- Transport Controls & Song Progress -->
+		<div class="transport-section">
+			<div class="transport-controls">
+				<div class="main-controls">
+					<Button variant="icon" onclick={stop} color={playState === PLAYSTATE_PLAYING || playState === PLAYSTATE_PAUSED ? 'delete' : 'primary'}>
+						<StopIcon />
+					</Button>
 
-		<!-- Additional Live Performance Features -->
-		<div class="live-features">
-			<h4>Next Up</h4>
-			{#if currentSongIndex < allTabs.length - 1}
-				{@const nextTab = allTabs[currentSongIndex + 1]}
-				{#if nextTab}
-					<div class="next-song">
-						<div class="next-song-name">{nextTab.name}</div>
-						<div class="next-song-duration">{formatDuration(nextTab.length)}</div>
+					<Button variant="icon" onclick={togglePlayPause} color="success">
+						{#if playState === PLAYSTATE_PLAYING}
+							<PauseIcon />
+						{:else}
+							<PlayIcon />
+						{/if}
+					</Button>
+
+					<Button variant="icon" onclick={startRecording} color={playState === PLAYSTATE_RECORDING ? 'delete' : 'primary'}>
+						<RecordIcon />
+					</Button>
+				</div>
+			</div>
+
+			<div class="song-progress">
+				<div class="progress-group">
+					<div class="progress-label">
+						<span>Song Progress</span>
+						<span class="time-display">{formatTime(currentSongTime)} / {formatTime(totalSongDuration)}</span>
 					</div>
-				{/if}
-			{:else}
-				<div class="set-complete">Set Complete!</div>
-			{/if}
+					<div class="progress-bar-container">
+						<div class="progress-bar">
+							<div class="progress-fill" style="width: {songProgress}%"></div>
+							<div class="progress-handle" style="left: {songProgress}%"></div>
+						</div>
+					</div>
+					<div class="remaining-time">-{formatTime(remainingSongTime)}</div>
+				</div>
+			</div>
 		</div>
 
 		<!-- Set Progress -->
-		<div class="progress-section">
-			<div class="progress-group">
-				<div class="progress-label">
-					<span>Set Progress</span>
-					<span class="time-display">{formatTime(totalSetTime)} / {formatTime(totalSetDuration)}</span>
-				</div>
-				<div class="progress-bar-container">
-					<div class="progress-bar set-progress">
-						<div class="progress-fill" style="width: {setProgress}%"></div>
-						<div class="progress-handle" style="left: {setProgress}%"></div>
+		<div class="set-section">
+			<div class="set-progress">
+				<div class="progress-group">
+					<div class="progress-label">
+						<span>Set Progress</span>
+						<span class="time-display">{formatTime(totalSetTime)} / {formatTime(totalSetDuration)}</span>
 					</div>
+					<div class="progress-bar-container">
+						<div class="progress-bar set-progress-bar">
+							<div class="progress-fill" style="width: {setProgress}%"></div>
+							<div class="progress-handle" style="left: {setProgress}%"></div>
+						</div>
+					</div>
+					<div class="remaining-time">-{formatTime(remainingSetTime)}</div>
 				</div>
-				<div class="remaining-time">-{formatTime(remainingSetTime)}</div>
 			</div>
 		</div>
 
@@ -332,6 +329,39 @@
 </div>
 
 <style>
+	.track-navigation {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
+	}
+
+	.next-up-info {
+		width: 100%;
+		padding-top: 1rem;
+		border-top: 1px solid var(--current-line);
+	}
+
+	.next-up-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+	}
+
+	.next-up-info h4 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--foreground);
+	}
+
+	.next-song {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.25rem;
+		text-align: right;
+	}
+
 	.player-container {
 		margin: 0 auto;
 		padding: 2rem;
@@ -344,8 +374,9 @@
 
 	.current-song-section {
 		display: flex;
+		flex-direction: column;
 		justify-content: space-between;
-		align-items: flex-start;
+		align-items: center;
 		gap: 2rem;
 		padding: 2rem;
 		background: var(--background);
@@ -355,10 +386,11 @@
 
 	.song-info {
 		flex: 1;
+		text-align: center;
 	}
 
 	.song-title {
-		margin: 0 0 0.5rem 0;
+		margin: 0.5rem 0 0 0;
 		font-size: 2.5rem;
 		font-weight: 700;
 		color: var(--primary);
@@ -367,33 +399,15 @@
 	.song-meta {
 		display: flex;
 		flex-direction: column;
+		align-items: center;
 		gap: 0.25rem;
 		color: var(--comment);
 		font-size: 1rem;
+		margin-bottom: 0;
 	}
 
-	.tempo-volume {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		align-items: flex-end;
-		justify-content: flex-end;
-		height: 100%;
-	}
-
-	.tempo-display {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 1.25rem;
-		font-weight: 600;
-	}
-
-	.progress-section {
-		background: var(--background);
-		border-radius: 0.75rem;
-		border: 1px solid var(--current-line);
-		padding: 1.5rem;
+	:global(.track-nav-button) {
+		flex-shrink: 0;
 	}
 
 	.progress-group {
@@ -434,7 +448,7 @@
 		transition: width 0.3s ease;
 	}
 
-	.set-progress .progress-fill {
+	.set-progress-bar .progress-fill {
 		background: linear-gradient(90deg, var(--purple), var(--pink));
 	}
 
@@ -501,13 +515,29 @@
 		font-family: monospace;
 	}
 
-	.transport-controls {
-		display: flex;
-		justify-content: center;
-		padding: 2rem;
+	.transport-section {
 		background: var(--background);
 		border-radius: 1rem;
 		border: 2px solid var(--current-line);
+		padding: 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+
+	.transport-controls {
+		display: flex;
+		justify-content: center;
+	}
+
+	.set-section {
+		background: var(--background);
+		border-radius: 0.75rem;
+		border: 1px solid var(--current-line);
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
 	}
 
 	.main-controls {
@@ -522,19 +552,6 @@
 
 	:global(.record-button) {
 		margin-left: 1rem;
-	}
-
-	.live-features {
-		background: var(--background);
-		border-radius: 0.75rem;
-		border: 1px solid var(--current-line);
-		padding: 1.5rem;
-	}
-
-	.next-song {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
 	}
 
 	.next-song-name {
@@ -580,19 +597,30 @@
 		}
 
 		.current-song-section {
-			flex-direction: column;
 			padding: 1.5rem;
+			gap: 1rem;
 		}
 
-		.tempo-volume {
-			flex-direction: row;
-			justify-content: space-between;
-			align-items: center;
-			width: 100%;
+		.song-info {
+			text-align: center;
+		}
+
+		.next-up-info {
+			padding-top: 0.75rem;
 		}
 
 		.song-title {
-			font-size: 2rem;
+			font-size: 1.75rem;
+			margin: 0.25rem 0 0 0;
+		}
+
+		.transport-section {
+			padding: 1.5rem;
+			gap: 1.5rem;
+		}
+
+		.set-section {
+			gap: 1rem;
 		}
 
 		.markers-grid {

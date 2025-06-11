@@ -1,4 +1,5 @@
 import type { ReaperMarker } from '$lib/models/reaper-marker';
+import type { ReaperTab } from '$lib/models/reaper-tab';
 import type { ReaperTransport } from '$lib/models/reaper-transport';
 import type { Setlist } from '../models/setlist';
 import type { Song } from '../models/song';
@@ -15,8 +16,8 @@ export interface ReaperApiClient {
 	executeCommands: <T extends readonly ReaperCommand<any, any, any>[]>(commands: T) => Promise<CommandResults<T>>;
 
 	// High-level API methods
-	goToStart: () => Promise<void>;
-	goToMarker: (markerId: number) => Promise<void>;
+	goToStart: () => Promise<ReaperTransport>;
+	goToMarker: (markerId: number) => Promise<ReaperTransport>;
 
 	newTab: () => Promise<void>;
 	closeAllTabs: () => Promise<void>;
@@ -37,7 +38,7 @@ export interface ReaperRpcClient {
 	openProject: (projectPath: string) => Promise<void>;
 	testActionId: (testNonce: string) => Promise<string>;
 	getProjectLength(): Promise<number>;
-	getOpenTabs: () => Promise<{ index: number; name: string; length: number }[]>;
+	getOpenTabs: () => Promise<ReaperTab[]>;
 }
 
 export interface ReaperScriptSettingsClient {
