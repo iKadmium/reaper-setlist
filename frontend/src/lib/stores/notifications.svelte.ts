@@ -1,3 +1,4 @@
+import { generateUUID } from '$lib/util';
 import type { ButtonColor } from '../components/Button/Button.svelte';
 
 export interface Notification {
@@ -8,20 +9,6 @@ export interface Notification {
     timestamp: Date;
 }
 
-// Fallback UUID generation for non-secure contexts
-function generateId(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-    }
-
-    // Fallback: generate a pseudo-UUID using Math.random()
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
 class NotificationStore {
     private notifications = $state<Notification[]>([]);
 
@@ -30,7 +17,7 @@ class NotificationStore {
     }
 
     add(message: string, type: ButtonColor = 'primary', duration?: number): string {
-        const id = generateId();
+        const id = generateUUID();
         const notification: Notification = {
             id,
             message,
@@ -39,7 +26,8 @@ class NotificationStore {
             timestamp: new Date()
         };
 
-        this.notifications.push(notification);
+        // Use array assignment instead of push to ensure reactivity
+        this.notifications = [...this.notifications, notification];
 
         // Auto-remove after duration if specified
         if (duration !== undefined) {
@@ -52,14 +40,11 @@ class NotificationStore {
     }
 
     remove(id: string) {
-        const index = this.notifications.findIndex(n => n.id === id);
-        if (index > -1) {
-            this.notifications.splice(index, 1);
-        }
+        this.notifications = this.notifications.filter(n => n.id !== id);
     }
 
     clear() {
-        this.notifications.splice(0, this.notifications.length);
+        this.notifications = [];
     }
 
     // Convenience methods

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
+      lua: ${{ steps.filter.outputs.lua }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,8 +26,8 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
-            backend:
-              - 'backend/**'
+            lua:
+              - 'lua/**'
 
   # Job to build and test the SvelteKit Frontend
   frontend:
@@ -57,30 +57,23 @@ jobs:
         working-directory: ./frontend
         run: bun run build
 
-  # Job to build and test the Rust Backend
-  backend:
-    name: Backend
+  # Job to build and test the Lua Scripts
+  lua:
+    name: Lua
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.lua == 'true'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable # Recommended replacement
-        with:
-          components: clippy
+      - name: Install Lua and luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.4 luarocks
+          sudo luarocks install luacheck
 
-      - name: Run cargo clippy
-        working-directory: ./backend
-        run: cargo clippy -- -D warnings
-
-      - name: Run cargo tests
-        working-directory: ./backend
-        run: cargo test
-
-      - name: Check release build
-        working-directory: ./backend
-        run: cargo check --release
+      - name: Run luacheck
+        working-directory: ./lua
+        run: luacheck . --exclude-files reaper-api.lua

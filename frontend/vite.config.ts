@@ -6,7 +6,10 @@ import Icons from 'unplugin-icons/vite';
 export default defineConfig({
 	server: {
 		proxy: {
-			'/api': 'http://localhost:3000'
+			'/_/': {
+				target: 'http://192.168.0.42:8080/',
+				changeOrigin: true
+			}
 		}
 	},
 

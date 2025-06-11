@@ -13,12 +13,15 @@
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import type { PageData } from './$types';
+	import { getApi } from '$lib/api/api';
+	import { base } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
 	const sets = $state<Database<Setlist>>(data.sets);
 	const songs = data.songs;
 	const errorMessage = data.error;
+	const api = getApi();
 
 	onMount(() => {
 		if (errorMessage) {
@@ -27,38 +30,26 @@
 	});
 
 	async function handleDeleteClick(item: Setlist) {
-		if (!item.id) {
-			notifications.error('Cannot delete a set without an ID.');
-			return;
-		}
 		if (confirm('Are you sure you want to delete this set?')) {
-			// Update this URL to point to your new external backend
-			const result = await fetch(`api/sets/${item.id}`, { method: 'DELETE' });
-			if (result.ok) {
-				delete sets[item.id];
+			try {
+				// Call the API to delete the set
+				await api.sets.delete(item.id);
+				delete sets[item.id]; // Remove from local state
 				notifications.success('Set deleted successfully');
-			} else {
-				const error = await result.json();
-				notifications.error(error.error ? `Failed to delete set: ${error.error}` : 'Failed to delete set');
+			} catch (error) {
+				notifications.error(`Failed to delete set: ${(error as Error).message}`);
 			}
 		}
 	}
 
 	async function handleDuplicateClick(item: Setlist) {
 		const duplicated: NewSetlist = { ...item, id: undefined, venue: `${item.venue} (copy)` };
-		// Update this URL to point to your new external backend
-		const result = await fetch('/api/sets', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(duplicated)
-		});
-		if (result.ok) {
-			const newSet = await result.json();
+		try {
+			const newSet = await api.sets.add(duplicated);
 			sets[newSet.id] = newSet; // Or sets = [...sets, newSet] with Svelte 5 runes
 			notifications.success('Set duplicated successfully');
-		} else {
-			const error = await result.json();
-			notifications.error(error.error ? `Failed to duplicate set: ${error.error}` : 'Failed to duplicate set');
+		} catch (error) {
+			notifications.error(`Failed to duplicate set: ${(error as Error).message}`);
 		}
 	}
 
@@ -109,21 +100,19 @@
 					<span class="date">{formatDate(item.date)}</span>
 					<span class="venue">{item.venue}</span>
 				</div>
-				{#if item.songs.length > 0}
-					<div class="set-details">
-						<span class="song-count">{item.songs.length} song{item.songs.length > 1 ? 's' : ''}</span>
-						<span class="duration">{formatDuration(item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0))}</span>
-					</div>
-				{/if}
+				<div class="set-details">
+					<span class="song-count">{item.songs.length} song{item.songs.length > 1 ? 's' : ''}</span>
+					<span class="duration">{formatDuration(item.songs.map((songId) => songs[songId]?.length || 0).reduce((a, b) => a + b, 0))}</span>
+				</div>
 			</div>
 		{/snippet}
 		{#snippet actions(item)}
 			<ResponsiveActions>
 				{#snippet primaryAction()}
-					<Button color="primary" elementType="a" href={`/set/${item.id}/load`} variant="icon"><PlayIcon /></Button>
+					<Button color="primary" elementType="a" href={`${base}/#/set/${item.id}/load`} variant="icon"><PlayIcon /></Button>
 				{/snippet}
 				{#snippet secondaryActions()}
-					<Button elementType="a" color="edit" href={`/set/${item.id}/edit`} variant="icon"><EditIcon /></Button>
+					<Button elementType="a" color="edit" href={`${base}/#/set/${item.id}/edit`} variant="icon"><EditIcon /></Button>
 					<Button color="delete" onclick={() => handleDeleteClick(item)} variant="icon"><DeleteIcon /></Button>
 					<Button color="success" onclick={() => handleDuplicateClick(item)} variant="icon"><CopyIcon /></Button>
 				{/snippet}
@@ -133,7 +122,7 @@
 {/if}
 
 <div class="action-section">
-	<Button elementType="a" href="set/add" color="success">Add Set</Button>
+	<Button elementType="a" href={`${base}/#/set/add`} color="success">Add Set</Button>
 </div>
 
 <style>

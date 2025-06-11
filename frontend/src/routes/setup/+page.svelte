@@ -1,140 +1,183 @@
 <script lang="ts">
+	import { base } from '$app/paths';
+	import { configuration, notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
 	import Form from '$lib/components/Form/Form.svelte';
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
-	import type { ReaperSettings, TestConnectionRequest } from '$lib/models/reaper-settings';
-	import { notifications } from '$lib';
-	import type { PageData } from './$types';
-	import { goto } from '$app/navigation';
+	import type { StepStatus } from '$lib/components/Step/Step.svelte';
+	import Step from '$lib/components/Step/Step.svelte';
+	import DownloadIcon from 'virtual:icons/mdi/download';
+	import RefreshIcon from 'virtual:icons/mdi/refresh';
+	import ExportIcon from 'virtual:icons/mdi/export';
+	import ImportIcon from 'virtual:icons/mdi/import';
+	import type { PageProps } from './$types';
+	import type { Backup } from '$lib/models/backup';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: PageProps = $props();
 
-	let folderPath = $state<string>(data.settings.folderPath);
-	let reaperUrl = $state<string>(data.settings.reaperUrl);
-	let username = $state<string>(data.settings.reaperUsername ?? '');
-	let password = $state<string>(data.settings.reaperPassword ?? '');
-	let useAuthentication = $state<boolean>(!!(data.settings.reaperUsername || data.settings.reaperPassword));
+	const api = getApi();
 
-	// Visual feedback states
-	let urlTestState = $state<'success' | 'error' | null>(null);
-	let authFieldsState = $state<'success' | 'error' | null>(null);
+	let folderPath = $state<string | undefined>(data.folderPath);
+	// Initialize status based on existing script action ID
+	let scriptInstallationStatus = $state<StepStatus>(data.scriptActionId && data.scriptActionId.trim() !== '' ? 'completed' : 'pending');
+	let isRefreshing = $state<boolean>(false);
+	let hasCheckedInitially = $state<boolean>(false);
 
-	// Clear visual feedback when user types
-	function clearUrlTestState() {
-		urlTestState = null;
-	}
-
-	function clearAuthFieldsError() {
-		authFieldsState = null;
-	}
-
-	const setupSteps = [
-		{ label: 'Enter the root folder path where your backing tracks are stored in the form below.' },
-		{ label: "In Reaper, under preferences > Control/OSC/Web, add a web browser interface if you haven't already." },
-		{ label: 'Enter the URL of your Reaper web interface (e.g., http://localhost:8080) in the form below.' },
-		{ label: 'If your Reaper web interface has authentication enabled, check the authentication box and enter your username and password.' },
-		{ label: 'Click Test to make sure the connection to Reaper is working.' },
-		{ label: 'Click "Save" to store these settings.' },
-		{ label: 'After saving, you will be redirected to the script installation page.' }
+	const nextSteps = [
+		{ label: 'Add your songs', href: '/song' },
+		{ label: 'Create setlists', href: '/' }
 	];
 
-	async function testConnection() {
-		if (!reaperUrl.trim()) {
-			notifications.error('Please enter a Reaper URL first');
-			return;
+	const setupSteps = [
+		{ label: 'Download the Reaper Setlist script from the link below.' },
+		{ label: 'Open Reaper and go to "Actions" > "Show Action List".' },
+		{ label: 'Search for "ReaScript: Run Script" (the one with command ID 41060) ' },
+		{ label: 'Locate the script you downloaded and click "Load" to install it into Reaper.' },
+		{ label: 'The script will automatically register itself. Use the refresh button below to check installation status.' },
+		{ label: 'Enter the root folder path where your backing tracks are stored in the form below.' },
+		{ label: 'Click "Save" to store these settings.' }
+	];
+
+	// Only check script installation status once on initial load if not already completed
+	$effect(() => {
+		if (!hasCheckedInitially && scriptInstallationStatus !== 'completed') {
+			hasCheckedInitially = true;
+			checkScriptInstallation();
 		}
-
-		// Reset visual states
-		urlTestState = null;
-		authFieldsState = null;
-
-		const testRequest: TestConnectionRequest = {
-			reaper_url: reaperUrl,
-			reaper_username: useAuthentication && username.trim() ? username.trim() : undefined,
-			reaper_password: useAuthentication && password.trim() ? password.trim() : undefined
-		};
-
-		try {
-			const response = await fetch('/api/settings/test-connection', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(testRequest)
-			});
-
-			if (response.status === 401) {
-				// 401 Unauthorized - URL is correct, but authentication required
-				urlTestState = 'success'; // URL is working
-				useAuthentication = true;
-				authFieldsState = 'error';
-				return;
-			}
-
-			if (response.status === 403) {
-				// 403 Forbidden - URL is correct, but wrong credentials
-				urlTestState = 'success'; // URL is working
-				authFieldsState = 'error';
-				return;
-			}
-
-			if (response.status === 204) {
-				// Success - 204 No Content
-				urlTestState = 'success';
-				// If authentication was used and test succeeded, mark auth fields as success too
-				if (useAuthentication && username.trim() && password.trim()) {
-					authFieldsState = 'success';
-				}
-			} else {
-				// Any other status is an error (network, 404, 500, etc.)
-				urlTestState = 'error';
-			}
-		} catch (error) {
-			urlTestState = 'error';
-		}
-	}
+	});
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
-		const reaperUrlValue = formData.get('reaper-url') || '';
 		const folderPathValue = formData.get('backing-tracks-folder') || '';
-		const usernameValue = formData.get('reaper-username');
-		const passwordValue = formData.get('reaper-password');
 
-		const body: ReaperSettings = {
-			reaperUrl: reaperUrlValue ? (reaperUrlValue as string) : '',
-			folderPath: folderPathValue ? (folderPathValue as string) : ''
-		};
+		try {
+			// Update folder path in the store
+			await configuration.updateFolderPath(folderPathValue as string);
 
-		if (useAuthentication && usernameValue && typeof usernameValue === 'string' && usernameValue.trim() !== '') {
-			body.reaperUsername = usernameValue;
-		}
-		if (useAuthentication && passwordValue && typeof passwordValue === 'string' && passwordValue.trim() !== '') {
-			body.reaperPassword = passwordValue;
-		}
-
-		const res = await fetch('/api/settings', {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-		if (!res.ok) {
-			notifications.error('Failed to save settings');
-			return;
-		} else {
 			notifications.success('Settings saved successfully!');
 
-			// Always redirect to installation after saving basic settings
-			if (!data.settings.listProjectsScriptActionId || !data.settings.loadProjectScriptActionId) {
-				await goto('/setup/installation');
-			}
+			// Update local state to reflect the saved values
+			folderPath = folderPathValue as string;
+		} catch (error) {
+			notifications.error(`Failed to save settings: ${(error as Error).message}`);
+			return;
 		}
+	}
+
+	async function checkScriptInstallation() {
+		if (isRefreshing) return;
+
+		isRefreshing = true;
+		scriptInstallationStatus = 'running';
+
+		try {
+			// Try to get the script action ID from the backend
+			const actionId = await api.scriptSettings.getScriptActionId();
+
+			if (actionId && actionId.trim() !== '') {
+				scriptInstallationStatus = 'completed';
+			} else {
+				scriptInstallationStatus = 'error';
+			}
+		} catch (error) {
+			scriptInstallationStatus = 'error';
+		} finally {
+			isRefreshing = false;
+		}
+	}
+
+	async function exportData() {
+		const allSongs = await api.songs.list();
+		const allSetlists = await api.sets.list();
+		const dataToExport: Backup = {
+			songs: allSongs,
+			sets: allSetlists
+		};
+		const jsonData = JSON.stringify(dataToExport, null, 2);
+		const blob = new Blob([jsonData], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = 'reaper-setlist-data.json';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+		notifications.success('Data exported successfully!');
+	}
+
+	async function importData() {
+		const fileInput = document.createElement('input');
+		fileInput.type = 'file';
+		fileInput.accept = '.json';
+		fileInput.onchange = async (event: Event) => {
+			const target = event.target as HTMLInputElement;
+			if (target.files && target.files.length > 0) {
+				const file = target.files[0];
+				try {
+					const text = await file.text();
+					const importedData = JSON.parse(text) as Backup;
+
+					// Step 1: Import songs and create ID mapping
+					const oldToNewSongIdMap = new Map<string, string>();
+
+					for (const song of Object.values(importedData.songs)) {
+						const { id, ...songWithoutId } = song;
+						const newSong = await api.songs.add(songWithoutId);
+						oldToNewSongIdMap.set(id, newSong.id);
+					}
+
+					// Step 2: Import setlists with updated song IDs
+					for (const setlist of Object.values(importedData.sets)) {
+						const { id, ...setlistWithoutId } = setlist;
+						const updatedSetlist = {
+							...setlistWithoutId,
+							songs: setlist.songs.map((oldSongId) => oldToNewSongIdMap.get(oldSongId) || oldSongId)
+						};
+						await api.sets.add(updatedSetlist);
+					}
+
+					notifications.success('Data imported successfully!');
+				} catch (error) {
+					notifications.error(`Failed to import data: ${(error as Error).message}`);
+				}
+			}
+		};
+		fileInput.click();
 	}
 </script>
 
 <div class="content">
 	<h1>Setup</h1>
 
-	<InstructionBox title="Setup Steps" steps={setupSteps} variant="help" listType="ordered" />
+	{#if scriptInstallationStatus === 'error'}
+		<InstructionBox title="Script Installation" steps={setupSteps} variant="help" listType="ordered" />
+
+		<a class="download-link" href={`${base}/lua/reaper-setlist.lua`} download="reaper-setlist.lua">
+			<DownloadIcon />
+			Download reaper-setlist.lua
+		</a>
+	{:else}
+		<InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
+	{/if}
+
+	<div class="script-status">
+		<Step
+			title="Script Installation Status"
+			description={scriptInstallationStatus === 'completed'
+				? 'Script is installed and ready to use'
+				: scriptInstallationStatus === 'running'
+					? 'Checking installation status...'
+					: 'Script not detected. Please install the script in Reaper and refresh.'}
+			status={scriptInstallationStatus}
+		/>
+		<Button elementType="button" onclick={checkScriptInstallation} disabled={isRefreshing} variant="text">
+			<RefreshIcon />
+			Refresh Status
+		</Button>
+	</div>
 
 	<Form onsubmit={handleSubmit}>
 		<div class="form-group">
@@ -142,93 +185,77 @@
 			<input bind:value={folderPath} type="text" id="backing-tracks-folder" name="backing-tracks-folder" placeholder="e.g., /path/to/your/backing/tracks" />
 		</div>
 
-		<div class="checkbox-group">
-			<label class="checkbox-label">
-				<input type="checkbox" bind:checked={useAuthentication} />
-				Enable Reaper Authentication
-			</label>
-		</div>
-
-		{#if useAuthentication}
-			<div class="form-group">
-				<label for="reaper-username">Reaper Username:</label>
-				<input
-					bind:value={username}
-					type="text"
-					id="reaper-username"
-					name="reaper-username"
-					placeholder="Username"
-					class:success={authFieldsState === 'success'}
-					class:error={authFieldsState === 'error'}
-					oninput={clearAuthFieldsError}
-				/>
-			</div>
-
-			<div class="form-group">
-				<label for="reaper-password">Reaper Password:</label>
-				<input
-					bind:value={password}
-					type="password"
-					id="reaper-password"
-					name="reaper-password"
-					placeholder="Password"
-					class:success={authFieldsState === 'success'}
-					class:error={authFieldsState === 'error'}
-					oninput={clearAuthFieldsError}
-				/>
-			</div>
-		{/if}
-
-		<div class="form-group">
-			<label for="reaper-url">Reaper URL:</label>
-			<div class="url-input-container input-with-button">
-				<input
-					bind:value={reaperUrl}
-					type="text"
-					id="reaper-url"
-					name="reaper-url"
-					placeholder="e.g., http://localhost:8080"
-					class:success={urlTestState === 'success'}
-					class:error={urlTestState === 'error'}
-					oninput={clearUrlTestState}
-				/>
-				<Button variant="text" onclick={testConnection}>Test</Button>
-			</div>
-		</div>
-
 		<div class="submit-section">
-			<Button elementType="submit" color="primary">Save</Button>
+			<Button elementType="submit" color="success">Save</Button>
 		</div>
 	</Form>
+
+	<div class="import-export">
+		<h3>Data Management</h3>
+		<div class="import-export-buttons">
+			<Button elementType="button" onclick={exportData} variant="text">
+				<ExportIcon />
+				Export Data
+			</Button>
+			<Button elementType="button" onclick={importData} variant="text">
+				<ImportIcon />
+				Import Data
+			</Button>
+		</div>
+	</div>
 </div>
 
 <style>
 	.content {
-		max-width: 800px;
 		margin: 0 auto;
 		padding: 2rem;
-	}
-
-	.checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		cursor: pointer;
-		font-weight: 500;
-		width: fit-content;
-		white-space: nowrap;
-		margin: 0;
-	}
-
-	.checkbox-label input[type='checkbox'] {
-		margin: 0;
-		flex-shrink: 0;
-		width: auto;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	@media (max-width: 768px) {
 		.content {
 			padding: 1rem;
 		}
+	}
+
+	.download-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--purple);
+		text-decoration: none;
+		font-weight: 500;
+		margin-bottom: 1rem;
+		transition: color 0.2s ease;
+		font-size: 0.95rem;
+	}
+
+	.download-link:hover {
+		color: hsl(from var(--purple) h s calc(l * 0.9));
+		text-decoration: underline;
+	}
+
+	.script-status {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin: 1rem 0;
+	}
+
+	.script-status :global(.step) {
+		margin: 0;
+	}
+
+	.import-export {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-top: 2rem;
+	}
+
+	.import-export-buttons {
+		display: flex;
+		gap: 1rem;
 	}
 </style>

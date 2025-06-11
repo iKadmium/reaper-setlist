@@ -8,12 +8,18 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
+		router: {
+			type: 'hash'
+		},
 		adapter: adapter({
 			fallback: 'index.html'
-		})
+		}),
+		paths: {
+			base: process.env.NODE_ENV == 'production' ? '/setlist' : ''
+		}
 	},
 
-	compilerOptions:{
+	compilerOptions: {
 		runes: true
 	}
 };

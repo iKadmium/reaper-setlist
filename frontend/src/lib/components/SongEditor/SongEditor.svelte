@@ -2,6 +2,7 @@
 	type SongLike = Song | NewSong;
 
 	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
 	import type { Database } from '$lib/models/database';
 	import type { NewSong, Song } from '$lib/models/song';
@@ -17,6 +18,8 @@
 <script lang="ts">
 	import Form from '../Form/Form.svelte';
 
+	const api = getApi();
+
 	type T = $$Generic<SongLike>;
 	let { song: originalSong, onSubmit, projects, songs }: SongEditorProps<T> = $props();
 	const song = $state({ ...originalSong });
@@ -29,7 +32,7 @@
 	const usedProjects = $derived(
 		Object.values(songs)
 			.filter((s) => s.id !== song.id) // Exclude current song when editing
-			.map((s) => s.relativePath)
+			.map((s) => s.path)
 	);
 
 	// Filter projects based on checkbox state
@@ -42,7 +45,7 @@
 	}
 
 	function handleProjectSelect(projectPath: string) {
-		song.relativePath = projectPath;
+		song.path = projectPath;
 
 		// Extract filename from path and remove extension for song name
 		const pathSegments = projectPath.split(/[/\\]/);
@@ -52,54 +55,37 @@
 	}
 
 	async function handleGetDurationClick() {
-		const response = await fetch('/api/projects/current/get-duration', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		});
-		if (!response.ok) {
-			notifications.error('Failed to get duration from Reaper');
-			return;
-		}
-		const data = (await response.json()) as number;
-		song.length = data;
+		song.length = Math.ceil(await api.script.getProjectLength());
 		notifications.success('Duration retrieved from Reaper!');
 	}
 
 	async function handleLoadClick() {
-		const response = await fetch(`/api/projects/load`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({ relative_path: song.relativePath })
-		});
-		if (!response.ok) {
-			notifications.error(`Failed to load ${song.name} in Reaper`);
-			return;
+		try {
+			await api.script.openProject(song.path);
+			notifications.success(`${song.name} loaded in Reaper!`);
+		} catch (error) {
+			notifications.error(`Failed to load song in Reaper: ${(error as Error).message}`);
 		}
-		notifications.success(`${song.name} loaded in Reaper!`);
 	}
 </script>
 
 <Form onsubmit={() => onSubmit(song)}>
 	<div class="form-group">
-		<label for="relative-path">Project File Path (relative to root folder):</label>
-		<div class="checkbox-container">
-			<label class="checkbox-label">
-				<input type="checkbox" bind:checked={hideUsedProjects} />
-				Hide projects already used by other songs
-			</label>
-		</div>
+		<label for="relative-path">Project File:</label>
 		<div class="input-with-select">
-			<select onchange={(e) => handleProjectSelect(e.currentTarget.value)} bind:value={song.relativePath} id="relative-path" required>
+			<select onchange={(e) => handleProjectSelect(e.currentTarget.value)} bind:value={song.path} id="relative-path" required>
 				<option value="">Select project...</option>
 				{#each filteredProjects as project}
 					<option value={project}>{project}</option>
 				{/each}
 			</select>
-			<Button elementType="button" onclick={handleLoadClick} disabled={song.name === '' || song.relativePath === ''}>Load</Button>
+			<Button elementType="button" onclick={handleLoadClick} disabled={song.name === '' || song.path === ''}>Load</Button>
+		</div>
+		<div class="checkbox-container">
+			<label class="checkbox-label">
+				<input type="checkbox" bind:checked={hideUsedProjects} />
+				Hide projects already used by other songs
+			</label>
 		</div>
 	</div>
 
@@ -118,7 +104,7 @@
 	</div>
 
 	<div class="submit-section">
-		<Button elementType="submit" disabled={song.name === '' || song.relativePath === ''}>Save</Button>
+		<Button elementType="submit" disabled={song.name === '' || song.path === ''}>Save</Button>
 	</div>
 </Form>
 
@@ -131,7 +117,7 @@
 	}
 
 	.checkbox-container {
-		margin-bottom: 0.5rem;
+		margin-top: 0.5rem;
 	}
 
 	.checkbox-label {
