@@ -6,6 +6,13 @@ A simple setlist management script for the Reaper DAW.
 
 - 🎵 Manage setlists and songs for Reaper
 - Beautiful and fluid interface
+- Useful player interface
+
+![Player screenshot](docs/player.png)
+
+![Song editor screenshot](docs/song-editor.png)
+
+![Set editor screenshot](docs/set-editor.png)
 
 ## Installation
 

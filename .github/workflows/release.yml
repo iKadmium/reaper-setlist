@@ -61,12 +61,12 @@ jobs:
 
       - name: Prepare release package
         run: |
-          mkdir -p package/web/lua
+          mkdir -p package/setlist/lua
           mkdir -p package/script
 
           # Copy frontend build output
-          cp -r frontend/build/* package/web
-          cp lua/build/reaper-setlist.lua package/web/lua
+          cp -r frontend/build/* package/setlist
+          cp lua/build/reaper-setlist.lua package/setlist/lua
 
           # Copy Lua bundle
           cp lua/build/reaper-setlist.lua package/script/
@@ -76,13 +76,13 @@ jobs:
 
           # Create the release archive
           cd package
-          tar -czf ../reaper-setlist-${{ inputs.version }}.tar.gz .
+          zip -r ../reaper-setlist-${{ inputs.version }}.zip .
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: reaper-setlist-package
-          path: reaper-setlist-${{ inputs.version }}.tar.gz
+          path: reaper-setlist-${{ inputs.version }}.zip
 
   release:
     name: Create Release
@@ -105,10 +105,10 @@ jobs:
 
             ## Download
 
-            - `reaper-setlist-${{ inputs.version }}.tar.gz`
+            - `reaper-setlist-${{ inputs.version }}.zip`
 
             Unpack and see the Installation.txt file for instructions.
-          files: reaper-setlist-${{ inputs.version }}.tar.gz
+          files: reaper-setlist-${{ inputs.version }}.zip
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
