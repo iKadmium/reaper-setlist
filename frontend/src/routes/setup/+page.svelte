@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { base } from '$app/paths';
 	import { configuration, notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import Button from '$lib/components/Button/Button.svelte';
@@ -7,12 +6,12 @@
 	import InstructionBox from '$lib/components/InstructionBox/InstructionBox.svelte';
 	import type { StepStatus } from '$lib/components/Step/Step.svelte';
 	import Step from '$lib/components/Step/Step.svelte';
-	import DownloadIcon from 'virtual:icons/mdi/download';
-	import RefreshIcon from 'virtual:icons/mdi/refresh';
+	import type { Backup } from '$lib/models/backup';
 	import ExportIcon from 'virtual:icons/mdi/export';
 	import ImportIcon from 'virtual:icons/mdi/import';
+	import RefreshIcon from 'virtual:icons/mdi/refresh';
 	import type { PageProps } from './$types';
-	import type { Backup } from '$lib/models/backup';
+	import { generateUUID } from '$lib/util';
 
 	let { data }: PageProps = $props();
 
@@ -76,6 +75,15 @@
 			const actionId = await api.scriptSettings.getScriptActionId();
 
 			if (actionId && actionId.trim() !== '') {
+				const nonce = generateUUID();
+				const result = await api.script.testActionId(nonce);
+				if (result === `Test action ID received: ${actionId}`) {
+					// If the action ID is valid, update the status to completed
+					scriptInstallationStatus = 'completed';
+				} else {
+					// If the action ID is not valid, set status to error
+					scriptInstallationStatus = 'error';
+				}
 				scriptInstallationStatus = 'completed';
 			} else {
 				scriptInstallationStatus = 'error';

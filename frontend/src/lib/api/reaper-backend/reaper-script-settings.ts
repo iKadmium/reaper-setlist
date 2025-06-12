@@ -1,12 +1,9 @@
-import type { ReaperScriptSettingsClient } from '../api';
 import { GetStateCommand, SetStateCommand } from './commands';
 import type { ReaperApiClient } from './reaper-api';
 import { SectionKeys, StateKeys, type StateKey } from './reaper-state';
 
-export class ReaperScriptSettingsImpl implements ReaperScriptSettingsClient {
-	constructor(
-		private readonly apiClient: ReaperApiClient
-	) { }
+export class ReaperScriptSettingsClient {
+	constructor(private readonly apiClient: ReaperApiClient) {}
 
 	private async getStateValue(key: StateKey): Promise<string | undefined> {
 		const command = new GetStateCommand(SectionKeys.ReaperSetlist, key);
