@@ -14,7 +14,7 @@
 		try {
 			await api.songs.update(song.id, song);
 			notifications.success('Song updated successfully!');
-			await goto(`${base}/#/song`);
+			await goto(`#/song`);
 		} catch (error) {
 			notifications.error(`Failed to update song: ${(error as Error).message}`);
 			return;

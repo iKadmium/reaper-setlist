@@ -24,7 +24,7 @@
 		try {
 			await api.sets.add(set);
 			notifications.success('Set added successfully!');
-			await goto(`${base}/#/`);
+			await goto(`#/`);
 		} catch (error) {
 			notifications.error(`Failed to add set: ${(error as Error).message}`);
 		}

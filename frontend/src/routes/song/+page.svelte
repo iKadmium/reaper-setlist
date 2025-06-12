@@ -72,7 +72,7 @@
 					<Button color="primary" onclick={() => handleLoadClick(item)} variant="icon"><PlayIcon /></Button>
 				{/snippet}
 				{#snippet secondaryActions()}
-					<Button elementType="a" color="edit" href={`${base}/#/song/${item.id}/edit`} variant="icon"><EditIcon /></Button>
+					<Button elementType="a" color="edit" href={`#/song/${item.id}/edit`} variant="icon"><EditIcon /></Button>
 					<Button color="delete" onclick={() => handleDeleteClick(item)} variant="icon"><DeleteIcon /></Button>
 				{/snippet}
 			</ResponsiveActions>
@@ -81,7 +81,7 @@
 {/if}
 
 <div class="action-section">
-	<Button elementType="a" href={`${base}/#/song/add`} color="success">Add Song</Button>
+	<Button elementType="a" href={`#/song/add`} color="success">Add Song</Button>
 </div>
 
 <style>

@@ -9,8 +9,12 @@ local function Install()
         return
     end
 
+    -- this action id is a red herring - it's temporary and subject to change
     local action_id = reaper.AddRemoveReaScript(true, 0, filename, true)
-    reaper.SetExtState(Globals.SECTION, Globals.KEYS.script_action_id, tostring(action_id), true)
+    -- get the permanent ID of the action
+    local permanent_id = reaper.ReverseNamedCommandLookup(action_id)
+
+    reaper.SetExtState(Globals.SECTION, Globals.KEYS.script_action_id, "_" .. permanent_id, true)
 end
 
 return Install

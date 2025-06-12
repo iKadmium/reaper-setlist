@@ -45,11 +45,14 @@ for (const prop of scriptOperationsInterface.getProperties()) {
 			}
 		}
 
+		const typeArgs = signature.getTypeParameters();
+
 		for (const target of targets) {
 			target.addOperation({
 				name: operationName,
 				inputs,
-				outputs
+				outputs,
+				typeArgs
 			});
 		}
 	}

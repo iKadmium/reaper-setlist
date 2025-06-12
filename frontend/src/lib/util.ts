@@ -1,7 +1,3 @@
-import { RunScriptCommand } from "./api/reaper-backend/commands";
-import type { ReaperMarker } from "./models/reaper-marker";
-import type { PlayState, ReaperTransport } from "./models/reaper-transport";
-import { configuration } from "./stores/configuration.svelte";
 
 export function formatDuration(seconds: number): string {
 	const minutes = Math.floor(seconds / 60);
@@ -22,38 +18,14 @@ export function generateUUID(): string {
 	});
 }
 
-export function parseTransportString(transportString: string): ReaperTransport {
-	const parts = transportString.split('\t');
-	if (parts.length !== 6) {
-		throw new Error(`Unexpected transport format: ${transportString}`);
+export function chunk<T>(item: T, chunkSize: number = 600): string[] {
+	const str = JSON.stringify(item);
+	const chunks: string[] = [];
+
+	for (let i = 0; i < str.length; i += chunkSize) {
+		const substr = str.substring(i, i + chunkSize);
+		chunks.push(substr);
 	}
 
-	const transport: ReaperTransport = {
-		playState: parseInt(parts[1], 10) as PlayState,
-		positionSeconds: parseFloat(parts[2]),
-		repeatOn: parts[3] === '1',
-		positionString: parts[4],
-		positionStringBeats: parts[5]
-	};
-	return transport;
-}
-
-export class Lazy<T> {
-	private value: T | undefined;
-	private readonly factory: () => Promise<T>;
-
-	constructor(factory: () => Promise<T>) {
-		this.factory = factory;
-	}
-
-	async get(): Promise<T> {
-		if (this.value === undefined) {
-			this.value = await this.factory();
-		}
-		return Promise.resolve(this.value);
-	}
-
-	reset(): void {
-		this.value = undefined;
-	}
+	return chunks;
 }
