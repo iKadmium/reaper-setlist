@@ -18,9 +18,7 @@ local OpenProject = require "operations/open_project"
 local TestActionId = require "operations/test_action_id"
 local GetProjectLength = require "operations/get_project_length"
 local GetOpenTabs = require "operations/get_open_tabs"
-
-
-
+local WriteChunkedData = require "operations/write_chunked_data"
 
 ---@class ReaperTab
 ---@field index number
@@ -83,6 +81,42 @@ local Operations = {
 		end
 
 		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), true)
+	end),
+
+	["writeChunkedData"] = safe_operation(function()
+		local section = reaper.GetExtState(Globals.SECTION, "section")
+		if not section or section == "" then
+			error("Missing required parameter: section")
+		end
+
+		local key = reaper.GetExtState(Globals.SECTION, "key")
+		if not key or key == "" then
+			error("Missing required parameter: key")
+		end
+
+		local chunks_length = reaper.GetExtState(Globals.SECTION, "chunks_length")
+		if not chunks_length or chunks_length == "" then
+			error("Missing required parameter: chunks_length")
+		end
+
+		local chunks = {}
+		for i = 0, tonumber(chunks_length) do
+			local chunk = reaper.GetExtState(Globals.SECTION, "chunks_" .. i)
+			if chunk and chunk ~= "" then
+				chunks[i + 1] = chunk
+			else
+				error("Missing chunk for chunks at index " .. i)
+			end
+		end
+
+		WriteChunkedData(section, key, chunks)
+
+		reaper.DeleteExtState(Globals.SECTION, "section", true)
+		reaper.DeleteExtState(Globals.SECTION, "key", true)
+		reaper.DeleteExtState(Globals.SECTION, "chunks_length", true)
+		for i = 0, tonumber(chunks_length) do
+			reaper.DeleteExtState(Globals.SECTION, "chunks_" .. i, true)
+		end
 	end),
 }
 

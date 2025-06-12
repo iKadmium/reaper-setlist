@@ -16,6 +16,7 @@ export class TypeScriptTarget extends Target {
 
 	protected override renderTypeDefinitions(): string[] {
 		const typeDefs: string[][] = [];
+		typeDefs.push([`export type ChunkSet = string[];`]);
 		for (const type of Object.values(this.types)) {
 			const typeLines: string[] = [];
 			let trueType: Type<ts.Type> | undefined = type;
@@ -36,9 +37,8 @@ export class TypeScriptTarget extends Target {
 					typeLines.push(`\t${propName}: ${propType};`);
 				}
 				typeLines.push(`}`);
+				typeDefs.push(typeLines);
 			}
-
-			typeDefs.push(typeLines);
 		}
 		const lines = typeDefs.map(definition => definition.join('\n'));
 
@@ -97,7 +97,12 @@ export class TypeScriptTarget extends Target {
 		);
 		operationLines.push(`\tconst commands = [`);
 		for (const { name, type } of inputs) {
-			operationLines.push(`\t\tnew SetStateCommand(SectionKeys.ReaperSetlist, "${name}", ${name}),`);
+			if (type.getText() === 'ChunkSet') {
+				operationLines.push(`\t\tnew SetStateCommand(SectionKeys.ReaperSetlist, "${name}_length", ${name}.length.toString()),`);
+				operationLines.push(`\t\t...${name}.map((chunk, index) => new SetStateCommand(SectionKeys.ReaperSetlist, \`chunk_\${index}\`, chunk)),`);
+			} else {
+				operationLines.push(`\t\tnew SetStateCommand(SectionKeys.ReaperSetlist, "${name}", ${name}),`);
+			}
 		}
 
 		operationLines.push(`\t\tnew SetOperationCommand("${name}"),`);

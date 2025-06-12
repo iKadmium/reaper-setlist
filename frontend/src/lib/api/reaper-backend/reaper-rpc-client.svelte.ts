@@ -4,9 +4,7 @@ import type { ReaperApiClient } from "../api";
 import { GetStateCommand, RunScriptCommand, SetOperationCommand, SetStateCommand } from "./commands";
 import { SectionKeys } from "./reaper-state";
 
-
-
-
+export type ChunkSet = string[];
 export interface ReaperTab {
 	index: number;
 	name: string;
@@ -80,5 +78,17 @@ export class ReaperRpcClient {
 		} 
 		const tabs = JSON.parse(tabsRaw) as ReaperTab[];  
 		return tabs;  
+	}  
+
+	public async writeChunkedData(section: string, key: string, chunks: ChunkSet): Promise<void> { 
+		const commands = [ 
+			new SetStateCommand(SectionKeys.ReaperSetlist, "section", section), 
+			new SetStateCommand(SectionKeys.ReaperSetlist, "key", key), 
+			new SetStateCommand(SectionKeys.ReaperSetlist, "chunks_length", chunks.length.toString()), 
+			...chunks.map((chunk, index) => new SetStateCommand(SectionKeys.ReaperSetlist, `chunk_${index}`, chunk)), 
+			new SetOperationCommand("writeChunkedData"), 
+			new RunScriptCommand(), 
+		] as const; 
+		await this.apiClient.executeCommands(commands);  
 	}  
 }
