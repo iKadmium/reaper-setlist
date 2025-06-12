@@ -1,10 +1,8 @@
 import type { ReaperMarker } from '$lib/models/reaper-marker';
 import type { ReaperTransport } from '$lib/models/reaper-transport';
-import {
-	Commands,
-	type CommandResults,
-	type ReaperCommand
-} from './commands';
+import { Commands, type CommandResults, type ReaperCommand } from './commands';
+
+const MAX_URL_LENGTH = 600;
 
 export class ReaperApiClient {
 	private readonly urlRoot: string;
@@ -16,13 +14,17 @@ export class ReaperApiClient {
 	}
 
 	// New type-safe command execution
-	async executeCommand<TReturn, TInput, TResponse extends string | undefined>(command: ReaperCommand<TReturn, TInput, TResponse>): Promise<TReturn> {
+	async executeCommand<TReturn, TInput, TResponse extends string | undefined>(
+		command: ReaperCommand<TReturn, TInput, TResponse>
+	): Promise<TReturn> {
 		const [response] = await this.executeCommands([command] as const);
 		return response;
 	}
 
-	async executeCommands<T extends readonly ReaperCommand<any, any, any>[]>(commands: T): Promise<CommandResults<T>> {
-		const commandStrings = await Promise.all(commands.map(cmd => cmd.getCommandString()));
+	async executeCommands<T extends readonly ReaperCommand<any, any, any>[]>(
+		commands: T
+	): Promise<CommandResults<T>> {
+		const commandStrings = await Promise.all(commands.map((cmd) => cmd.getCommandString()));
 		const response = await this.sendRawCommands(commandStrings);
 
 		// Parse responses for each command, preserving type information
@@ -50,7 +52,9 @@ export class ReaperApiClient {
 
 			const commandResponseType = commandResponse.split('\t')[0];
 			if (commandResponseType !== command.getResponseMarker()) {
-				throw new Error(`Unexpected response type for command ${command.getCommandString()}: expected ${command.getResponseMarker()}, got ${commandResponseType}`);
+				throw new Error(
+					`Unexpected response type for command ${command.getCommandString()}: expected ${command.getResponseMarker()}, got ${commandResponseType}`
+				);
 			}
 
 			if (command.getResponseMarker() === 'MARKER_LIST') {
@@ -85,7 +89,10 @@ export class ReaperApiClient {
 	}
 
 	async goToStart(): Promise<ReaperTransport> {
-		const [_, transport] = await this.executeCommands([Commands.goToStart(), Commands.transport()] as const);
+		const [_, transport] = await this.executeCommands([
+			Commands.goToStart(),
+			Commands.transport()
+		] as const);
 		return transport;
 	}
 
@@ -129,7 +136,7 @@ export class ReaperApiClient {
 		await this.executeCommand(Commands.closeAllTabs());
 	}
 
-	async nextTab(): Promise<{ markers: ReaperMarker[], transport: ReaperTransport }> {
+	async nextTab(): Promise<{ markers: ReaperMarker[]; transport: ReaperTransport }> {
 		const [, transport, markers] = await this.executeCommands([
 			Commands.nextTab(),
 			Commands.transport(),
@@ -138,7 +145,7 @@ export class ReaperApiClient {
 		return { markers, transport };
 	}
 
-	async previousTab(): Promise<{ markers: ReaperMarker[], transport: ReaperTransport }> {
+	async previousTab(): Promise<{ markers: ReaperMarker[]; transport: ReaperTransport }> {
 		const [, transport, markers] = await this.executeCommands([
 			Commands.previousTab(),
 			Commands.transport(),
@@ -152,7 +159,10 @@ export class ReaperApiClient {
 	}
 
 	async goToMarker(markerId: number): Promise<ReaperTransport> {
-		const [_, transport] = await this.executeCommands([Commands.goToMarker(markerId), Commands.transport()] as const);
+		const [_, transport] = await this.executeCommands([
+			Commands.goToMarker(markerId),
+			Commands.transport()
+		] as const);
 		return transport;
 	}
 
@@ -167,9 +177,9 @@ export class ReaperApiClient {
 	}> {
 		// Execute multiple commands with different return types
 		const [playResult, transport, markers] = await this.executeCommands([
-			Commands.play(),      // Returns void
-			Commands.transport(), // Returns ReaperTransport  
-			Commands.markers()    // Returns ReaperMarker[]
+			Commands.play(), // Returns void
+			Commands.transport(), // Returns ReaperTransport
+			Commands.markers() // Returns ReaperMarker[]
 		] as const);
 
 		// TypeScript now knows the exact type of each element:
@@ -194,13 +204,56 @@ export class ReaperApiClient {
 	}
 
 	private async sendRawCommands(commands: string[]): Promise<string[]> {
-		const result = await this.fetch(`${this.urlRoot}/${commands.join(';')}`, {
-			method: 'GET'
-		});
-		if (!result.ok) {
-			throw new Error(`Failed to send commands ${commands.join(',')}: ${result.statusText}`);
+		if (commands.length === 0) {
+			return [];
 		}
-		const text = await result.text();
-		return text.split('\n').slice(0, -1);
+
+		const allResults: string[] = [];
+		const batches = this.batchCommandsByUrlLength(commands);
+
+		for (const batch of batches) {
+			const url = `${this.urlRoot}/${batch.join(';')}`;
+
+			const result = await this.fetch(url, {
+				method: 'GET'
+			});
+			if (!result.ok) {
+				throw new Error(`Failed to send commands ${batch.join(',')}: ${result.statusText}`);
+			}
+			const text = await result.text();
+			const batchResults = text.split('\n').slice(0, -1);
+			allResults.push(...batchResults);
+		}
+
+		return allResults;
+	}
+
+	private batchCommandsByUrlLength(commands: string[]): string[][] {
+		const batches: string[][] = [];
+		let currentBatch: string[] = [];
+		let currentLength = this.urlRoot.length;
+
+		for (const command of commands) {
+			// Calculate length if we add this command
+			const separator = currentBatch.length > 0 ? ';' : '';
+			const additionalLength = separator.length + command.length;
+
+			// If adding this command would exceed the limit, start a new batch
+			if (currentLength + additionalLength > MAX_URL_LENGTH && currentBatch.length > 0) {
+				batches.push([...currentBatch]);
+				currentBatch = [command];
+				currentLength = this.urlRoot.length + command.length;
+			} else {
+				currentBatch.push(command);
+				currentLength += additionalLength;
+			}
+		}
+
+		// Add the final batch if it has commands
+		if (currentBatch.length > 0) {
+			batches.push(currentBatch);
+		}
+
+		return batches;
 	}
 }

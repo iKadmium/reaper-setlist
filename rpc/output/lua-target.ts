@@ -65,7 +65,7 @@ export class LuaTarget extends Target {
 				typeDefs.push(typeLines);
 			}
 		}
-		const lines = typeDefs.map(definition => definition.join('\n'));
+		const lines = typeDefs.map((definition) => definition.join('\n'));
 
 		return lines;
 	}
@@ -113,8 +113,10 @@ export class LuaTarget extends Target {
 				operationLines.push(...this.getInputChecker(`${name}_length`));
 				operationLines.push(``);
 				operationLines.push(`\t\tlocal ${name} = {}`);
-				operationLines.push(`\t\tfor i = 0, tonumber(${name}_length) do`);
-				operationLines.push(`\t\t\tlocal chunk = reaper.GetExtState(Globals.SECTION, "${name}_" .. i)`);
+				operationLines.push(`\t\tfor i = 0, (tonumber(${name}_length) - 1) do`);
+				operationLines.push(
+					`\t\t\tlocal chunk = reaper.GetExtState(Globals.SECTION, "${name}_" .. i)`
+				);
 				operationLines.push(`\t\t\tif chunk and chunk ~= "" then`);
 				operationLines.push(`\t\t\t\t${name}[i + 1] = chunk`);
 				operationLines.push(`\t\t\telse`);
@@ -125,7 +127,6 @@ export class LuaTarget extends Target {
 				operationLines.push(...this.getInputChecker(name));
 			}
 			operationLines.push('');
-
 		}
 		const argsList = inputs.map((input) => input.name).join(', ');
 		if (outputs.length === 0) {
@@ -146,12 +147,17 @@ export class LuaTarget extends Target {
 				operationLines.push(`\t\tend`);
 				operationLines.push('');
 				if (type.isNumber()) {
-					operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", tostring(${outputName}), true)`);
-				}
-				else if (type.isString()) {
-					operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName}, true)`);
+					operationLines.push(
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", tostring(${outputName}), true)`
+					);
+				} else if (type.isString()) {
+					operationLines.push(
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName}, true)`
+					);
 				} else {
-					operationLines.push(`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", json.encode(${outputName}), true)`);
+					operationLines.push(
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", json.encode(${outputName}), true)`
+					);
 				}
 			}
 		}
@@ -160,7 +166,9 @@ export class LuaTarget extends Target {
 				if (type.getText() === 'ChunkSet') {
 					operationLines.push(`\t\treaper.DeleteExtState(Globals.SECTION, "${name}_length", true)`);
 					operationLines.push(`\t\tfor i = 0, tonumber(${name}_length) do`);
-					operationLines.push(`\t\t\treaper.DeleteExtState(Globals.SECTION, "${name}_" .. i, true)`);
+					operationLines.push(
+						`\t\t\treaper.DeleteExtState(Globals.SECTION, "${name}_" .. i, true)`
+					);
 					operationLines.push(`\t\tend`);
 				} else {
 					operationLines.push(`\t\treaper.DeleteExtState(Globals.SECTION, "${name}", true)`);

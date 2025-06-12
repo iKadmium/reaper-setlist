@@ -101,7 +101,7 @@ local Operations = {
 		end
 
 		local chunks = {}
-		for i = 0, tonumber(chunks_length) do
+		for i = 0, (tonumber(chunks_length) - 1) do
 			local chunk = reaper.GetExtState(Globals.SECTION, "chunks_" .. i)
 			if chunk and chunk ~= "" then
 				chunks[i + 1] = chunk

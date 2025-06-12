@@ -9,7 +9,11 @@ const CHUNK_SIZE = 500;
 const INDEX_KEY = '__index__';
 
 export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<string, TValue> {
-	constructor(private readonly apiClient: ReaperApiClient, private readonly scriptClient: ReaperRpcClient, private readonly sectionKey: SectionKey) {
+	constructor(
+		private readonly apiClient: ReaperApiClient,
+		private readonly scriptClient: ReaperRpcClient,
+		private readonly sectionKey: SectionKey
+	) {
 		super();
 	}
 
@@ -25,16 +29,16 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
 	private async saveData<T>(key: string, item: T): Promise<void> {
 		const length = JSON.stringify(item).length;
 		if (length <= CHUNK_SIZE) {
-			await this.apiClient.executeCommand(new SetStateCommand(this.sectionKey, key, JSON.stringify(item)));
-		}
-		else {
+			await this.apiClient.executeCommand(
+				new SetStateCommand(this.sectionKey, key, JSON.stringify(item))
+			);
+		} else {
 			await this.scriptClient.writeChunkedData(this.sectionKey, key, item);
 		}
 	}
 
 	private async saveIndex(ids: string[]): Promise<void> {
-
-		await this.apiClient.executeCommand(new SetStateCommand(this.sectionKey, INDEX_KEY, JSON.stringify(ids)));
+		await this.saveData(INDEX_KEY, ids);
 	}
 
 	private async fetchById(id: string): Promise<TValue | undefined> {
@@ -44,7 +48,7 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
 	}
 
 	private async saveById(id: string, value: TValue): Promise<void> {
-		await this.apiClient.executeCommand(new SetStateCommand(this.sectionKey, id, JSON.stringify(value)));
+		await this.saveData(id, value);
 	}
 
 	private async deleteById(id: string): Promise<void> {
