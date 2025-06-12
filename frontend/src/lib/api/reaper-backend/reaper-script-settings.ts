@@ -1,5 +1,6 @@
-import type { ReaperApiClient, ReaperScriptSettingsClient } from '../api';
+import type { ReaperScriptSettingsClient } from '../api';
 import { GetStateCommand, SetStateCommand } from './commands';
+import type { ReaperApiClient } from './reaper-api';
 import { SectionKeys, StateKeys, type StateKey } from './reaper-state';
 
 export class ReaperScriptSettingsImpl implements ReaperScriptSettingsClient {

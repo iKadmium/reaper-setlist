@@ -15,6 +15,16 @@
             "type": "bun",
             "internalConsoleOptions": "neverOpen",
             "request": "launch",
+            "name": "Debug Morph",
+            "program": "morph.ts",
+            "cwd": "${workspaceFolder}/rpc",
+            "stopOnEntry": false,
+            "watchMode": false
+        },
+        {
+            "type": "bun",
+            "internalConsoleOptions": "neverOpen",
+            "request": "launch",
             "name": "Run File",
             "program": "${file}",
             "cwd": "${workspaceFolder}/rpc",

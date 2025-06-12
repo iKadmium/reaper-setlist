@@ -1,31 +1,54 @@
 import { generateUUID } from '$lib/util';
 import { KeyValueStore, type WithId } from '../key-value-store';
-import type { ReaperStoreAccessor } from './reaper-store-accessor';
+import { GetStateCommand, SetStateCommand } from './commands';
+import type { ReaperApiClient } from './reaper-api';
+import type { ReaperRpcClient } from './reaper-rpc-client.svelte';
+import { type SectionKey } from './reaper-state';
+
+const CHUNK_SIZE = 500;
+const INDEX_KEY = '__index__';
 
 export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<string, TValue> {
-	constructor(private readonly accessor: ReaperStoreAccessor<TValue>) {
+	constructor(private readonly apiClient: ReaperApiClient, private readonly scriptClient: ReaperRpcClient, private readonly sectionKey: SectionKey) {
 		super();
 	}
 
 	private async fetchIndex(): Promise<string[]> {
-		const index = await this.accessor.getIndex();
-		return index ?? [];
+		const command = new GetStateCommand(this.sectionKey, INDEX_KEY);
+		const index = await this.apiClient.executeCommand(command);
+		if (!index) {
+			return [];
+		}
+		return JSON.parse(index) as string[];
+	}
+
+	private async saveData<T>(key: string, item: T): Promise<void> {
+		const length = JSON.stringify(item).length;
+		if (length <= CHUNK_SIZE) {
+			await this.apiClient.executeCommand(new SetStateCommand(this.sectionKey, key, JSON.stringify(item)));
+		}
+		else {
+			await this.scriptClient.writeChunkedData(this.sectionKey, key, item);
+		}
 	}
 
 	private async saveIndex(ids: string[]): Promise<void> {
-		await this.accessor.setIndex(ids);
+
+		await this.apiClient.executeCommand(new SetStateCommand(this.sectionKey, INDEX_KEY, JSON.stringify(ids)));
 	}
 
 	private async fetchById(id: string): Promise<TValue | undefined> {
-		return this.accessor.getItem(id);
+		const command = new GetStateCommand(this.sectionKey, id);
+		const data = await this.apiClient.executeCommand(command);
+		return data ? (JSON.parse(data) as TValue) : undefined;
 	}
 
 	private async saveById(id: string, value: TValue): Promise<void> {
-		await this.accessor.setItem(id, value);
+		await this.apiClient.executeCommand(new SetStateCommand(this.sectionKey, id, JSON.stringify(value)));
 	}
 
 	private async deleteById(id: string): Promise<void> {
-		await this.accessor.deleteItem(id);
+		await this.scriptClient.deleteState(this.sectionKey, id);
 	}
 
 	async get(key: string): Promise<TValue | undefined> {
@@ -54,43 +77,21 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
 	}
 
 	async list(): Promise<Record<string, TValue>> {
-		const ids = await this.fetchIndex();
-		const result: Record<string, TValue> = {};
-		const maxChunkSize = 1900;
-
-		let currentChunk: string[] = [];
-		let currentChunkSize = 0;
-
-		for (const id of ids) {
-			const idLength = id.length;
-
-			// If adding this ID would exceed the limit, process the current chunk
-			if (currentChunkSize + idLength > maxChunkSize && currentChunk.length > 0) {
-				const items = await this.accessor.getItems(currentChunk);
-				for (const chunkId of currentChunk) {
-					const value = items[chunkId];
-					if (value) result[chunkId] = value;
-				}
-
-				// Reset for next chunk
-				currentChunk = [];
-				currentChunkSize = 0;
-			}
-
-			// Add the current ID to the chunk
-			currentChunk.push(id);
-			currentChunkSize += idLength;
+		const getIndexCommand = new GetStateCommand(this.sectionKey, INDEX_KEY);
+		const index = await this.apiClient.executeCommand(getIndexCommand);
+		if (!index) {
+			return {};
 		}
-
-		// Process the final chunk if it has any items
-		if (currentChunk.length > 0) {
-			const items = await this.accessor.getItems(currentChunk);
-			for (const id of currentChunk) {
-				const value = items[id];
-				if (value) result[id] = value;
+		const ids = JSON.parse(index) as string[];
+		const items: Record<string, TValue> = {};
+		const getCommands = ids.map((id) => new GetStateCommand(this.sectionKey, id));
+		const results = await this.apiClient.executeCommands(getCommands);
+		for (const result of results) {
+			if (result) {
+				const item = JSON.parse(result) as TValue;
+				items[item.id] = item;
 			}
 		}
-
-		return result;
+		return items;
 	}
 }

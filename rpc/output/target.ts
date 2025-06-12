@@ -1,4 +1,4 @@
-import type { ts, Type } from 'ts-morph';
+import type { ts, Type, TypeParameter } from 'ts-morph';
 
 export abstract class Target {
 	protected operations: OperationOptions[] = [];
@@ -74,6 +74,7 @@ export interface OperationOptions {
 	name: string;
 	inputs: Argument[];
 	outputs: Argument[];
+	typeArgs: TypeParameter[];
 }
 
 export interface Argument {

@@ -1,7 +1,6 @@
 import type { ReaperMarker } from '$lib/models/reaper-marker';
-import type { ReaperTransport } from '$lib/models/reaper-transport';
+import type { PlayState, ReaperTransport } from '$lib/models/reaper-transport';
 import { configuration } from '$lib/stores/configuration.svelte';
-import { parseTransportString } from '$lib/util';
 import { ScriptOperationKey, SectionKeys } from './reaper-state';
 
 // Base command interface
@@ -31,7 +30,19 @@ export class TransportCommand extends BaseCommand<ReaperTransport, string, strin
         if (!response) {
             throw new Error('Empty transport response');
         }
-        return parseTransportString(response);
+        const parts = response.split('\t');
+        if (parts.length !== 6) {
+            throw new Error(`Unexpected transport format: ${response}`);
+        }
+
+        const transport: ReaperTransport = {
+            playState: parseInt(parts[1], 10) as PlayState,
+            positionSeconds: parseFloat(parts[2]),
+            repeatOn: parts[3] === '1',
+            positionString: parts[4],
+            positionStringBeats: parts[5]
+        };
+        return transport;
     }
 
     getResponseMarker(): string {
@@ -162,7 +173,8 @@ export class SetStateCommand extends VoidCommand {
 
     async getCommandString(): Promise<string> {
         const command = this.persist ? 'SET/EXTSTATEPERSIST' : 'SET/EXTSTATE';
-        return Promise.resolve(`${command}/${this.section}/${this.key}/${this.value}`);
+        const encodedValue = encodeURIComponent(this.value);
+        return Promise.resolve(`${command}/${this.section}/${this.key}/${encodedValue}`);
     }
 }
 

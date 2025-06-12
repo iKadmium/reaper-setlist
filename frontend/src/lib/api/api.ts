@@ -5,41 +5,12 @@ import type { Setlist } from '../models/setlist';
 import type { Song } from '../models/song';
 import type { KeyValueStore } from './key-value-store';
 import type { ReaperCommand, CommandResults } from './reaper-backend/commands';
+import type { ReaperApiClient } from './reaper-backend/reaper-api';
 import { ReaperBackend } from './reaper-backend/reaper-backend';
+import type { ReaperRpcClient } from './reaper-backend/reaper-rpc-client.svelte';
 
 // Re-export for backward compatibility
 export type { ReaperCommand, CommandResults } from './reaper-backend/commands';
-
-export interface ReaperApiClient {
-	// New type-safe command methods
-	executeCommand: <TReturn, TInput, TResponse extends string | undefined>(command: ReaperCommand<TReturn, TInput, TResponse>) => Promise<TReturn>;
-	executeCommands: <T extends readonly ReaperCommand<any, any, any>[]>(commands: T) => Promise<CommandResults<T>>;
-
-	// High-level API methods
-	goToStart: () => Promise<ReaperTransport>;
-	goToMarker: (markerId: number) => Promise<ReaperTransport>;
-
-	newTab: () => Promise<void>;
-	closeAllTabs: () => Promise<void>;
-	nextTab: () => Promise<{ markers: ReaperMarker[], transport: ReaperTransport }>;
-	previousTab: () => Promise<{ markers: ReaperMarker[], transport: ReaperTransport }>;
-
-	play: () => Promise<ReaperTransport>;
-	pause: () => Promise<ReaperTransport>;
-	stop: () => Promise<ReaperTransport>;
-	record: () => Promise<ReaperTransport>;
-	getTransport: () => Promise<ReaperTransport>;
-
-	getMarkers: () => Promise<ReaperMarker[]>;
-}
-
-export interface ReaperRpcClient {
-	listProjects: () => Promise<string[]>;
-	openProject: (projectPath: string) => Promise<void>;
-	testActionId: (testNonce: string) => Promise<string>;
-	getProjectLength(): Promise<number>;
-	getOpenTabs: () => Promise<ReaperTab[]>;
-}
 
 export interface ReaperScriptSettingsClient {
 	setProjectRoot: (root: string) => Promise<void>;

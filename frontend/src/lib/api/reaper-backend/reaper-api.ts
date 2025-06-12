@@ -1,13 +1,12 @@
 import type { ReaperMarker } from '$lib/models/reaper-marker';
 import type { ReaperTransport } from '$lib/models/reaper-transport';
-import type { ReaperApiClient } from '../api';
 import {
 	Commands,
 	type CommandResults,
 	type ReaperCommand
 } from './commands';
 
-export class ReaperApiClientImpl implements ReaperApiClient {
+export class ReaperApiClient {
 	private readonly urlRoot: string;
 	private readonly fetch: typeof globalThis.fetch;
 

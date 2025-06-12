@@ -1,4 +1,4 @@
-import type { Type } from 'ts-morph';
+import type { Type, TypeParameter } from 'ts-morph';
 import { SyntaxKind } from 'ts-morph';
 import * as ts from 'typescript';
 import { capitalizeFirstLetter, getMembers } from '../util';
@@ -8,15 +8,15 @@ export class TypeScriptTarget extends Target {
 	constructor() {
 		super();
 		this.imports.push(
-			`import type { ReaperApiClient } from "../api";`,
 			`import { GetStateCommand, RunScriptCommand, SetOperationCommand, SetStateCommand } from "./commands";`,
+			`import type { ReaperApiClient } from "./reaper-api";`,
 			`import { SectionKeys } from "./reaper-state";`
 		);
 	}
 
 	protected override renderTypeDefinitions(): string[] {
 		const typeDefs: string[][] = [];
-		typeDefs.push([`export type ChunkSet = string[];`]);
+		typeDefs.push([`export type Chunkable<T> = T;`]);
 		for (const type of Object.values(this.types)) {
 			const typeLines: string[] = [];
 			let trueType: Type<ts.Type> | undefined = type;
@@ -62,6 +62,22 @@ export class TypeScriptTarget extends Target {
 		return [
 			`export class ReaperRpcClient {`,
 			`\tconstructor(${constructorArgs.join(', ')}) { }`,
+			``,
+			`\tprivate getChunkCommands<T>(name: string, item: Chunkable<T>): SetStateCommand[] {`,
+			`\t\tconst chunks: string[] = [];`,
+			`\t\tconst itemString = JSON.stringify(item);`,
+			`\t\tconst chunkSize = 500;`,
+			`\t\tfor (let i = 0; i < itemString.length; i += chunkSize) {`,
+			`\t\t\tchunks.push(itemString.slice(i, i + chunkSize));`,
+			`\t\t}`,
+			``,
+			`\t\tconst commands: SetStateCommand[] = [];`,
+			`\t\tcommands.push(new SetStateCommand(SectionKeys.ReaperSetlist, ` + '`${name}_length`' + `, chunks.length.toString()));`,
+			`\t\tfor (let index = 0; index < chunks.length; index++) {`,
+			`\t\t\tcommands.push(new SetStateCommand(SectionKeys.ReaperSetlist, ` + '`${name}_${index}`' + `, chunks[index]));`,
+			`\t\t}`,
+			`\t\treturn commands;`,
+			`\t}`,
 		];
 	}
 
@@ -72,14 +88,14 @@ export class TypeScriptTarget extends Target {
 	override renderOperations(): string[] {
 		let code: string[] = [];
 		let operationLines: string[][] = [];
-		for (const { name, inputs, outputs } of this.operations) {
-			operationLines.push(this.renderOperation(name, inputs, outputs));
+		for (const { name, inputs, outputs, typeArgs } of this.operations) {
+			operationLines.push(this.renderOperation(name, inputs, outputs, typeArgs));
 		}
 		code.push(operationLines.map((lines) => lines.join('\n')).join('\n\n'));
 		return code;
 	}
 
-	private renderOperation(name: string, inputs: Argument[], outputs: Argument[]): string[] {
+	private renderOperation(name: string, inputs: Argument[], outputs: Argument[], typeParams: TypeParameter[]): string[] {
 		const operationLines: string[] = [];
 		let outputsStr;
 		if (outputs.length === 0) {
@@ -89,17 +105,19 @@ export class TypeScriptTarget extends Target {
 		} else {
 			outputsStr = `{ ${outputs.map((o) => `${o.name}: ${o.type.getText()}`).join(', ')} }`;
 		}
+		const typeParamsStr = typeParams.length > 0
+			? `<${typeParams.map((tp) => tp.getText()).join(', ')}>`
+			: '';
 		operationLines.push(
-			`public async ${name}(${inputs
+			`public async ${name}${typeParamsStr}(${inputs
 				.map((input) => `${input.name}: ${input.type.getText()}`)
 				.join(', ')
 			}): Promise<${outputsStr}> {`
 		);
 		operationLines.push(`\tconst commands = [`);
 		for (const { name, type } of inputs) {
-			if (type.getText() === 'ChunkSet') {
-				operationLines.push(`\t\tnew SetStateCommand(SectionKeys.ReaperSetlist, "${name}_length", ${name}.length.toString()),`);
-				operationLines.push(`\t\t...${name}.map((chunk, index) => new SetStateCommand(SectionKeys.ReaperSetlist, \`chunk_\${index}\`, chunk)),`);
+			if (type.getText() === 'Chunkable<T>') {
+				operationLines.push(`\t\t...this.getChunkCommands("${name}", ${name}),`);
 			} else {
 				operationLines.push(`\t\tnew SetStateCommand(SectionKeys.ReaperSetlist, "${name}", ${name}),`);
 			}
@@ -142,7 +160,6 @@ export class TypeScriptTarget extends Target {
 			} else {
 				throw new Error(`Unsupported output type: ${output.type.getText()}`);
 			}
-
 		}
 
 		if (outputs.length === 1) {

@@ -19,6 +19,7 @@ local TestActionId = require "operations/test_action_id"
 local GetProjectLength = require "operations/get_project_length"
 local GetOpenTabs = require "operations/get_open_tabs"
 local WriteChunkedData = require "operations/write_chunked_data"
+local DeleteState = require "operations/delete_state"
 
 ---@class ReaperTab
 ---@field index number
@@ -113,10 +114,24 @@ local Operations = {
 
 		reaper.DeleteExtState(Globals.SECTION, "section", true)
 		reaper.DeleteExtState(Globals.SECTION, "key", true)
-		reaper.DeleteExtState(Globals.SECTION, "chunks_length", true)
-		for i = 0, tonumber(chunks_length) do
-			reaper.DeleteExtState(Globals.SECTION, "chunks_" .. i, true)
+		reaper.DeleteExtState(Globals.SECTION, "chunks", true)
+	end),
+
+	["deleteState"] = safe_operation(function()
+		local section = reaper.GetExtState(Globals.SECTION, "section")
+		if not section or section == "" then
+			error("Missing required parameter: section")
 		end
+
+		local key = reaper.GetExtState(Globals.SECTION, "key")
+		if not key or key == "" then
+			error("Missing required parameter: key")
+		end
+
+		DeleteState(section, key)
+
+		reaper.DeleteExtState(Globals.SECTION, "section", true)
+		reaper.DeleteExtState(Globals.SECTION, "key", true)
 	end),
 }
 

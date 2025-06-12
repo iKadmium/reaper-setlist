@@ -109,7 +109,7 @@ export class LuaTarget extends Target {
 		const functionName = name.charAt(0).toUpperCase() + name.slice(1);
 		operationLines.push(`\t["${name}"] = safe_operation(function()`);
 		for (const { name: name, type } of inputs) {
-			if (type.getText() === 'ChunkSet') {
+			if (type.getText() === 'Chunkable<T>') {
 				operationLines.push(...this.getInputChecker(`${name}_length`));
 				operationLines.push(``);
 				operationLines.push(`\t\tlocal ${name} = {}`);
