@@ -1,3 +1,4 @@
+// @ts-check
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
@@ -11,20 +12,19 @@ const config = {
 		router: {
 			type: 'hash'
 		},
+
 		adapter: adapter({
 			pages: 'build',
-			assets: 'build/setlist-assets',
-			fallback: 'setlist.html',
-			strict: false
+			assets: 'build',
+			precompress: false
 		}),
 
 		paths: {
-			base: ''
+			base: process.env.NODE_ENV === 'production' ? '/reaper-setlist' : ''
 		},
 
 		prerender: {
-			entries: ['*'],
-			handleMissingId: 'ignore'
+			entries: ['*']
 		},
 
 		files: {
