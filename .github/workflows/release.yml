@@ -61,15 +61,14 @@ jobs:
 
       - name: Prepare release package
         run: |
-          mkdir -p package/setlist/lua
-          mkdir -p package/script
+          mkdir -p package/reaper_www_root/
+          mkdir -p package/Scripts
 
           # Copy frontend build output
-          cp -r frontend/build/* package/setlist
-          cp lua/build/reaper-setlist.lua package/setlist/lua
+          cp -r frontend/build/* package/reaper_www_root/
 
           # Copy Lua bundle
-          cp lua/build/reaper-setlist.lua package/script/
+          cp lua/build/reaper-setlist.lua package/Scripts/
 
           # Copy Installation.txt
           cp Installation.txt package/

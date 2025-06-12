@@ -12,10 +12,23 @@ const config = {
 			type: 'hash'
 		},
 		adapter: adapter({
-			fallback: 'index.html'
+			pages: 'build',
+			assets: 'build/setlist-assets',
+			fallback: 'setlist.html',
+			strict: false
 		}),
+
 		paths: {
-			base: process.env.NODE_ENV == 'production' ? '/setlist' : ''
+			base: ''
+		},
+
+		prerender: {
+			entries: ['*'],
+			handleMissingId: 'ignore'
+		},
+
+		files: {
+			assets: 'static'
 		}
 	},
 
