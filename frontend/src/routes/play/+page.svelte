@@ -323,7 +323,7 @@
 		<div class="no-setlist">
 			<h2>No Setlist Loaded</h2>
 			<p>Please load a setlist to begin playing.</p>
-			<Button elementType="a" href="/" color="primary">Browse Setlists</Button>
+			<Button elementType="a" href="#/" color="primary">Browse Setlists</Button>
 		</div>
 	{/if}
 </div>
