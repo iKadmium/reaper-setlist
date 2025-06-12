@@ -1,5 +1,3 @@
-local Globals = require("globals")
-
 ---@param section string
 ---@param key string
 ---@param chunks string[]
