@@ -14,7 +14,7 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
 
 		// If setup is not complete, navigate to setup page (but only if not already there)
 		if (!setupComplete && browser && url.pathname !== '/setup' && !url.hash?.includes('/setup')) {
-			goto(`${base}/#/setup`);
+			goto(`#/setup`);
 			return { setupComplete };
 		}
 

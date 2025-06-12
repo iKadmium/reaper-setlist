@@ -24,7 +24,7 @@
 			return;
 		}
 
-		await goto(`${base}/#/song`);
+		await goto(`#/song`);
 	}
 </script>
 

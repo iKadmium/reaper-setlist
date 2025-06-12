@@ -30,7 +30,6 @@
 	];
 
 	const setupSteps = [
-		{ label: 'Download the Reaper Setlist script from the link below.' },
 		{ label: 'Open Reaper and go to "Actions" > "Show Action List".' },
 		{ label: 'Search for "ReaScript: Run Script" (the one with command ID 41060) ' },
 		{ label: 'Locate the script you downloaded and click "Load" to install it into Reaper.' },
@@ -154,11 +153,6 @@
 
 	{#if scriptInstallationStatus === 'error'}
 		<InstructionBox title="Script Installation" steps={setupSteps} variant="help" listType="ordered" />
-
-		<a class="download-link" href={`${base}/lua/reaper-setlist.lua`} download="reaper-setlist.lua">
-			<DownloadIcon />
-			Download reaper-setlist.lua
-		</a>
 	{:else}
 		<InstructionBox title="Next steps:" steps={nextSteps} variant="success" listType="unordered" />
 	{/if}
@@ -217,23 +211,6 @@
 		.content {
 			padding: 1rem;
 		}
-	}
-
-	.download-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: var(--purple);
-		text-decoration: none;
-		font-weight: 500;
-		margin-bottom: 1rem;
-		transition: color 0.2s ease;
-		font-size: 0.95rem;
-	}
-
-	.download-link:hover {
-		color: hsl(from var(--purple) h s calc(l * 0.9));
-		text-decoration: underline;
 	}
 
 	.script-status {

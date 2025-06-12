@@ -6,8 +6,9 @@ local Install = require "operations.install"
 local operation = reaper.GetExtState(Globals.SECTION, Globals.KEYS.operation)
 if not operation or operation == "" then
     local _, _, _, cmdId = reaper.get_action_context()
+    local named_command = reaper.ReverseNamedCommandLookup(cmdId)
     local saved_action_id = reaper.GetExtState(Globals.SECTION, Globals.KEYS.script_action_id)
-    if saved_action_id == "" or tostring(cmdId) ~= saved_action_id then
+    if saved_action_id == "" or named_command ~= saved_action_id then
         -- If the script is just called by Reaper without an operation and the project root folder is not set,
         -- it's probably the initial installation request
         Install()

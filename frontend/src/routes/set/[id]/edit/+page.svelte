@@ -19,7 +19,7 @@
 	async function onSubmit(set: Setlist) {
 		try {
 			await api.sets.update(set.id, set);
-			await goto(`${base}/#/`);
+			await goto(`#/`);
 		} catch (error) {
 			notifications.error(`Failed to update set: ${(error as Error).message}`);
 		}

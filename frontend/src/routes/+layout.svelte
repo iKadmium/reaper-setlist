@@ -5,7 +5,15 @@
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
+	function getBaseUrl() {
+		const url = new URL(window.location.href);
+		return url.origin + url.pathname;
+	}
 </script>
+
+<svelte:head>
+	<base href={getBaseUrl()} />
+</svelte:head>
 
 <Navbar setupComplete={data.setupComplete} />
 
