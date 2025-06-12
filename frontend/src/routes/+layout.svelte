@@ -13,6 +13,7 @@
 
 <svelte:head>
 	<base href={getBaseUrl()} />
+	<title>Reaper Setlist</title>
 </svelte:head>
 
 <Navbar setupComplete={data.setupComplete} />
