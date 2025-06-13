@@ -65,6 +65,39 @@ jobs:
         working-directory: ./frontend
         run: bun run build
 
+      - name: Deploy frontend to reapack
+        run: |
+          # Remove existing deployment
+          rm -rf reapack/repo/web/reaper-setlist
+
+          # Copy build output to reapack
+          mkdir -p reapack/repo/web/reaper-setlist
+          cp -r frontend/build/* reapack/repo/web/reaper-setlist/
+
+      - name: Check for changes in reapack
+        id: check-changes
+        run: |
+          if git diff --quiet reapack/repo/web/reaper-setlist; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes (on branch)
+        if: steps.check-changes.outputs.changes == 'true' && github.ref != 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add reapack/repo/web/reaper-setlist
+          git commit -m "Update frontend build in reapack [automated]"
+          git push
+
+      - name: Fail build if changes detected on main
+        if: steps.check-changes.outputs.changes == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          echo "::error::Frontend build changes detected on main branch. Please update the reapack deployment in a separate commit."
+          exit 1
+
   # Job to build and test the Lua Scripts
   lua:
     name: Lua
@@ -84,4 +117,33 @@ jobs:
 
       - name: Run luacheck
         working-directory: ./lua
-        run: luacheck . --exclude-files reaper-api.lua
+        run: luacheck .
+
+      - name: Run Lua bundle
+        working-directory: ./lua
+        run: |
+          ./bundle.sh
+
+      - name: Check for changes in bundle
+        id: check-bundle-changes
+        run: |
+          if git diff --quiet lua/build; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes (on branch)
+        if: steps.check-bundle-changes.outputs.changes == 'true' && github.ref != 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add lua/build
+          git commit -m "Update lua build in reapack [automated]"
+          git push
+
+      - name: Fail build if changes detected on main
+        if: steps.check-bundle-changes.outputs.changes == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          echo "::error::Lua build changes detected on main branch. Please update the reapack deployment in a separate commit."
+          exit 1
