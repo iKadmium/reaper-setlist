@@ -7,11 +7,11 @@
 	import type { StepStatus } from '$lib/components/Step/Step.svelte';
 	import Step from '$lib/components/Step/Step.svelte';
 	import type { Backup } from '$lib/models/backup';
+	import { generateUUID } from '$lib/util';
 	import ExportIcon from 'virtual:icons/mdi/export';
 	import ImportIcon from 'virtual:icons/mdi/import';
 	import RefreshIcon from 'virtual:icons/mdi/refresh';
 	import type { PageProps } from './$types';
-	import { generateUUID } from '$lib/util';
 
 	let { data }: PageProps = $props();
 
@@ -89,6 +89,7 @@
 				scriptInstallationStatus = 'error';
 			}
 		} catch (error) {
+			console.error('Error checking script installation:', error);
 			scriptInstallationStatus = 'error';
 		} finally {
 			isRefreshing = false;
@@ -138,7 +139,7 @@
 
 					// Step 2: Import setlists with updated song IDs
 					for (const setlist of Object.values(importedData.sets)) {
-						const { id, ...setlistWithoutId } = setlist;
+						const { ...setlistWithoutId } = setlist;
 						const updatedSetlist = {
 							...setlistWithoutId,
 							songs: setlist.songs.map((oldSongId) => oldToNewSongIdMap.get(oldSongId) || oldSongId)

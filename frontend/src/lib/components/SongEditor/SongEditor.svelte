@@ -20,6 +20,7 @@
 
 	const api = getApi();
 
+	// eslint-disable-next-line no-undef
 	type T = $$Generic<SongLike>;
 	let { song: originalSong, onSubmit, projects, songs }: SongEditorProps<T> = $props();
 	const song = $state({ ...originalSong });
@@ -75,7 +76,7 @@
 		<div class="input-with-select">
 			<select onchange={(e) => handleProjectSelect(e.currentTarget.value)} bind:value={song.path} id="relative-path" required>
 				<option value="">Select project...</option>
-				{#each filteredProjects as project}
+				{#each filteredProjects as project (project)}
 					<option value={project}>{project}</option>
 				{/each}
 			</select>

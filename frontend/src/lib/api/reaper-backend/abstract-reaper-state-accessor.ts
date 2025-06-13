@@ -1,11 +1,8 @@
-import type { ReaperCommand } from '../api';
 import { GetStateCommand, SetStateCommand } from './commands';
 import type { SectionKey } from './reaper-state';
 
 export abstract class ReaperStateCommandBuilder {
-	protected constructor(
-		protected readonly section: SectionKey
-	) { }
+	protected constructor(protected readonly section: SectionKey) {}
 
 	protected getExtStateCommand(key: string): GetStateCommand {
 		return new GetStateCommand(this.section, key);

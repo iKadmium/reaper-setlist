@@ -22,7 +22,7 @@
 <div class="next-steps {variantClasses[variant]}">
 	<p><strong>{title}</strong></p>
 	<ul>
-		{#each steps as step}
+		{#each steps as step (step.label)}
 			<li><a href={`#${step.href}`}>{step.label}</a></li>
 		{/each}
 	</ul>

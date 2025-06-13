@@ -12,7 +12,6 @@
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
-	import { base } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
@@ -27,6 +26,7 @@
 			await api.script.openProject(song.path);
 			notifications.success(`${song.name} loaded successfully in Reaper!`);
 		} catch (error) {
+			console.error('Error loading song in Reaper:', error);
 			notifications.error('Failed to communicate with Reaper');
 		}
 	}
@@ -81,7 +81,7 @@
 {/if}
 
 <div class="action-section">
-	<Button elementType="a" href={`#/song/add`} color="success">Add Song</Button>
+	<Button elementType="a" href="#/song/add" color="success">Add Song</Button>
 </div>
 
 <style>

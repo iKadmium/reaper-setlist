@@ -310,7 +310,7 @@
 			<div class="markers-section">
 				<h3>Song Markers</h3>
 				<div class="markers-grid">
-					{#each songMarkers as marker}
+					{#each songMarkers as marker (marker.id)}
 						<button class="marker-button" onclick={() => goToMarker(marker)}>
 							<div class="marker-name">{marker.name}</div>
 							<div class="marker-time">{formatTime(marker.position)}</div>

@@ -1,3 +1,3 @@
 export interface Database<T> {
-    [key: string]: T;
+	[key: string]: T;
 }

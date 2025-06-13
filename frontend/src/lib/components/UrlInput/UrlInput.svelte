@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Button from '$lib/components/Button/Button.svelte';
-	import TestIcon from 'virtual:icons/mdi/check-network';
 
 	interface UrlInputProps {
 		value: string;
@@ -8,10 +7,9 @@
 		name: string;
 		placeholder?: string;
 		onTest: () => void;
-		testLabel?: string;
 	}
 
-	let { value = $bindable(), id, name, placeholder = '', onTest, testLabel = 'Test Connection' }: UrlInputProps = $props();
+	let { value = $bindable(), id, name, placeholder = '', onTest }: UrlInputProps = $props();
 </script>
 
 <div class="url-input-container">

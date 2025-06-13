@@ -1,6 +1,6 @@
 <script module lang="ts">
-	import type { ButtonColor } from '../Button/Button.svelte';
 	import type { Notification } from '../../stores/notifications.svelte';
+	import type { ButtonColor } from '../Button/Button.svelte';
 
 	export interface Props {
 		notification: Notification;
@@ -9,10 +9,9 @@
 </script>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { fly, fade } from 'svelte/transition';
-	import Button from '../Button/Button.svelte';
+	import { fade, fly } from 'svelte/transition';
 	import CloseIcon from 'virtual:icons/mdi/close';
+	import Button from '../Button/Button.svelte';
 
 	let { notification, onDismiss }: Props = $props();
 

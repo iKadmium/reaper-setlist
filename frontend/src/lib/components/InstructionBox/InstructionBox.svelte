@@ -25,7 +25,7 @@
 	<h2>{title}</h2>
 	{#if listType === 'ordered'}
 		<ol>
-			{#each steps as step}
+			{#each steps as step (step.label)}
 				<li>
 					{#if step.href}
 						<a href={`#${step.href}`}>{step.label}</a>
@@ -37,7 +37,7 @@
 		</ol>
 	{:else}
 		<ul>
-			{#each steps as step}
+			{#each steps as step (step.label)}
 				<li>
 					{#if step.href}
 						<a href={`#${step.href}`}>{step.label}</a>

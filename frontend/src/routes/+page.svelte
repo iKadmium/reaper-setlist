@@ -4,6 +4,7 @@
 	import ResponsiveActions from '$lib/components/ResponsiveActions/ResponsiveActions.svelte';
 
 	import { notifications } from '$lib';
+	import { getApi } from '$lib/api/api';
 	import type { Database } from '$lib/models/database';
 	import type { NewSetlist, Setlist } from '$lib/models/setlist';
 	import { formatDuration } from '$lib/util';
@@ -13,8 +14,6 @@
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
 	import type { PageData } from './$types';
-	import { getApi } from '$lib/api/api';
-	import { base } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
@@ -122,7 +121,7 @@
 {/if}
 
 <div class="action-section">
-	<Button elementType="a" href={`#/set/add`} color="success">Add Set</Button>
+	<Button elementType="a" href="#/set/add" color="success">Add Set</Button>
 </div>
 
 <style>
