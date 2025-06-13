@@ -34,7 +34,11 @@
 			.toSorted((a, b) => a.name.localeCompare(b.name))
 	);
 
-	let newSongId = $state<string | null>(remainingSongs[0]?.id || null);
+	let newSongId = $state<string | null>(
+		Object.values(songs)
+			.filter((s) => !setlist.songs.includes(s.id))
+			.toSorted((a, b) => a.name.localeCompare(b.name))[0]?.id || null
+	);
 	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (songs[songId]?.length ?? 0) || 0, 0));
 
 	let draggingIndex: number | undefined = $state(undefined);
@@ -112,7 +116,7 @@
 						<div class="drag-target" in:fade={{ duration: 200 }}></div>
 					{/if}
 					<div class="list-item" class:dragging={draggingIndex === i}>
-						<Draggable onmove={(y) => onDragMove(y, i)} onstart={() => onDragStart(i)} onend={() => onDragEnd()} />
+						<Draggable onmove={(y) => onDragMove(y)} onstart={() => onDragStart(i)} onend={() => onDragEnd()} />
 						<div class="song-info">
 							<span class="song-name">{songs[songId]?.name}</span>
 							<span class="song-duration">{formatDuration(songs[songId]?.length || 0)}</span>
