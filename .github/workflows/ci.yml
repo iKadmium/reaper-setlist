@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: read
+
 jobs:
   # Detect changes to determine which jobs to run
   changes:
@@ -39,6 +43,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -86,11 +93,18 @@ jobs:
       - name: Commit and push changes (on branch)
         if: steps.check-changes.outputs.changes == 'true' && github.ref != 'refs/heads/main'
         run: |
+          # Get the branch name from the ref
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          echo "Working on branch: $BRANCH_NAME"
+
+          # Checkout the actual branch (not detached HEAD)
+          git checkout $BRANCH_NAME
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add reapack/repo/web/reaper-setlist
           git commit -m "Update frontend build in reapack [automated]"
-          git push
+          git push origin $BRANCH_NAME
 
       - name: Fail build if changes detected on main
         if: steps.check-changes.outputs.changes == 'true' && github.ref == 'refs/heads/main'
@@ -108,6 +122,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Install Lua and luacheck
         run: |
@@ -136,11 +153,18 @@ jobs:
       - name: Commit and push changes (on branch)
         if: steps.check-bundle-changes.outputs.changes == 'true' && github.ref != 'refs/heads/main'
         run: |
+          # Get the branch name from the ref
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          echo "Working on branch: $BRANCH_NAME"
+
+          # Checkout the actual branch (not detached HEAD)
+          git checkout $BRANCH_NAME
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add lua/build
           git commit -m "Update lua build in reapack [automated]"
-          git push
+          git push origin $BRANCH_NAME
 
       - name: Fail build if changes detected on main
         if: steps.check-bundle-changes.outputs.changes == 'true' && github.ref == 'refs/heads/main'
