@@ -55,7 +55,7 @@ jobs:
 
       - name: Run frontend type check
         working-directory: ./frontend
-        run: bun typecheck
+        run: bun check
 
       - name: Run frontend tests
         working-directory: ./frontend
