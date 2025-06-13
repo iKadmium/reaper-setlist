@@ -15,7 +15,8 @@
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"preinstall": "npx only-allow bun"
+		"preinstall": "npx only-allow bun",
+		"clean": "rimraf .svelte-kit build"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",
@@ -32,6 +33,7 @@
 		"jsdom": "^26.1.0",
 		"prettier": "^3.5.3",
 		"prettier-plugin-svelte": "^3.4.0",
+		"rimraf": "^6.0.1",
 		"svelte": "^5.33.19",
 		"svelte-check": "^4.2.1",
 		"typescript": "^5.8.3",

@@ -1,0 +1,46 @@
+{
+  "name": "reapack-generator",
+  "version": "1.0.0",
+  "description": "TypeScript tool for managing ReaPack index.xml files",
+  "module": "index.ts",
+  "main": "index.js",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "reapack-generator": "./cli.ts",
+    "reapack-ci-release": "./ci-release.ts"
+  },
+  "scripts": {
+    "start": "bun run cli.ts",
+    "ci-release": "bun run ci-release.ts",
+    "check": "bun tsc --noEmit",
+    "test": "bun test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "keywords": [
+    "reaper",
+    "reapack",
+    "xml",
+    "package-manager",
+    "music-production"
+  ],
+  "author": "REAPER Setlist Project",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/xml2js": "^0.4.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@contentful/rich-text-from-markdown": "^16.0.0",
+    "commander": "^14.0.0",
+    "marked": "^15.0.12",
+    "xml2js": "^0.6.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
