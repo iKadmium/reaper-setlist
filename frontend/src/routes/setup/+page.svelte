@@ -49,16 +49,20 @@
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
-		const folderPathValue = formData.get('backing-tracks-folder') || '';
+		const folderPathValue: string = formData.get('backing-tracks-folder')?.toString() || '';
+		let escapedFolderPath = folderPathValue.replaceAll('\\', '/'); // Normalize path for consistency
+		while (escapedFolderPath.includes('//')) {
+			escapedFolderPath = escapedFolderPath.replace('//', '/'); // Remove any double slashes
+		}
 
 		try {
 			// Update folder path in the store
-			await configuration.updateFolderPath(folderPathValue as string);
+			await configuration.updateFolderPath(escapedFolderPath);
 
 			notifications.success('Settings saved successfully!');
 
 			// Update local state to reflect the saved values
-			folderPath = folderPathValue as string;
+			folderPath = escapedFolderPath;
 		} catch (error) {
 			notifications.error(`Failed to save settings: ${(error as Error).message}`);
 			return;
