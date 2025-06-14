@@ -30,9 +30,10 @@
 
 	const setupSteps = [
 		{ label: 'Open Reaper and go to "Actions" > "Show Action List".' },
-		{ label: 'Search for "ReaScript: Run Script" (the one with command ID 41060) ' },
-		{ label: 'Locate the script you downloaded and click "Load" to install it into Reaper.' },
-		{ label: 'The script will automatically register itself. Use the refresh button below to check installation status.' },
+		{ label: 'If you installed this via ReaPack, the reaper-setlist.lua script should already be listed here.' },
+		{ label: 'If not, click "New Action" > "Load ReaScript..." and open the reaper-setlist.lua script.' },
+		{ label: 'Simply run the script to register it.' },
+		{ label: 'Use the refresh button below to check installation status.' },
 		{ label: 'Enter the root folder path where your backing tracks are stored in the form below.' },
 		{ label: 'Click "Save" to store these settings.' }
 	];
