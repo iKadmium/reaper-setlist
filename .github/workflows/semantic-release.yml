@@ -82,7 +82,6 @@ jobs:
     uses: ./.github/workflows/github-release.yml
     with:
       tag_name: ${{ needs.semantic-release.outputs.release-tag }}
-      version: ${{ needs.semantic-release.outputs.release-version }}
       release_notes: ${{ needs.semantic-release.outputs.release-notes }}
 
   trigger-reapack-release:

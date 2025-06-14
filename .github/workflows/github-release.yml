@@ -1,14 +1,10 @@
-name: Release
+name: Github Release
 
 on:
   workflow_dispatch:
     inputs:
       tag_name:
         description: "Tag name for the release (e.g., v1.2.0)"
-        required: true
-        type: string
-      version:
-        description: "Version number for the release (e.g., 1.2.0)"
         required: true
         type: string
       release_notes:
@@ -19,10 +15,6 @@ on:
     inputs:
       tag_name:
         description: "Tag name for the release (e.g., v1.2.0)"
-        required: true
-        type: string
-      version:
-        description: "Version number for the release (e.g., 1.2.0)"
         required: true
         type: string
       release_notes:
@@ -46,14 +38,14 @@ jobs:
 
       - name: Create ZIP Archive
         run: |
-          mkdir -p reaper-setlist-${{ inputs.version }}/reaper_www_root/reaper-setlist
-          mkdir -p reaper-setlist-${{ inputs.version }}/Scripts
+          mkdir -p reaper-setlist-${{ inputs.tag_name }}/reaper_www_root/reaper-setlist
+          mkdir -p reaper-setlist-${{ inputs.tag_name }}/Scripts
 
-          cp -r reapack/repo/reaper-setlist/files/setlist.html reaper-setlist-${{ inputs.version }}/reaper_www_root/
-          cp -r reapack/repo/reaper-setlist/files/reaper-setlist.lua reaper-setlist-${{ inputs.version }}/Scripts/
-          cp -r reapack/repo/reaper-setlist/files/reaper-setlist/* reaper-setlist-${{ inputs.version }}/reaper_www_root/reaper-setlist/
+          cp -r reapack/repo/reaper-setlist/files/setlist.html reaper-setlist-${{ inputs.tag_name }}/reaper_www_root/
+          cp -r reapack/repo/reaper-setlist/files/reaper-setlist.lua reaper-setlist-${{ inputs.tag_name }}/Scripts/
+          cp -r reapack/repo/reaper-setlist/files/reaper-setlist/* reaper-setlist-${{ inputs.tag_name }}/reaper_www_root/reaper-setlist/
 
-          zip -r reaper-setlist-${{ inputs.version }}.zip reaper-setlist-${{ inputs.version }}
+          zip -r reaper-setlist-${{ inputs.tag_name }}.zip reaper-setlist-${{ inputs.tag_name }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -66,10 +58,10 @@ jobs:
 
             ## Download
 
-            - `reaper-setlist-${{ inputs.version }}.zip`
+            - `reaper-setlist-${{ inputs.tag_name }}.zip`
 
             Unpack and see the Installation.txt file for instructions.
-          files: reaper-setlist-${{ inputs.version }}.zip
+          files: reaper-setlist-${{ inputs.tag_name }}.zip
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
