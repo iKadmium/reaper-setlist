@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1">
+<index version="1" name="Reaper Setlist">
   <category name="Scripts">
     <reapack name="Reaper Setlist" type="webinterface" desc="Reaper Setlist">
       <version name="2.0.1" author="iKadmium" time="2025-06-14T03:52:55.510Z">
