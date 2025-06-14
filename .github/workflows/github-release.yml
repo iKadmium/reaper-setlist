@@ -34,65 +34,26 @@ permissions:
   contents: write
 
 jobs:
-  build-and-package:
-    name: Build and Package
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: bun install
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: bun run build
-
-      - name: Bundle Lua script
-        working-directory: ./lua
+      - name: Create ZIP Archive
         run: |
-          ./bundle.sh
+          mkdir -p reaper-setlist-${{ inputs.version }}/reaper_www_root/reaper-setlist
+          mkdir -p reaper-setlist-${{ inputs.version }}/Scripts
 
-      - name: Prepare release package
-        run: |
-          mkdir -p package/reaper_www_root/reaper-setlist
-          mkdir -p package/Scripts
+          cp -r reapack/repo/reaper-setlist/files/setlist.html reaper-setlist-${{ inputs.version }}/reaper_www_root/
+          cp -r reapack/repo/reaper-setlist/files/reaper-setlist.lua reaper-setlist-${{ inputs.version }}/Scripts/
+          cp -r reapack/repo/reaper-setlist/files/reaper-setlist/reaper-setlist/* reaper-setlist-${{ inputs.version }}/reaper_www_root/reaper-setlist/
 
-          # Copy frontend build output
-          cp -r frontend/build/* package/reaper_www_root/reaper-setlist
-          cp html/setlist.html package/reaper_www_root/
-
-          # Copy Lua bundle
-          cp lua/build/reaper-setlist.lua package/Scripts/
-
-          # Copy Installation.txt
-          cp Installation.txt package/
-
-          # Create the release archive
-          cd package
-          zip -r ../reaper-setlist-${{ inputs.version }}.zip .
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: reaper-setlist-package
-          path: reaper-setlist-${{ inputs.version }}.zip
-
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: build-and-package
-    steps:
-      - name: Download package artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: reaper-setlist-package
+          zip -r reaper-setlist-${{ inputs.version }}.zip reaper-setlist-${{ inputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

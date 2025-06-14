@@ -10,13 +10,14 @@
 </script>
 
 <script lang="ts">
+	// eslint-disable-next-line no-undef
 	type T = $$Generic;
 
 	let { items, nameDisplay, getName, actions }: ItemGridProps<T> = $props();
 </script>
 
 <div class="item-grid">
-	{#each items as item}
+	{#each items as item (item)}
 		<div class="list-item">
 			<div class="name">
 				{#if nameDisplay}

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
 	import SetEditor from '$lib/components/SetEditor/SetEditor.svelte';

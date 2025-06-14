@@ -21,6 +21,7 @@ export class ReaperApiClient {
 		return response;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	async executeCommands<T extends readonly ReaperCommand<any, any, any>[]>(
 		commands: T
 	): Promise<CommandResults<T>> {
@@ -32,6 +33,7 @@ export class ReaperApiClient {
 		return results;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private parseMultiCommandResponse<T extends readonly ReaperCommand<any, any, any>[]>(
 		commands: T,
 		response: string[]

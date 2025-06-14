@@ -8,7 +8,6 @@
 	}
 </script>
 
-<!-- svelte-ignore state_referenced_locally -->
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import { fade, fly } from 'svelte/transition';
@@ -22,6 +21,7 @@
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import Draggable from '../Draggable/Draggable.svelte';
 
+	// eslint-disable-next-line no-undef
 	type T = $$Generic<SetlistLike>;
 
 	let { setlist: initialSetlist, songs, onSubmit }: SetEditorProps<T> = $props();
@@ -34,7 +34,11 @@
 			.toSorted((a, b) => a.name.localeCompare(b.name))
 	);
 
-	let newSongId = $state<string | null>(remainingSongs[0]?.id || null);
+	let newSongId = $state<string | null>(
+		Object.values(songs)
+			.filter((s) => !setlist.songs.includes(s.id))
+			.toSorted((a, b) => a.name.localeCompare(b.name))[0]?.id || null
+	);
 	let totalTime = $derived(setlist.songs.reduce((acc, songId) => acc + (songs[songId]?.length ?? 0) || 0, 0));
 
 	let draggingIndex: number | undefined = $state(undefined);
@@ -55,7 +59,7 @@
 		return rect.top + rect.height / 2;
 	}
 
-	function onDragMove(y: number, index: number) {
+	function onDragMove(y: number) {
 		if (!itemsRef) return;
 		const childElements = Array.from(itemsRef.querySelectorAll<HTMLDivElement>('.list-item'));
 
@@ -71,7 +75,7 @@
 		draggingIndex = index;
 	}
 
-	function onDragEnd(y: number) {
+	function onDragEnd() {
 		if (draggingIndex !== undefined && draggingTargetIndex !== undefined) {
 			const removedItem = setlist.songs.splice(draggingIndex, 1)[0];
 			const adjustedIndex = draggingTargetIndex > draggingIndex ? draggingTargetIndex - 1 : draggingTargetIndex;
@@ -112,7 +116,7 @@
 						<div class="drag-target" in:fade={{ duration: 200 }}></div>
 					{/if}
 					<div class="list-item" class:dragging={draggingIndex === i}>
-						<Draggable onmove={(y) => onDragMove(y, i)} onstart={() => onDragStart(i)} onend={(y) => onDragEnd(y)} />
+						<Draggable onmove={(y) => onDragMove(y)} onstart={() => onDragStart(i)} onend={() => onDragEnd()} />
 						<div class="song-info">
 							<span class="song-name">{songs[songId]?.name}</span>
 							<span class="song-duration">{formatDuration(songs[songId]?.length || 0)}</span>
@@ -132,7 +136,7 @@
 			<label for="new-song">Add Song:</label>
 			<div class="add-song-container input-with-button">
 				<select id="new-song" bind:value={newSongId}>
-					{#each remainingSongs as song}
+					{#each remainingSongs as song (song.id)}
 						<option value={song.id}>{song.name}</option>
 					{/each}
 				</select>

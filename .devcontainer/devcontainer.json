@@ -17,7 +17,8 @@
 				"GitHub.copilot",
 				"sumneko.lua",
 				"oven.bun-vscode",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"dbaeumer.vscode-eslint"
 			]
 		}
 	},

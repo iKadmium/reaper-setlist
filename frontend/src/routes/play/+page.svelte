@@ -310,7 +310,7 @@
 			<div class="markers-section">
 				<h3>Song Markers</h3>
 				<div class="markers-grid">
-					{#each songMarkers as marker}
+					{#each songMarkers as marker (marker.id)}
 						<button class="marker-button" onclick={() => goToMarker(marker)}>
 							<div class="marker-name">{marker.name}</div>
 							<div class="marker-time">{formatTime(marker.position)}</div>
@@ -323,7 +323,7 @@
 		<div class="no-setlist">
 			<h2>No Setlist Loaded</h2>
 			<p>Please load a setlist to begin playing.</p>
-			<Button elementType="a" href="/" color="primary">Browse Setlists</Button>
+			<Button elementType="a" href="#/" color="primary">Browse Setlists</Button>
 		</div>
 	{/if}
 </div>

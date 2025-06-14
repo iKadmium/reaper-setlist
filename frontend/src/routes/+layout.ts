@@ -1,6 +1,5 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
-import { base } from '$app/paths';
 import { configuration } from '$lib';
 import type { LayoutLoad } from './$types';
 

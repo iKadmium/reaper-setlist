@@ -9,7 +9,7 @@ import type { ReaperScriptSettingsClient } from './reaper-backend/reaper-script-
 // Re-export for backward compatibility
 export type { CommandResults, ReaperCommand } from './reaper-backend/commands';
 
-export interface SongsStore extends KeyValueStore<string, Song> {}
+export type SongsStore = KeyValueStore<string, Song>;
 
 export interface SetlistsStore extends KeyValueStore<string, Setlist> {
 	deleteSongFromSets(id: string): unknown;

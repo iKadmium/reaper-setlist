@@ -37,8 +37,8 @@
 			generateSteps();
 		}
 		// This effect will re-run when replaceExistingTabs or movePlayheadToStart changes
-		replaceExistingTabs;
-		movePlayheadToStart;
+		void replaceExistingTabs;
+		void movePlayheadToStart;
 	});
 
 	function generateSteps() {
