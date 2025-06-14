@@ -14,6 +14,7 @@
 	--yellow: hsl(65, 92%, 76%);
 
 	--primary: var(--purple);
+	--text-muted: var(--comment);
 }
 
 body {
@@ -96,6 +97,11 @@ input::placeholder {
 input.success {
 	border-color: var(--green);
 	box-shadow: 0 0 0 1px var(--green);
+}
+
+input.warning {
+	border-color: var(--yellow);
+	box-shadow: 0 0 0 1px var(--yellow);
 }
 
 input.error {

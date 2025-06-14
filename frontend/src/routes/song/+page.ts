@@ -6,10 +6,11 @@ import { getApi } from '$lib/api/api';
 export const load: PageLoad = async ({ fetch }) => {
 	try {
 		const api = getApi(fetch);
-		const songs = await api.songs.list();
+		const [songs, projects] = await Promise.all([api.songs.list(), api.script.listProjects()]);
 
 		return {
-			songs
+			songs,
+			projects
 		};
 	} catch (error) {
 		return {
