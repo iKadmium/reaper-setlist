@@ -51,7 +51,7 @@ jobs:
 
           cp -r reapack/repo/reaper-setlist/files/setlist.html reaper-setlist-${{ inputs.version }}/reaper_www_root/
           cp -r reapack/repo/reaper-setlist/files/reaper-setlist.lua reaper-setlist-${{ inputs.version }}/Scripts/
-          cp -r reapack/repo/reaper-setlist/files/reaper-setlist/reaper-setlist/* reaper-setlist-${{ inputs.version }}/reaper_www_root/reaper-setlist/
+          cp -r reapack/repo/reaper-setlist/files/reaper-setlist/* reaper-setlist-${{ inputs.version }}/reaper_www_root/reaper-setlist/
 
           zip -r reaper-setlist-${{ inputs.version }}.zip reaper-setlist-${{ inputs.version }}
 
