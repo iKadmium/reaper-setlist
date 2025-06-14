@@ -3,10 +3,6 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "Tag name for the release (e.g., v1.2.0)"
-        required: true
-        type: string
       version:
         description: "Version number for the release (e.g., 1.2.0)"
         required: true
@@ -15,18 +11,22 @@ on:
         description: "Release notes for the release"
         required: false
         type: string
+      triggered_by:
+        description: "Who/what triggered this release"
+        required: false
+        type: string
   workflow_call:
     inputs:
-      tag_name:
-        description: "Tag name for the release (e.g., v1.2.0)"
-        required: true
-        type: string
       version:
         description: "Version number for the release (e.g., 1.2.0)"
         required: true
         type: string
       release_notes:
         description: "Release notes for the release"
+        required: false
+        type: string
+      triggered_by:
+        description: "Who/what triggered this release"
         required: false
         type: string
 
@@ -61,18 +61,14 @@ jobs:
 
       - name: Prepare release package
         run: |
-          mkdir -p package/reaper_www_root/reaper-setlist
-          mkdir -p package/Scripts
+          mkdir -p package/reaper-setlist
 
           # Copy frontend build output
-          cp -r frontend/build/* package/reaper_www_root/reaper-setlist
-          cp html/setlist.html package/reaper_www_root/
+          cp -r frontend/build/* package/reaper-setlist/
+          cp html/setlist.html package/
 
           # Copy Lua bundle
-          cp lua/build/reaper-setlist.lua package/Scripts/
-
-          # Copy Installation.txt
-          cp Installation.txt package/
+          cp lua/build/reaper-setlist.lua package/
 
           # Create the release archive
           cd package
@@ -94,6 +90,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag v${{ inputs.version }} -m "Release ${{ inputs.version }}"
+          git push origin v${{ inputs.version }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -119,18 +122,18 @@ jobs:
 
           # Copy files from extracted package to ReaPack structure
           # Copy the Lua script
-          if [ -f "temp-extract/Scripts/reaper-setlist.lua" ]; then
-            cp temp-extract/Scripts/reaper-setlist.lua reapack/repo/reaper-setlist/files/
+          if [ -f "temp-extract/reaper-setlist.lua" ]; then
+            cp temp-extract/reaper-setlist.lua reapack/repo/reaper-setlist/files/
           fi
 
           # Copy the HTML file
-          if [ -f "temp-extract/reaper_www_root/setlist.html" ]; then
-            cp temp-extract/reaper_www_root/setlist.html reapack/repo/reaper-setlist/files/
+          if [ -f "temp-extract/setlist.html" ]; then
+            cp temp-extract/setlist.html reapack/repo/reaper-setlist/files/
           fi
 
           # Copy the frontend build files
-          if [ -d "temp-extract/reaper_www_root/reaper-setlist" ]; then
-            cp -r temp-extract/reaper_www_root/reaper-setlist reapack/repo/reaper-setlist/files/
+          if [ -d "temp-extract/reaper-setlist" ]; then
+            cp -r temp-extract/reaper-setlist reapack/repo/reaper-setlist/files/
           fi
 
           echo "Updated ReaPack repository with new files:"
@@ -156,20 +159,29 @@ jobs:
           bun ci-release.ts release \
             --release-version "$VERSION" \
             --changelog "$CHANGELOG" \
-            --author "Release Workflow" \
-            --time "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            --author "${{ inputs.triggered_by || github.actor }}"
 
-      - name: Commit and push ReaPack changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(release): Update ReaPack repository for release ${{ inputs.version }}"
+          title: "chore(release): Release ${{ inputs.version }}"
+          body: |
+            Automated release PR for version ${{ inputs.version }}
 
-          # Check if there are changes to commit
-          if git diff --quiet reapack/repo/; then
-            echo "No changes to ReaPack repository"
-          else
-            git add reapack/repo/
-            git commit -m "Update ReaPack repository for release ${{ inputs.version }} [skip ci]"
-            git push
-            echo "ReaPack repository updated and pushed"
-          fi
+            This PR updates the ReaPack repository with the latest release files.
+
+            **Triggered by:** ${{ inputs.triggered_by || github.actor }}
+
+            **Changes:**
+            - Updated ReaPack repository files
+            - Generated new index for version ${{ inputs.version }}
+
+            **Release Notes:**
+            ${{ inputs.release_notes || 'No release notes provided' }}
+          branch: "release/${{ inputs.version }}"
+          base: main
+          delete-branch: true
+          author: "GitHub Action <action@github.com>"
+          committer: "GitHub Action <action@github.com>"

@@ -75,20 +75,22 @@ jobs:
         with:
           dry_run: true
 
-      - name: Create Git Tag
-        if: steps.semantic.outputs.new_release_published == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.semantic.outputs.new_release_git_tag }}
-          git push origin ${{ steps.semantic.outputs.new_release_git_tag }}
-
-  trigger-release:
-    name: Trigger Release Build
+  trigger-github-release:
+    name: Trigger GitHub Release
     needs: semantic-release
-    if: needs.semantic-release.outputs.new-release == 'true'
+    if: needs.semantic-release.outputs.new-release == 'true' && contains(github.event.head_commit.message, 'chore(release):')
     uses: ./.github/workflows/github-release.yml
     with:
       tag_name: ${{ needs.semantic-release.outputs.release-tag }}
       version: ${{ needs.semantic-release.outputs.release-version }}
       release_notes: ${{ needs.semantic-release.outputs.release-notes }}
+
+  trigger-reapack-release:
+    name: Trigger ReaPack Release
+    needs: semantic-release
+    if: needs.semantic-release.outputs.new-release == 'true' && !contains(github.event.head_commit.message, 'chore(release):')
+    uses: ./.github/workflows/reapack-release.yml
+    with:
+      version: ${{ needs.semantic-release.outputs.release-version }}
+      release_notes: ${{ needs.semantic-release.outputs.release-notes }}
+      triggered_by: "${{ github.actor }}"
