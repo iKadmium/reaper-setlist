@@ -88,6 +88,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest # Or a specific version like '1.1.17'
+
       - name: Install Lua and luacheck
         run: |
           sudo apt-get update
