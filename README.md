@@ -18,7 +18,7 @@ A simple setlist management script for the Reaper DAW.
 
 ### Via ReaPack
 
-- Add the `https://raw.githubusercontent.com/iKadmium/reaper-setlist/refs/heads/fix-instructions/reapack/repo/index.xml` repo to your repositories list.
+- Add the `https://raw.githubusercontent.com/iKadmium/reaper-setlist/refs/heads/main/reapack/repo/index.xml` repo to your repositories list.
 - Install the Reaper Setlist package.
 - Add a web interface to your Reaper settings if you haven't already.
 - Open a web browser to the `/setlist.html` page in your Reaper web instance (default will be http://localhost:8080/setlist), and follow the instructions.
