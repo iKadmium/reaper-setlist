@@ -6,16 +6,17 @@
 	import type { Database } from '$lib/models/database';
 	import type { Song } from '$lib/models/song';
 	import { formatDuration } from '$lib/util';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 
 	import { getApi } from '$lib/api/api';
 	import DeleteIcon from 'virtual:icons/mdi/delete';
 	import EditIcon from 'virtual:icons/mdi/pencil';
 	import PlayIcon from 'virtual:icons/mdi/play';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: PageProps = $props();
 
 	let songs = $state<Database<Song>>(data.songs);
+	let projects = $state<string[] | undefined>(data.projects);
 	const api = getApi();
 
 	const errorMessage = data.error;
@@ -80,9 +81,13 @@
 	</ItemGrid>
 {/if}
 
-<div class="action-section">
-	<Button elementType="a" href="#/song/add" color="success">Add Song</Button>
-</div>
+{#if projects && projects.length > 0}
+	<div class="action-section">
+		<Button elementType="a" href="#/song/add" color="success">Add Song</Button>
+	</div>
+{:else}
+	<p style="color: var(--text-muted);">No Reaper projects found. Please double-check your backing tracks folder in Settings.</p>
+{/if}
 
 <style>
 	.song-info {

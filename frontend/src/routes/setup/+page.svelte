@@ -23,6 +23,11 @@
 	let isRefreshing = $state<boolean>(false);
 	let hasCheckedInitially = $state<boolean>(false);
 
+	// Folder validation state
+	let folderValidationStatus = $state<'pending' | 'checking' | 'success' | 'warning' | 'error'>('pending');
+	let folderValidationMessage = $state<string>('');
+	let lastValidatedPath = $state<string | undefined>(data.folderPath);
+
 	const nextSteps = [
 		{ label: 'Add your songs', href: '/song' },
 		{ label: 'Create setlists', href: '/' }
@@ -46,6 +51,14 @@
 		}
 	});
 
+	// Reset validation status when folder path changes (user is typing)
+	$effect(() => {
+		if (folderPath !== lastValidatedPath && folderValidationStatus !== 'pending') {
+			folderValidationStatus = 'pending';
+			folderValidationMessage = '';
+		}
+	});
+
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		const formData = new FormData(event.target as HTMLFormElement);
@@ -55,15 +68,31 @@
 			escapedFolderPath = escapedFolderPath.replace('//', '/'); // Remove any double slashes
 		}
 
+		// Start validation
+		folderValidationStatus = 'checking';
+		folderValidationMessage = 'Validating folder...';
+
 		try {
 			// Update folder path in the store
 			await configuration.updateFolderPath(escapedFolderPath);
+			const projects = await api.script.listProjects();
 
-			notifications.success('Settings saved successfully!');
+			if (projects.length > 0) {
+				folderValidationStatus = 'success';
+				folderValidationMessage = `Found ${projects.length} project${projects.length === 1 ? '' : 's'}`;
+				notifications.success('Settings saved successfully!');
+			} else {
+				folderValidationStatus = 'warning';
+				folderValidationMessage = 'No .rpp files found in this folder';
+				notifications.warning('Settings saved but no projects were found. Please double-check the folder path.');
+			}
 
 			// Update local state to reflect the saved values
 			folderPath = escapedFolderPath;
+			lastValidatedPath = escapedFolderPath;
 		} catch (error) {
+			folderValidationStatus = 'error';
+			folderValidationMessage = `Error: ${(error as Error).message}`;
 			notifications.error(`Failed to save settings: ${(error as Error).message}`);
 			return;
 		}
@@ -190,7 +219,27 @@
 	<Form onsubmit={handleSubmit}>
 		<div class="form-group">
 			<label for="backing-tracks-folder">Backing Tracks Root Folder:</label>
-			<input bind:value={folderPath} type="text" id="backing-tracks-folder" name="backing-tracks-folder" placeholder="e.g., /path/to/your/backing/tracks" />
+			<input
+				bind:value={folderPath}
+				type="text"
+				id="backing-tracks-folder"
+				name="backing-tracks-folder"
+				placeholder="e.g., /path/to/your/backing/tracks"
+				class={folderValidationStatus === 'success'
+					? 'success'
+					: folderValidationStatus === 'warning'
+						? 'warning'
+						: folderValidationStatus === 'error'
+							? 'error'
+							: ''}
+			/>
+			{#if folderValidationMessage}
+				<div class="validation-message validation-message--{folderValidationStatus}">
+					{folderValidationMessage}
+				</div>
+			{:else if folderPath && folderPath.trim() !== '' && folderPath !== lastValidatedPath}
+				<div class="validation-message validation-message--pending">Click "Save" to validate this folder path</div>
+			{/if}
 		</div>
 
 		<div class="submit-section">
@@ -248,5 +297,32 @@
 	.import-export-buttons {
 		display: flex;
 		gap: 1rem;
+	}
+
+	.validation-message {
+		font-size: 0.875rem;
+		margin-top: 0.5rem;
+		padding: 0.25rem 0;
+	}
+
+	.validation-message--success {
+		color: var(--green);
+	}
+
+	.validation-message--warning {
+		color: var(--yellow);
+	}
+
+	.validation-message--error {
+		color: var(--red);
+	}
+
+	.validation-message--checking {
+		color: var(--comment);
+	}
+
+	.validation-message--pending {
+		color: var(--comment);
+		font-style: italic;
 	}
 </style>

@@ -120,9 +120,13 @@
 	</ItemGrid>
 {/if}
 
-<div class="action-section">
-	<Button elementType="a" href="#/set/add" color="success">Add Set</Button>
-</div>
+{#if Object.entries(songs).length > 0}
+	<div class="action-section">
+		<Button elementType="a" href="#/set/add" color="success">Add Set</Button>
+	</div>
+{:else}
+	<p style="color: var(--text-muted);">No songs available. Please add some songs to get started.</p>
+{/if}
 
 <style>
 	.set-info {
