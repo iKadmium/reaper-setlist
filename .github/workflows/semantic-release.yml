@@ -78,7 +78,7 @@ jobs:
   trigger-github-release:
     name: Trigger GitHub Release
     needs: semantic-release
-    if: needs.semantic-release.outputs.new-release == 'true' && contains(github.event.head_commit.message, 'chore(release):')
+    if: needs.semantic-release.outputs.new-release == 'false' && contains(github.event.head_commit.message, 'chore(release):')
     uses: ./.github/workflows/github-release.yml
     with:
       tag_name: ${{ needs.semantic-release.outputs.release-tag }}
