@@ -137,6 +137,10 @@ jobs:
             cp -r temp-extract/reaper-setlist reapack/repo/reaper-setlist/files/
           fi
 
+          # Delete the temporary directory and the zip file
+          rm -fr temp-extract
+          rm reaper-setlist-${{ inputs.version }}.zip
+
           echo "Updated ReaPack repository with new files:"
           find reapack/repo/reaper-setlist/files -type f | head -20
 
