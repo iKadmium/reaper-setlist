@@ -34,7 +34,7 @@ local Operations = {
 			error("Operation listProjects failed to return required output: projects")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), true)
+		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), false)
 	end),
 
 	["openProject"] = safe_operation(function()
@@ -60,7 +60,7 @@ local Operations = {
 			error("Operation testActionId failed to return required output: testOutput")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, true)
+		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, false)
 		reaper.DeleteExtState(Globals.SECTION, "testNonce", true)
 	end),
 
@@ -71,7 +71,7 @@ local Operations = {
 			error("Operation getProjectLength failed to return required output: projectLength")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), true)
+		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), false)
 	end),
 
 	["getOpenTabs"] = safe_operation(function()
@@ -81,7 +81,7 @@ local Operations = {
 			error("Operation getOpenTabs failed to return required output: tabs")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), true)
+		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), false)
 	end),
 
 	["writeChunkedData"] = safe_operation(function()
