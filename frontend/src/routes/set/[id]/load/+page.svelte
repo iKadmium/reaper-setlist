@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { notifications } from '$lib';
 	import { getApi } from '$lib/api/api';
+	import { Commands } from '$lib/api/reaper-backend/commands';
 	import Button from '$lib/components/Button/Button.svelte';
 	import type { StepStatus } from '$lib/components/Step/Step.svelte';
 	import Step from '$lib/components/Step/Step.svelte';
 	import type { Database } from '$lib/models/database';
+	import type { ReaperTab } from '$lib/models/reaper-tab';
 	import type { Setlist } from '$lib/models/setlist';
 	import type { Song } from '$lib/models/song';
 	import type { PageData } from './$types';
@@ -15,8 +17,12 @@
 	let hasExecuted = $state<boolean>(false);
 	let replaceExistingTabs = $state<boolean>(true);
 	let movePlayheadToStart = $state<boolean>(true);
+	let tabs = $state<ReaperTab[]>(data.tabs.tabs);
 	let set = $state<Setlist | undefined>(data.set);
 	let songs = $state<Database<Song>>(data.songs);
+	let anyDirty = $derived(tabs.some((tab) => tab.dirty));
+	let checkingTabs = $state<boolean>(false);
+	let shouldDisableLoad = $derived(replaceExistingTabs && anyDirty);
 	const errorMessage = data.error;
 
 	const api = getApi();
@@ -92,6 +98,17 @@
 			}
 		});
 
+		// Add step to switch to the first song tab after all songs are loaded
+		if (set.songs.length > 0) {
+			newSteps.push({
+				id: 'switch-to-first-song',
+				title: 'Switch to First Song',
+				description: 'Navigate to the first song tab in the setlist',
+				status: 'pending',
+				action: () => switchToFirstSong()
+			});
+		}
+
 		steps = newSteps;
 	}
 
@@ -135,6 +152,35 @@
 		}
 	}
 
+	async function switchToFirstSong(): Promise<boolean> {
+		try {
+			// Calculate how many tabs to skip to get to the first song
+			let tabsToSkip: number;
+
+			if (replaceExistingTabs) {
+				// If we closed all tabs, the first song is at tab 0, so no skipping needed
+				tabsToSkip = 0;
+			} else {
+				// If we didn't close tabs, we need to skip the original tabs to get to the first new tab
+				tabsToSkip = data.tabs.tabs.length;
+			}
+
+			// If we need to skip tabs, send multiple nextTab commands in a batch
+			if (tabsToSkip > 0) {
+				// Create an array of nextTab commands and execute them in a batch
+				const commands = Array(tabsToSkip)
+					.fill(0)
+					.map(() => Commands.nextTab());
+				await api.reaper.executeCommands(commands as any);
+			}
+
+			return true;
+		} catch (error) {
+			notifications.error(`Failed to switch to first song: ${(error as Error).message}`);
+			return false;
+		}
+	}
+
 	function updateStepStatus(stepId: string, status: StepStatus) {
 		const stepIndex = steps.findIndex((s) => s.id === stepId);
 		if (stepIndex !== -1) {
@@ -155,6 +201,20 @@
 			console.error(`Error executing step ${step.id}:`, error);
 			updateStepStatus(step.id, 'error');
 			return false;
+		}
+	}
+
+	async function refreshTabs() {
+		if (checkingTabs) return;
+
+		checkingTabs = true;
+		try {
+			const response = await api.script.getOpenTabs();
+			tabs = response.tabs;
+		} catch (error) {
+			notifications.error(`Failed to refresh tabs: ${(error as Error).message}`);
+		} finally {
+			checkingTabs = false;
 		}
 	}
 
@@ -215,10 +275,41 @@
 	</div>
 
 	<div class="load-button-container">
-		<Button onclick={loadSet} disabled={working}>
+		<Button onclick={loadSet} disabled={working || shouldDisableLoad}>
 			{working ? 'Loading...' : hasExecuted ? 'Load Again' : 'Load Set'}
 		</Button>
 	</div>
+
+	{#if shouldDisableLoad}
+		<div class="warning-container">
+			<div class="warning-message">
+				<h3>⚠️ Unsaved Changes Detected</h3>
+				<p>
+					You have unsaved changes in {tabs.filter((tab) => tab.dirty).length} tab{tabs.filter((tab) => tab.dirty).length === 1 ? '' : 's'}. Since "Replace
+					existing tabs" is enabled, these changes will be lost when loading the set.
+				</p>
+				<div class="dirty-tabs-list">
+					<p><strong>Tabs with unsaved changes:</strong></p>
+					<ul class="dirty-tabs">
+						{#each tabs.filter((tab) => tab.dirty) as dirtyTab}
+							<li class="dirty-tab">
+								<span class="tab-name">{dirtyTab.name || 'Untitled'}</span>
+								<span class="tab-index">(Tab {dirtyTab.index + 1})</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+				<p><strong>What to do:</strong></p>
+				<ul>
+					<li>Save your changes in Reaper, then click "Check Again" below</li>
+					<li>Or disable "Replace existing tabs" to keep your current tabs</li>
+				</ul>
+				<Button onclick={refreshTabs} disabled={checkingTabs} variant="text">
+					{checkingTabs ? 'Checking...' : 'Check Again'}
+				</Button>
+			</div>
+		</div>
+	{/if}
 
 	{#if steps.length > 0}
 		<div class="steps-container">
@@ -270,5 +361,85 @@
 	.load-button-container {
 		display: flex;
 		justify-content: center;
+	}
+
+	.warning-container {
+		margin: 1rem 0;
+		display: flex;
+		justify-content: center;
+	}
+
+	.warning-message {
+		background-color: hsl(from var(--yellow) h s l / 0.1);
+		border: 1px solid var(--yellow);
+		border-radius: 0.5rem;
+		padding: 1rem;
+		max-width: 600px;
+		width: 100%;
+	}
+
+	.warning-message h3 {
+		margin: 0 0 0.5rem 0;
+		color: var(--yellow);
+		font-size: 1.1rem;
+	}
+
+	.warning-message p {
+		margin: 0.5rem 0;
+		line-height: 1.4;
+	}
+
+	.warning-message ul {
+		margin: 0.5rem 0;
+		padding-left: 1.5rem;
+	}
+
+	.warning-message li {
+		margin: 0.25rem 0;
+		line-height: 1.4;
+	}
+
+	.dirty-tabs-list {
+		margin: 1rem 0;
+		padding: 0.75rem;
+		background-color: hsl(from var(--background) h s calc(l * 0.8));
+		border-radius: 0.25rem;
+		border-left: 3px solid var(--yellow);
+	}
+
+	.dirty-tabs-list p {
+		margin: 0 0 0.5rem 0;
+		font-weight: 500;
+	}
+
+	.dirty-tabs {
+		margin: 0;
+		padding-left: 1rem;
+		list-style: none;
+	}
+
+	.dirty-tab {
+		margin: 0.25rem 0;
+		padding: 0.25rem 0;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.dirty-tab::before {
+		content: '•';
+		color: var(--yellow);
+		font-weight: bold;
+		margin-right: 0.25rem;
+	}
+
+	.tab-name {
+		font-weight: 500;
+		color: var(--foreground);
+	}
+
+	.tab-index {
+		color: var(--comment);
+		font-size: 0.9rem;
 	}
 </style>

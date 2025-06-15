@@ -154,6 +154,10 @@ export class LuaTarget extends Target {
 					operationLines.push(
 						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName}, false)`
 					);
+				} else if (type.isBoolean()) {
+					operationLines.push(
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName} and "true" or "false", false)`
+					);
 				} else {
 					operationLines.push(
 						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", json.encode(${outputName}), false)`

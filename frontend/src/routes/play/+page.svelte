@@ -106,8 +106,8 @@
 
 	async function stop() {
 		try {
-			await api.reaper.stop();
-			await refreshTransport();
+			const transport = await api.reaper.stop();
+			updateTransport(transport);
 		} catch (error) {
 			notifications.error(`Failed to stop playback: ${(error as Error).message}`);
 		}
@@ -133,18 +133,28 @@
 
 	async function goToMarker(marker: ReaperMarker) {
 		try {
-			await api.reaper.goToMarker(marker.id);
-			await refreshTransport();
+			const transport = await api.reaper.goToMarker(marker.id);
+			updateTransport(transport);
 		} catch (error) {
 			notifications.error(`Failed to jump to marker: ${(error as Error).message}`);
 			console.error(`Failed to jump to marker:`, error);
 		}
 	}
 
+	async function goToStart() {
+		try {
+			const transport = await api.reaper.goToStart();
+			updateTransport(transport);
+		} catch (error) {
+			notifications.error(`Failed to jump to song start: ${(error as Error).message}`);
+			console.error(`Failed to jump to song start:`, error);
+		}
+	}
+
 	async function startRecording() {
 		try {
-			await api.reaper.record();
-			await refreshTransport();
+			const transport = await api.reaper.record();
+			updateTransport(transport);
 		} catch (error) {
 			notifications.error(`Failed to toggle recording: ${(error as Error).message}`);
 			console.error(`Failed to toggle recording:`, error);
@@ -186,7 +196,10 @@
 	// Load sample data (in real app, this would come from route params)
 	onMount(async () => {
 		try {
-			allTabs = await api.script.getOpenTabs();
+			const response = await api.script.getOpenTabs();
+			allTabs = response.tabs;
+			currentSongIndex = response.activeIndex;
+
 			transportUpdateHandle = window.setInterval(refreshTransport, 1000); // Update transport every second
 			await refreshMarkers(); // Load initial song markers
 		} catch (error) {
@@ -306,19 +319,21 @@
 		</div>
 
 		<!-- Song Markers -->
-		{#if songMarkers.length > 0}
-			<div class="markers-section">
-				<h3>Song Markers</h3>
-				<div class="markers-grid">
-					{#each songMarkers as marker (marker.id)}
-						<button class="marker-button" onclick={() => goToMarker(marker)}>
-							<div class="marker-name">{marker.name}</div>
-							<div class="marker-time">{formatTime(marker.position)}</div>
-						</button>
-					{/each}
-				</div>
+		<div class="markers-section">
+			<h3>Song Markers</h3>
+			<div class="markers-grid">
+				<button class="marker-button" onclick={() => goToStart()}>
+					<div class="marker-name">Start</div>
+					<div class="marker-time">{formatTime(0)}</div>
+				</button>
+				{#each songMarkers as marker (marker.id)}
+					<button class="marker-button" onclick={() => goToMarker(marker)}>
+						<div class="marker-name">{marker.name}</div>
+						<div class="marker-time">{formatTime(marker.position)}</div>
+					</button>
+				{/each}
 			</div>
-		{/if}
+		</div>
 	{:else}
 		<div class="no-setlist">
 			<h2>No Setlist Loaded</h2>

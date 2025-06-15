@@ -112,9 +112,15 @@ export class NewTabCommand extends VoidCommand {
 	}
 }
 
-export class CloseAllTabsCommand extends VoidCommand {
+export class CloseTabCommand extends VoidCommand {
 	getCommandString(): Promise<string> {
 		return Promise.resolve('40860');
+	}
+}
+
+export class CloseAllTabsCommand extends VoidCommand {
+	getCommandString(): Promise<string> {
+		return Promise.resolve('40886');
 	}
 }
 
@@ -248,6 +254,7 @@ export const Commands = {
 	goToStart: () => new GoToStartCommand(),
 	goToMarker: (markerId: number) => new GoToMarkerCommand(markerId),
 	newTab: () => new NewTabCommand(),
+	closeTab: () => new CloseTabCommand(),
 	closeAllTabs: () => new CloseAllTabsCommand(),
 	nextTab: () => new NextTabCommand(),
 	previousTab: () => new PreviousTabCommand(),

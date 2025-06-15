@@ -16,8 +16,8 @@
 <nav>
 	<ul class="nav">
 		{#if setupComplete}
-			<li><a href="#/" class:active={page.url.hash === `#/` || page.url.hash === ''}>Sets</a></li>
-			<li><a href="#/song" class:active={page.url.hash === `#/song`}>Songs</a></li>
+			<li><a href="#/" class:active={page.url.hash === `#/` || page.url.hash === '' || page.url.hash.startsWith('#/set/')}>Sets</a></li>
+			<li><a href="#/song" class:active={page.url.hash.startsWith(`#/song`)}>Songs</a></li>
 			<li><a href="#/play" class:active={page.url.hash === `#/play`}>Play</a></li>
 		{/if}
 		<li><a href="#/setup" class:active={page.url.hash === `#/setup` || page.url.hash.startsWith(`#/setup/`)}>Setup</a></li>

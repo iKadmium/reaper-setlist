@@ -25,6 +25,7 @@ local DeleteState = require "operations/delete_state"
 ---@field index number
 ---@field name string
 ---@field length number
+---@field dirty boolean
 
 local Operations = {
 	["listProjects"] = safe_operation(function()
@@ -75,13 +76,18 @@ local Operations = {
 	end),
 
 	["getOpenTabs"] = safe_operation(function()
-		local tabs = GetOpenTabs()
+		local tabs, activeIndex = GetOpenTabs()
 
 		if not tabs or tabs == '' then
 			error("Operation getOpenTabs failed to return required output: tabs")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), false)
+		if not activeIndex or activeIndex == '' then
+			error("Operation getOpenTabs failed to return required output: activeIndex")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "activeIndex", tostring(activeIndex), false)
 	end),
 
 	["writeChunkedData"] = safe_operation(function()
