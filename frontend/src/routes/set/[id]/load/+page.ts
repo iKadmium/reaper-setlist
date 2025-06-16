@@ -1,6 +1,5 @@
 import { getApi } from '$lib/api/api';
 import type { Database } from '$lib/models/database';
-import type { ReaperTab } from '$lib/models/reaper-tab';
 import type { Song } from '$lib/models/song';
 import type { PageLoad } from './$types';
 

@@ -171,7 +171,7 @@
 				const commands = Array(tabsToSkip)
 					.fill(0)
 					.map(() => Commands.nextTab());
-				await api.reaper.executeCommands(commands as any);
+				await api.reaper.executeCommands(commands);
 			}
 
 			return true;
@@ -291,7 +291,7 @@
 				<div class="dirty-tabs-list">
 					<p><strong>Tabs with unsaved changes:</strong></p>
 					<ul class="dirty-tabs">
-						{#each tabs.filter((tab) => tab.dirty) as dirtyTab}
+						{#each tabs.filter((tab) => tab.dirty) as dirtyTab (dirtyTab.index)}
 							<li class="dirty-tab">
 								<span class="tab-name">{dirtyTab.name || 'Untitled'}</span>
 								<span class="tab-index">(Tab {dirtyTab.index + 1})</span>

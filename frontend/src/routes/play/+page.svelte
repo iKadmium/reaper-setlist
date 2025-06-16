@@ -231,6 +231,9 @@
 		if (transportUpdateHandle) {
 			window.clearInterval(transportUpdateHandle);
 		}
+		if (tabsUpdateHandle) {
+			window.clearInterval(tabsUpdateHandle);
+		}
 	});
 </script>
 
