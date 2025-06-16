@@ -138,6 +138,7 @@ local DeleteState = require("operations/delete_state")
 ---@field index number
 ---@field name string
 ---@field length number
+---@field dirty boolean
 
 local Operations = {
 	["listProjects"] = safe_operation(function()
@@ -147,7 +148,7 @@ local Operations = {
 			error("Operation listProjects failed to return required output: projects")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), true)
+		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), false)
 	end),
 
 	["openProject"] = safe_operation(function()
@@ -173,7 +174,7 @@ local Operations = {
 			error("Operation testActionId failed to return required output: testOutput")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, true)
+		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, false)
 		reaper.DeleteExtState(Globals.SECTION, "testNonce", true)
 	end),
 
@@ -184,17 +185,22 @@ local Operations = {
 			error("Operation getProjectLength failed to return required output: projectLength")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), true)
+		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), false)
 	end),
 
 	["getOpenTabs"] = safe_operation(function()
-		local tabs = GetOpenTabs()
+		local tabs, activeIndex = GetOpenTabs()
 
 		if not tabs or tabs == '' then
 			error("Operation getOpenTabs failed to return required output: tabs")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), true)
+		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), false)
+		if not activeIndex or activeIndex == '' then
+			error("Operation getOpenTabs failed to return required output: activeIndex")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "activeIndex", tostring(activeIndex), false)
 	end),
 
 	["writeChunkedData"] = safe_operation(function()
@@ -276,10 +282,14 @@ return WriteChunkedData
 end)
 __bundle_register("operations/get_open_tabs", function(require, _LOADED, __bundle_register, __bundle_modules)
 ---@return ReaperTab[]
+---@return number active_index
 local GetOpenTabs = function()
     ---@type ReaperTab[]
     local tabs = {}
     local tab_index = 0
+
+    local active_project = reaper.EnumProjects(-1)
+    local active_project_index = -1;
 
     while true do
         local proj = reaper.EnumProjects(tab_index)
@@ -297,10 +307,17 @@ local GetOpenTabs = function()
         -- Normalize the path to ensure consistency
         local normalized_tab_name = tab_name:gsub("\\", "/")
 
+        local is_dirty = reaper.IsProjectDirty(proj) == 1
+        local is_active = (proj == active_project)
+        if is_active then
+            active_project_index = tab_index
+        end
+
         ---@type ReaperTab
         local tab = {
             index = tab_index,
             name = normalized_tab_name,
+            dirty = is_dirty,
             length = duration
         }
 
@@ -308,7 +325,7 @@ local GetOpenTabs = function()
         tab_index = tab_index + 1
     end
 
-    return tabs
+    return tabs, active_project_index
 end
 
 return GetOpenTabs
