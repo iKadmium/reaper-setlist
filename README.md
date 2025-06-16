@@ -25,8 +25,8 @@ A simple setlist management script for the Reaper DAW.
 
 ### Manual
 
-- Download, extract and run the package from the [releases section](https://github.com/iKadmium/reaper-setlist/releases) on the right.
-- Inside the package, put `reaper-setlist.lua` in your Reaper Scripts folder, and the `setlist` folder in your Reaper user pages folder.
+- Download the package from the [releases section](https://github.com/iKadmium/reaper-setlist/releases) on the right.
+- Extract it to your Reaper user resources folder. To find this, in Reaper, open the Options menu and click `Show REAPER resource path in Finder/Explorer...`
 - Add a web interface to your Reaper settings if you haven't already.
 - Open a web browser to the `/setlist.html` page in your Reaper web instance (default will be http://localhost:8080/setlist), and follow the instructions.
 
