@@ -56,32 +56,31 @@
 	}
 
 	async function handleGetDurationClick() {
-		song.length = Math.ceil(await api.script.getProjectLength());
-		notifications.success('Duration retrieved from Reaper!');
-	}
-
-	async function handleLoadClick() {
-		try {
+		const openTabs = await api.script.getOpenTabs();
+		const activeTab = openTabs.tabs[openTabs.activeIndex];
+		let openedNewTab = false;
+		if (!activeTab || !song.path.endsWith(activeTab.name)) {
+			await api.reaper.newTab();
 			await api.script.openProject(song.path);
-			notifications.success(`${song.name} loaded in Reaper!`);
-		} catch (error) {
-			notifications.error(`Failed to load song in Reaper: ${(error as Error).message}`);
+			openedNewTab = true;
 		}
+		song.length = Math.ceil(await api.script.getProjectLength());
+		if (openedNewTab) {
+			await api.reaper.closeTab();
+		}
+		notifications.success('Duration retrieved from Reaper!');
 	}
 </script>
 
 <Form onsubmit={() => onSubmit(song)}>
 	<div class="form-group">
 		<label for="relative-path">Project File:</label>
-		<div class="input-with-select">
-			<select onchange={(e) => handleProjectSelect(e.currentTarget.value)} bind:value={song.path} id="relative-path" required>
-				<option value="">Select project...</option>
-				{#each filteredProjects as project (project)}
-					<option value={project}>{project}</option>
-				{/each}
-			</select>
-			<Button elementType="button" onclick={handleLoadClick} disabled={song.name === '' || song.path === ''}>Load</Button>
-		</div>
+		<select onchange={(e) => handleProjectSelect(e.currentTarget.value)} bind:value={song.path} id="relative-path" required>
+			<option value="">Select project...</option>
+			{#each filteredProjects as project (project)}
+				<option value={project}>{project}</option>
+			{/each}
+		</select>
 		<div class="checkbox-container">
 			<label class="checkbox-label">
 				<input type="checkbox" bind:checked={hideUsedProjects} />
@@ -99,7 +98,7 @@
 		<label for="duration">Duration (seconds):</label>
 		<div class="input-with-button">
 			<input bind:value={song.length} type="number" id="duration" placeholder="Duration in seconds" min="0" required />
-			<Button elementType="button" onclick={handleGetDurationClick}>Get from Reaper</Button>
+			<Button elementType="button" onclick={handleGetDurationClick} disabled={song.path === ''}>Get from Reaper</Button>
 		</div>
 		<span class="duration-display">{duration}</span>
 	</div>

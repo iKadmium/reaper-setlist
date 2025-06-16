@@ -130,6 +130,10 @@ export class ReaperApiClient {
 		return transport;
 	}
 
+	async closeTab(): Promise<void> {
+		await this.executeCommand(Commands.closeTab());
+	}
+
 	async newTab(): Promise<void> {
 		await this.executeCommand(Commands.newTab());
 	}

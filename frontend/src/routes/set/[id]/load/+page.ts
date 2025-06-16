@@ -8,16 +8,22 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		const id = params.id;
 		const api = getApi(fetch);
 
-		const [set, songs] = await Promise.all([api.sets.get(id), api.songs.list()]);
+		const [set, songs, tabs] = await Promise.all([
+			api.sets.get(id),
+			api.songs.list(),
+			api.script.getOpenTabs()
+		]);
 
 		return {
 			set,
-			songs
+			songs,
+			tabs
 		};
 	} catch (error) {
 		return {
 			set: undefined,
 			songs: {} as Database<Song>,
+			tabs: { activeIndex: -1, tabs: [] },
 			error: error instanceof Error ? error.message : 'An unknown error occurred.'
 		};
 	}

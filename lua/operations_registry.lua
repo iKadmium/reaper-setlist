@@ -25,6 +25,7 @@ local DeleteState = require "operations/delete_state"
 ---@field index number
 ---@field name string
 ---@field length number
+---@field dirty boolean
 
 local Operations = {
 	["listProjects"] = safe_operation(function()
@@ -34,7 +35,7 @@ local Operations = {
 			error("Operation listProjects failed to return required output: projects")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), true)
+		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), false)
 	end),
 
 	["openProject"] = safe_operation(function()
@@ -60,7 +61,7 @@ local Operations = {
 			error("Operation testActionId failed to return required output: testOutput")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, true)
+		reaper.SetExtState(Globals.SECTION, "testOutput", testOutput, false)
 		reaper.DeleteExtState(Globals.SECTION, "testNonce", true)
 	end),
 
@@ -71,17 +72,22 @@ local Operations = {
 			error("Operation getProjectLength failed to return required output: projectLength")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), true)
+		reaper.SetExtState(Globals.SECTION, "projectLength", tostring(projectLength), false)
 	end),
 
 	["getOpenTabs"] = safe_operation(function()
-		local tabs = GetOpenTabs()
+		local tabs, activeIndex = GetOpenTabs()
 
 		if not tabs or tabs == '' then
 			error("Operation getOpenTabs failed to return required output: tabs")
 		end
 
-		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), true)
+		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), false)
+		if not activeIndex or activeIndex == '' then
+			error("Operation getOpenTabs failed to return required output: activeIndex")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "activeIndex", tostring(activeIndex), false)
 	end),
 
 	["writeChunkedData"] = safe_operation(function()

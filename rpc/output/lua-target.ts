@@ -148,15 +148,19 @@ export class LuaTarget extends Target {
 				operationLines.push('');
 				if (type.isNumber()) {
 					operationLines.push(
-						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", tostring(${outputName}), true)`
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", tostring(${outputName}), false)`
 					);
 				} else if (type.isString()) {
 					operationLines.push(
-						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName}, true)`
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName}, false)`
+					);
+				} else if (type.isBoolean()) {
+					operationLines.push(
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", ${outputName} and "true" or "false", false)`
 					);
 				} else {
 					operationLines.push(
-						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", json.encode(${outputName}), true)`
+						`\t\treaper.SetExtState(Globals.SECTION, "${outputName}", json.encode(${outputName}), false)`
 					);
 				}
 			}

@@ -30,7 +30,7 @@ export class ReaperKVS<TValue extends WithId<string>> extends KeyValueStore<stri
 		const length = JSON.stringify(item).length;
 		if (length <= CHUNK_SIZE) {
 			await this.apiClient.executeCommand(
-				new SetStateCommand(this.sectionKey, key, JSON.stringify(item))
+				new SetStateCommand(this.sectionKey, key, JSON.stringify(item), true)
 			);
 		} else {
 			await this.scriptClient.writeChunkedData(this.sectionKey, key, item);

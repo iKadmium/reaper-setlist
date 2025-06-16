@@ -2,6 +2,12 @@ interface ReaperTab {
 	index: number;
 	name: string;
 	length: number;
+	dirty: boolean;
+}
+
+interface TabsResponse {
+	tabs: ReaperTab[];
+	activeIndex: number;
 }
 
 type Chunkable<T> = T & { __chunkable: true };
@@ -11,7 +17,7 @@ export interface ScriptOperations {
 	openProject: (projectPath: string) => void;
 	testActionId: (testNonce: string) => { testOutput: string };
 	getProjectLength: () => { projectLength: number };
-	getOpenTabs: () => { tabs: ReaperTab[] };
+	getOpenTabs: () => TabsResponse;
 	writeChunkedData: <T>(section: string, key: string, chunks: Chunkable<T>) => void;
 	deleteState: (section: string, key: string) => void;
 }

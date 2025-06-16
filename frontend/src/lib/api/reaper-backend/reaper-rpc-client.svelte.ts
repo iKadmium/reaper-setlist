@@ -14,6 +14,7 @@ export interface ReaperTab {
 	index: number;
 	name: string;
 	length: number;
+	dirty: boolean;
 }
 
 export class ReaperRpcClient {
@@ -93,18 +94,24 @@ export class ReaperRpcClient {
 		return projectLength;
 	}
 
-	public async getOpenTabs(): Promise<ReaperTab[]> {
+	public async getOpenTabs(): Promise<{ tabs: ReaperTab[]; activeIndex: number }> {
 		const commands = [
 			new SetOperationCommand('getOpenTabs'),
 			new RunScriptCommand(),
-			new GetStateCommand(SectionKeys.ReaperSetlist, 'tabs')
+			new GetStateCommand(SectionKeys.ReaperSetlist, 'tabs'),
+			new GetStateCommand(SectionKeys.ReaperSetlist, 'activeIndex')
 		] as const;
-		const [_setOperation, _runScript, tabsRaw] = await this.apiClient.executeCommands(commands);
+		const [_setOperation, _runScript, tabsRaw, activeIndexRaw] =
+			await this.apiClient.executeCommands(commands);
 		if (tabsRaw === undefined) {
 			throw new Error('Failed to retrieve tabs. Please check the script configuration.');
 		}
 		const tabs = JSON.parse(tabsRaw) as ReaperTab[];
-		return tabs;
+		if (activeIndexRaw === undefined) {
+			throw new Error('Failed to retrieve activeIndex. Please check the script configuration.');
+		}
+		const activeIndex = parseFloat(activeIndexRaw);
+		return { tabs, activeIndex };
 	}
 
 	public async writeChunkedData<T>(
