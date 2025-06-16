@@ -38,6 +38,7 @@
 				}, 0) + currentSongTime
 	);
 	let transportUpdateHandle = $state<number | null>(null);
+	let tabsUpdateHandle = $state<number | null>(null);
 
 	// Current song data
 	const currentTab = $derived(!allTabs || currentSongIndex < 0 || currentSongIndex >= allTabs.length ? null : allTabs[currentSongIndex] || null);
@@ -193,16 +194,34 @@
 		}
 	}
 
+	async function refreshTabs() {
+		try {
+			const response = await api.script.getOpenTabs();
+			if (allTabs !== response.tabs || currentSongIndex !== response.activeIndex) {
+				allTabs = response.tabs;
+				currentSongIndex = response.activeIndex;
+				await refreshMarkers(); // Refresh markers after tabs update
+			}
+
+			if (currentSongIndex < 0 || currentSongIndex >= allTabs.length) {
+				currentSongIndex = 0; // Reset to first song if index is out of bounds
+			}
+		} catch (error) {
+			console.error(`Failed to refresh tabs: ${(error as Error).message}`);
+		}
+	}
+
 	// Load sample data (in real app, this would come from route params)
 	onMount(async () => {
 		try {
-			const response = await api.script.getOpenTabs();
-			allTabs = response.tabs;
-			currentSongIndex = response.activeIndex;
-
+			tabsUpdateHandle = window.setInterval(refreshTabs, 5000); // Refresh tabs every 5 seconds
 			transportUpdateHandle = window.setInterval(refreshTransport, 1000); // Update transport every second
+
+			await refreshTabs(); // Load initial tabs
 			await refreshMarkers(); // Load initial song markers
+			await refreshTransport(); // Load initial transport state
 		} catch (error) {
+			notifications.error(`Failed to load initial data: ${(error as Error).message}`);
 			console.error(`Failed to load data: ${(error as Error).message}`);
 		}
 	});
