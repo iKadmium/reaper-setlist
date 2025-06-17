@@ -9,6 +9,6 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	return {
 		song: songs[id],
 		songs: songs,
-		projects: projects
+		projects: projects.projects
 	};
 };

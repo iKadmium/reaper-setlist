@@ -70,7 +70,8 @@ local function list_rpp_files_recursive(current_dir, base_path_for_relative, sta
 end
 
 ---Returns a list of .rpp files in the project root folder and its subfolders
----@return string[]
+---@return string[] projects
+---@return boolean ok
 local function ListProjects()
     local project_root_folder = reaper.GetExtState(Globals.SECTION, Globals.KEYS.project_root_folder)
     if not project_root_folder or project_root_folder == "" then
@@ -94,7 +95,7 @@ local function ListProjects()
             reaper.ShowMessageBox(
                 "Operation timed out after " .. MAX_RUNTIME_SECONDS .. " seconds. Consider reducing the search scope.",
                 "List Projects Timeout", 0)
-            return {} -- Return empty list on timeout
+            return {}, false -- Return empty list on timeout
         else
             -- Re-throw other errors
             error(result)
@@ -107,7 +108,7 @@ local function ListProjects()
         return a:lower() < b:lower()
     end)
 
-    return project_files
+    return project_files, success
 end
 
 return ListProjects

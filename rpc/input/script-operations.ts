@@ -10,10 +10,15 @@ interface TabsResponse {
 	activeIndex: number;
 }
 
+interface ProjectsResponse {
+	projects: string[];
+	ok: boolean;
+}
+
 type Chunkable<T> = T & { __chunkable: true };
 
 export interface ScriptOperations {
-	listProjects: () => { projects: string[] };
+	listProjects: () => ProjectsResponse;
 	openProject: (projectPath: string) => void;
 	testActionId: (testNonce: string) => { testOutput: string };
 	getProjectLength: () => { projectLength: number };

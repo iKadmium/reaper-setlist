@@ -29,13 +29,18 @@ local DeleteState = require "operations/delete_state"
 
 local Operations = {
 	["listProjects"] = safe_operation(function()
-		local projects = ListProjects()
+		local projects, ok = ListProjects()
 
 		if not projects or projects == '' then
 			error("Operation listProjects failed to return required output: projects")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), false)
+		if not ok or ok == '' then
+			error("Operation listProjects failed to return required output: ok")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "ok", ok and "true" or "false", false)
 	end),
 
 	["openProject"] = safe_operation(function()

@@ -75,16 +75,18 @@
 		try {
 			// Update folder path in the store
 			await configuration.updateFolderPath(escapedFolderPath);
-			const projects = await api.script.listProjects();
+			const { projects, ok } = await api.script.listProjects();
 
-			if (projects.length > 0) {
+			if (ok && projects.length > 0) {
 				folderValidationStatus = 'success';
 				folderValidationMessage = `Found ${projects.length} project${projects.length === 1 ? '' : 's'}`;
 				notifications.success('Settings saved successfully!');
-			} else {
+			} else if (ok && projects.length === 0) {
 				folderValidationStatus = 'warning';
 				folderValidationMessage = 'No .rpp files found in this folder';
 				notifications.warning('Settings saved but no projects were found. Please double-check the folder path.');
+			} else {
+				notifications.error('Failed to list projects. Please check the folder path.');
 			}
 
 			// Update local state to reflect the saved values
