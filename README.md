@@ -5,8 +5,11 @@ A simple setlist management script for the Reaper DAW.
 ## Features
 
 - 🎵 Manage setlists and songs for Reaper
-- Beautiful and fluid interface
-- Useful player interface
+- 🎸 Control live shows from a web interface
+- 📱 Use remotely from a mobile device
+
+[![Demo video](https://img.youtube.com/vi/1zFOdXaxTQw/0.jpg)](https://youtu.be/1zFOdXaxTQw)
+<- Video demo on YouTube
 
 ![Player screenshot](docs/player.png)
 
