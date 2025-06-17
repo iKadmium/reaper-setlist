@@ -13,15 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            lua:
+              - 'lua/**'
+
       - name: Wait for Frontend CI
         uses: fountainhead/action-wait-for-check@v1.2.0
         id: wait-for-frontend
+        if: steps.filter.outputs.frontend == 'true'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           checkName: "Frontend"
@@ -31,6 +45,7 @@ jobs:
       - name: Wait for Lua CI
         uses: fountainhead/action-wait-for-check@v1.2.0
         id: wait-for-lua
+        if: steps.filter.outputs.lua == 'true'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           checkName: "Lua"
@@ -39,10 +54,10 @@ jobs:
 
       - name: Auto-approve and merge patch and minor updates
         if: |
-          steps.wait-for-frontend.outputs.conclusion == 'success' && 
-          steps.wait-for-lua.outputs.conclusion == 'success' && 
           (steps.metadata.outputs.update-type == 'version-update:semver-patch' || 
-           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+           steps.metadata.outputs.update-type == 'version-update:semver-minor') &&
+          (steps.filter.outputs.frontend != 'true' || steps.wait-for-frontend.outputs.conclusion == 'success') &&
+          (steps.filter.outputs.lua != 'true' || steps.wait-for-lua.outputs.conclusion == 'success')
         run: |
           gh pr review --approve "$PR_URL"
           gh pr merge --auto --merge "$PR_URL"
