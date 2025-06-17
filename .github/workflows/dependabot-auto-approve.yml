@@ -40,7 +40,7 @@ jobs:
       - name: Auto-approve and merge patch and minor updates
         if: |
           steps.wait-for-frontend.outputs.conclusion == 'success' && 
-          steps.wait-for-backend.outputs.conclusion == 'success' && 
+          steps.wait-for-lua.outputs.conclusion == 'success' && 
           (steps.metadata.outputs.update-type == 'version-update:semver-patch' || 
            steps.metadata.outputs.update-type == 'version-update:semver-minor')
         run: |
