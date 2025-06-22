@@ -98,7 +98,7 @@ export class LuaTarget extends Target {
 	private getInputChecker(name: string): string[] {
 		const lines: string[] = [];
 		lines.push(`\t\tlocal ${name} = reaper.GetExtState(Globals.SECTION, "${name}")`);
-		lines.push(`\t\tif not ${name} or ${name} == "" then`);
+		lines.push(`\t\tif ${name} == nil or ${name} == "" then`);
 		lines.push(`\t\t\terror("Missing required parameter: ${name}")`);
 		lines.push(`\t\tend`);
 		return lines;
@@ -140,7 +140,7 @@ export class LuaTarget extends Target {
 			);
 			operationLines.push('');
 			for (const { name: outputName, type } of outputs) {
-				operationLines.push(`\t\tif not ${outputName} or ${outputName} == '' then`);
+				operationLines.push(`\t\tif ${outputName} == nil or ${outputName} == '' then`);
 				operationLines.push(
 					`\t\t\terror("Operation ${name} failed to return required output: ${outputName}")`
 				);

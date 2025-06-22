@@ -14,6 +14,7 @@ end
 local Globals = require "globals"
 local json = require "json"
 local ListProjects = require "operations/list_projects"
+local TestProjectsFolder = require "operations/test_projects_folder"
 local OpenProject = require "operations/open_project"
 local TestActionId = require "operations/test_action_id"
 local GetProjectLength = require "operations/get_project_length"
@@ -31,16 +32,37 @@ local Operations = {
 	["listProjects"] = safe_operation(function()
 		local projects = ListProjects()
 
-		if not projects or projects == '' then
+		if projects == nil or projects == '' then
 			error("Operation listProjects failed to return required output: projects")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), false)
 	end),
 
+	["testProjectsFolder"] = safe_operation(function()
+		local folderPath = reaper.GetExtState(Globals.SECTION, "folderPath")
+		if folderPath == nil or folderPath == "" then
+			error("Missing required parameter: folderPath")
+		end
+
+		local valid, message = TestProjectsFolder(folderPath)
+
+		if valid == nil or valid == '' then
+			error("Operation testProjectsFolder failed to return required output: valid")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "valid", valid and "true" or "false", false)
+		if message == nil or message == '' then
+			error("Operation testProjectsFolder failed to return required output: message")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "message", message, false)
+		reaper.DeleteExtState(Globals.SECTION, "folderPath", true)
+	end),
+
 	["openProject"] = safe_operation(function()
 		local projectPath = reaper.GetExtState(Globals.SECTION, "projectPath")
-		if not projectPath or projectPath == "" then
+		if projectPath == nil or projectPath == "" then
 			error("Missing required parameter: projectPath")
 		end
 
@@ -51,13 +73,13 @@ local Operations = {
 
 	["testActionId"] = safe_operation(function()
 		local testNonce = reaper.GetExtState(Globals.SECTION, "testNonce")
-		if not testNonce or testNonce == "" then
+		if testNonce == nil or testNonce == "" then
 			error("Missing required parameter: testNonce")
 		end
 
 		local testOutput = TestActionId(testNonce)
 
-		if not testOutput or testOutput == '' then
+		if testOutput == nil or testOutput == '' then
 			error("Operation testActionId failed to return required output: testOutput")
 		end
 
@@ -68,7 +90,7 @@ local Operations = {
 	["getProjectLength"] = safe_operation(function()
 		local projectLength = GetProjectLength()
 
-		if not projectLength or projectLength == '' then
+		if projectLength == nil or projectLength == '' then
 			error("Operation getProjectLength failed to return required output: projectLength")
 		end
 
@@ -78,12 +100,12 @@ local Operations = {
 	["getOpenTabs"] = safe_operation(function()
 		local tabs, activeIndex = GetOpenTabs()
 
-		if not tabs or tabs == '' then
+		if tabs == nil or tabs == '' then
 			error("Operation getOpenTabs failed to return required output: tabs")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), false)
-		if not activeIndex or activeIndex == '' then
+		if activeIndex == nil or activeIndex == '' then
 			error("Operation getOpenTabs failed to return required output: activeIndex")
 		end
 
@@ -92,17 +114,17 @@ local Operations = {
 
 	["writeChunkedData"] = safe_operation(function()
 		local section = reaper.GetExtState(Globals.SECTION, "section")
-		if not section or section == "" then
+		if section == nil or section == "" then
 			error("Missing required parameter: section")
 		end
 
 		local key = reaper.GetExtState(Globals.SECTION, "key")
-		if not key or key == "" then
+		if key == nil or key == "" then
 			error("Missing required parameter: key")
 		end
 
 		local chunks_length = reaper.GetExtState(Globals.SECTION, "chunks_length")
-		if not chunks_length or chunks_length == "" then
+		if chunks_length == nil or chunks_length == "" then
 			error("Missing required parameter: chunks_length")
 		end
 
@@ -125,12 +147,12 @@ local Operations = {
 
 	["deleteState"] = safe_operation(function()
 		local section = reaper.GetExtState(Globals.SECTION, "section")
-		if not section or section == "" then
+		if section == nil or section == "" then
 			error("Missing required parameter: section")
 		end
 
 		local key = reaper.GetExtState(Globals.SECTION, "key")
-		if not key or key == "" then
+		if key == nil or key == "" then
 			error("Missing required parameter: key")
 		end
 

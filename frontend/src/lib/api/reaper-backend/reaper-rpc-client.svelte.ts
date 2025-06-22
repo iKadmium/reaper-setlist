@@ -54,6 +54,29 @@ export class ReaperRpcClient {
 		return projects;
 	}
 
+	public async testProjectsFolder(
+		folderPath: string
+	): Promise<{ valid: boolean; message: string }> {
+		const commands = [
+			new SetStateCommand(SectionKeys.ReaperSetlist, 'folderPath', folderPath),
+			new SetOperationCommand('testProjectsFolder'),
+			new RunScriptCommand(),
+			new GetStateCommand(SectionKeys.ReaperSetlist, 'valid'),
+			new GetStateCommand(SectionKeys.ReaperSetlist, 'message')
+		] as const;
+		const [_setFolderPath, _setOperation, _runScript, validRaw, messageRaw] =
+			await this.apiClient.executeCommands(commands);
+		if (validRaw === undefined) {
+			throw new Error('Failed to retrieve valid. Please check the script configuration.');
+		}
+		const valid = validRaw === 'true';
+		if (messageRaw === undefined) {
+			throw new Error('Failed to retrieve message. Please check the script configuration.');
+		}
+		const message = messageRaw;
+		return { valid, message };
+	}
+
 	public async openProject(projectPath: string): Promise<void> {
 		const commands = [
 			new SetStateCommand(SectionKeys.ReaperSetlist, 'projectPath', projectPath),

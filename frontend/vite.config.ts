@@ -7,7 +7,7 @@ export default defineConfig({
 	server: {
 		proxy: {
 			'/_/': {
-				target: 'http://192.168.0.42:8080/',
+				target: 'http://host.docker.internal:8081',
 				changeOrigin: true
 			}
 		}
