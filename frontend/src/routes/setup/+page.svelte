@@ -71,25 +71,23 @@
 		// Start validation
 		folderValidationStatus = 'checking';
 		folderValidationMessage = 'Validating folder...';
+		// Update local state to reflect the saved values
+		folderPath = escapedFolderPath;
+		lastValidatedPath = escapedFolderPath;
 
 		try {
+			const result = await api.script.testProjectsFolder(escapedFolderPath);
+			if (!result.valid) {
+				folderValidationStatus = 'error';
+				folderValidationMessage = result.message || 'Invalid folder path. Please check the path and try again.';
+				return;
+			}
 			// Update folder path in the store
 			await configuration.updateFolderPath(escapedFolderPath);
-			const projects = await api.script.listProjects();
 
-			if (projects.length > 0) {
-				folderValidationStatus = 'success';
-				folderValidationMessage = `Found ${projects.length} project${projects.length === 1 ? '' : 's'}`;
-				notifications.success('Settings saved successfully!');
-			} else {
-				folderValidationStatus = 'warning';
-				folderValidationMessage = 'No .rpp files found in this folder';
-				notifications.warning('Settings saved but no projects were found. Please double-check the folder path.');
-			}
-
-			// Update local state to reflect the saved values
-			folderPath = escapedFolderPath;
-			lastValidatedPath = escapedFolderPath;
+			folderValidationStatus = 'success';
+			folderValidationMessage = result.message || 'Folder path is valid!';
+			notifications.success('Settings saved successfully!');
 		} catch (error) {
 			folderValidationStatus = 'error';
 			folderValidationMessage = `Error: ${(error as Error).message}`;
@@ -109,6 +107,8 @@
 			const actionId = await api.scriptSettings.getScriptActionId();
 
 			if (actionId && actionId.trim() !== '') {
+				configuration.reset();
+				await configuration.initialize(fetch);
 				const nonce = generateUUID();
 				const result = await api.script.testActionId(nonce);
 				if (result === `Test action ID received: ${actionId}`) {

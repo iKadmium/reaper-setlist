@@ -6,7 +6,6 @@
 	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 	"features": {
 		"ghcr.io/lumenpink/devcontainer-features/bun:0": {},
-		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
 		"ghcr.io/prulloac/devcontainer-features/lua:1": {}
 	},
 	"customizations": {
