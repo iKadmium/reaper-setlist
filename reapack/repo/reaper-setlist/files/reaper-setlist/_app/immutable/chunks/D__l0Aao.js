@@ -1,0 +1,1 @@
+import{b as s,a as e}from"./BzJ4SX3Z.js";import{a as p}from"./DHXfWtOE.js";import{r as i}from"./_0x7LJxc.js";var m=s('<svg><path fill="currentColor" d="M8 5.14v14l11-7z"></path></svg>');function g(r,o){const a=i(o,["$$slots","$$events","$$legacy"]);var t=m();p(t,()=>({viewBox:"0 0 24 24",width:"1.2em",height:"1.2em",...a})),e(r,t)}export{g as P};

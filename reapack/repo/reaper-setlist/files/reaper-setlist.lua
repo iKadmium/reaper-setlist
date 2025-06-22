@@ -127,6 +127,7 @@ end
 local Globals = require("globals")
 local json = require("json")
 local ListProjects = require("operations/list_projects")
+local TestProjectsFolder = require("operations/test_projects_folder")
 local OpenProject = require("operations/open_project")
 local TestActionId = require("operations/test_action_id")
 local GetProjectLength = require("operations/get_project_length")
@@ -144,16 +145,37 @@ local Operations = {
 	["listProjects"] = safe_operation(function()
 		local projects = ListProjects()
 
-		if not projects or projects == '' then
+		if projects == nil or projects == '' then
 			error("Operation listProjects failed to return required output: projects")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "projects", json.encode(projects), false)
 	end),
 
+	["testProjectsFolder"] = safe_operation(function()
+		local folderPath = reaper.GetExtState(Globals.SECTION, "folderPath")
+		if folderPath == nil or folderPath == "" then
+			error("Missing required parameter: folderPath")
+		end
+
+		local valid, message = TestProjectsFolder(folderPath)
+
+		if valid == nil or valid == '' then
+			error("Operation testProjectsFolder failed to return required output: valid")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "valid", valid and "true" or "false", false)
+		if message == nil or message == '' then
+			error("Operation testProjectsFolder failed to return required output: message")
+		end
+
+		reaper.SetExtState(Globals.SECTION, "message", message, false)
+		reaper.DeleteExtState(Globals.SECTION, "folderPath", true)
+	end),
+
 	["openProject"] = safe_operation(function()
 		local projectPath = reaper.GetExtState(Globals.SECTION, "projectPath")
-		if not projectPath or projectPath == "" then
+		if projectPath == nil or projectPath == "" then
 			error("Missing required parameter: projectPath")
 		end
 
@@ -164,13 +186,13 @@ local Operations = {
 
 	["testActionId"] = safe_operation(function()
 		local testNonce = reaper.GetExtState(Globals.SECTION, "testNonce")
-		if not testNonce or testNonce == "" then
+		if testNonce == nil or testNonce == "" then
 			error("Missing required parameter: testNonce")
 		end
 
 		local testOutput = TestActionId(testNonce)
 
-		if not testOutput or testOutput == '' then
+		if testOutput == nil or testOutput == '' then
 			error("Operation testActionId failed to return required output: testOutput")
 		end
 
@@ -181,7 +203,7 @@ local Operations = {
 	["getProjectLength"] = safe_operation(function()
 		local projectLength = GetProjectLength()
 
-		if not projectLength or projectLength == '' then
+		if projectLength == nil or projectLength == '' then
 			error("Operation getProjectLength failed to return required output: projectLength")
 		end
 
@@ -191,12 +213,12 @@ local Operations = {
 	["getOpenTabs"] = safe_operation(function()
 		local tabs, activeIndex = GetOpenTabs()
 
-		if not tabs or tabs == '' then
+		if tabs == nil or tabs == '' then
 			error("Operation getOpenTabs failed to return required output: tabs")
 		end
 
 		reaper.SetExtState(Globals.SECTION, "tabs", json.encode(tabs), false)
-		if not activeIndex or activeIndex == '' then
+		if activeIndex == nil or activeIndex == '' then
 			error("Operation getOpenTabs failed to return required output: activeIndex")
 		end
 
@@ -205,17 +227,17 @@ local Operations = {
 
 	["writeChunkedData"] = safe_operation(function()
 		local section = reaper.GetExtState(Globals.SECTION, "section")
-		if not section or section == "" then
+		if section == nil or section == "" then
 			error("Missing required parameter: section")
 		end
 
 		local key = reaper.GetExtState(Globals.SECTION, "key")
-		if not key or key == "" then
+		if key == nil or key == "" then
 			error("Missing required parameter: key")
 		end
 
 		local chunks_length = reaper.GetExtState(Globals.SECTION, "chunks_length")
-		if not chunks_length or chunks_length == "" then
+		if chunks_length == nil or chunks_length == "" then
 			error("Missing required parameter: chunks_length")
 		end
 
@@ -238,12 +260,12 @@ local Operations = {
 
 	["deleteState"] = safe_operation(function()
 		local section = reaper.GetExtState(Globals.SECTION, "section")
-		if not section or section == "" then
+		if section == nil or section == "" then
 			error("Missing required parameter: section")
 		end
 
 		local key = reaper.GetExtState(Globals.SECTION, "key")
-		if not key or key == "" then
+		if key == nil or key == "" then
 			error("Missing required parameter: key")
 		end
 
@@ -385,36 +407,77 @@ end
 return OpenProject
 
 end)
-__bundle_register("operations/list_projects", function(require, _LOADED, __bundle_register, __bundle_modules)
-local Globals = require("globals")
-local GetRelativePath = require("relative_path")
+__bundle_register("operations/test_projects_folder", function(require, _LOADED, __bundle_register, __bundle_modules)
+local NormalizePath = require("normalize_path")
+local ListRppFilesRecursive = require("list_rpp_files")
 
--- Maximum runtime in seconds (default: 30 seconds)
 local MAX_RUNTIME_SECONDS = 10
 
----@param path string
----@return string
-local function normalize_path(path)
-    local normalized = path:gsub("\\", "/")
-    return normalized
+---@param folderPath string
+---@return boolean valid
+---@return string message
+local function TestProjectsFolder(folderPath)
+    local project_root_folder = NormalizePath(folderPath)
+    project_root_folder = project_root_folder:gsub("/$", "")
+
+    -- Record start time for timeout checking
+    local start_time = reaper.time_precise()
+
+    -- Use pcall to catch timeout errors
+    local success, result = pcall(function()
+        return ListRppFilesRecursive(project_root_folder, project_root_folder, start_time, MAX_RUNTIME_SECONDS)
+    end)
+
+    if not success then
+        -- Check if it's a timeout error
+        if result:match("^TIMEOUT:") then
+            reaper.ShowMessageBox(
+                "Operation timed out after " .. MAX_RUNTIME_SECONDS .. " seconds. Consider reducing the search scope.",
+                "List Projects Timeout", 0)
+            return false, "Operation timed out" -- Return empty list on timeout
+        else
+            -- Re-throw other errors
+            return false, tostring(result)
+        end
+    end
+
+    local project_files = result
+
+    table.sort(project_files, function(a, b)
+        return a:lower() < b:lower()
+    end)
+
+    if #project_files == 0 then
+        return false, "No project files found in the specified folder."
+    end
+
+    return true, "Found " .. #project_files .. " project files in the specified folder."
 end
+
+return TestProjectsFolder;
+
+end)
+__bundle_register("list_rpp_files", function(require, _LOADED, __bundle_register, __bundle_modules)
+local GetRelativePath = require("relative_path")
+local NormalizePath = require("normalize_path")
 
 ---@param current_dir string
 ---@param base_path_for_relative string
 ---@param start_time number
+---@param max_runtime_seconds number
 ---@return string[]
-local function list_rpp_files_recursive(current_dir, base_path_for_relative, start_time)
+local function ListRppFilesRecursive(current_dir, base_path_for_relative, start_time, max_runtime_seconds)
     ---@type string[]
     local project_files = {}
 
     -- Check if we've exceeded the maximum runtime
     local current_time = reaper.time_precise()
-    if current_time - start_time > MAX_RUNTIME_SECONDS then
-        error("TIMEOUT: Operation exceeded " .. MAX_RUNTIME_SECONDS .. " seconds")
+    if current_time - start_time > max_runtime_seconds then
+        error("TIMEOUT: Operation exceeded " .. max_runtime_seconds .. " seconds")
     end
 
-    current_dir = normalize_path(current_dir)
-    base_path_for_relative = normalize_path(base_path_for_relative)
+    current_dir = NormalizePath(current_dir)
+    base_path_for_relative = NormalizePath(base_path_for_relative)
 
     -- Step 1: Enumerate files in the current directory
     local file_index = 0
@@ -444,7 +507,8 @@ local function list_rpp_files_recursive(current_dir, base_path_for_relative, sta
         -- Skip special directories and hidden directories
         if dirname ~= "." and dirname ~= ".." and not dirname:match("^%.") then
             local full_subdir_path = current_dir .. "/" .. dirname
-            local subdir_files = list_rpp_files_recursive(full_subdir_path, base_path_for_relative, start_time)
+            local subdir_files = ListRppFilesRecursive(full_subdir_path, base_path_for_relative, start_time,
+                max_runtime_seconds)
 
             -- Use ipairs for better performance with arrays
             for _, file in ipairs(subdir_files) do
@@ -457,6 +521,45 @@ local function list_rpp_files_recursive(current_dir, base_path_for_relative, sta
     return project_files
 end
 
+return ListRppFilesRecursive
+
+end)
+__bundle_register("normalize_path", function(require, _LOADED, __bundle_register, __bundle_modules)
+---@param path string
+---@return string
+local function NormalizePath(path)
+    local normalized = path:gsub("\\", "/")
+    return normalized
+end
+
+return NormalizePath
+
+end)
+__bundle_register("relative_path", function(require, _LOADED, __bundle_register, __bundle_modules)
+---@param full_path string
+---@param base_path string
+---@return string
+local function GetRelativePath(full_path, base_path)
+    -- Ensure both paths end consistently for proper matching
+    local normalized_base = base_path:gsub("/$", "") .. "/"
+    local normalized_full = full_path:gsub("\\", "/")
+
+    if normalized_full:sub(1, #normalized_base) == normalized_base then
+        return normalized_full:sub(#normalized_base + 1)
+    end
+    return normalized_full -- fallback to full path if base not found
+end
+
+return GetRelativePath
+
+end)
+__bundle_register("operations/list_projects", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Globals = require("globals")
+local ListRppFilesRecursive = require("list_rpp_files")
+local NormalizePath = require("normalize_path")
+
+local MAX_RUNTIME_SECONDS = 10
+
 ---Returns a list of .rpp files in the project root folder and its subfolders
 ---@return string[]
 local function ListProjects()
@@ -465,7 +568,7 @@ local function ListProjects()
         error("Project root folder is not set. Cannot list files.")
     end
 
-    project_root_folder = normalize_path(project_root_folder)
+    project_root_folder = NormalizePath(project_root_folder)
     project_root_folder = project_root_folder:gsub("/$", "")
 
     -- Record start time for timeout checking
@@ -473,7 +576,7 @@ local function ListProjects()
 
     -- Use pcall to catch timeout errors
     local success, result = pcall(function()
-        return list_rpp_files_recursive(project_root_folder, project_root_folder, start_time)
+        return ListRppFilesRecursive(project_root_folder, project_root_folder, start_time, MAX_RUNTIME_SECONDS)
     end)
 
     if not success then
@@ -499,24 +602,6 @@ local function ListProjects()
 end
 
 return ListProjects
-
-end)
-__bundle_register("relative_path", function(require, _LOADED, __bundle_register, __bundle_modules)
----@param full_path string
----@param base_path string
----@return string
-local function GetRelativePath(full_path, base_path)
-    -- Ensure both paths end consistently for proper matching
-    local normalized_base = base_path:gsub("/$", "") .. "/"
-    local normalized_full = full_path:gsub("\\", "/")
-
-    if normalized_full:sub(1, #normalized_base) == normalized_base then
-        return normalized_full:sub(#normalized_base + 1)
-    end
-    return normalized_full -- fallback to full path if base not found
-end
-
-return GetRelativePath
 
 end)
 __bundle_register("json", function(require, _LOADED, __bundle_register, __bundle_modules)
