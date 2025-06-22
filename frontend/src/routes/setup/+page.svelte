@@ -299,6 +299,13 @@
 		gap: 1rem;
 	}
 
+	@media (max-width: 768px) {
+		.import-export-buttons {
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+	}
+
 	.validation-message {
 		font-size: 0.875rem;
 		margin-top: 0.5rem;
