@@ -17,6 +17,7 @@
 
 	let songs = $state<Database<Song>>(data.songs);
 	let projects = $state<string[] | undefined>(data.projects);
+	let unaddedProjects = $derived<string[]>(!projects ? [] : projects.filter((project) => !Object.values(songs).some((song) => song.path === project)));
 	const api = getApi();
 
 	const errorMessage = data.error;
@@ -43,6 +44,50 @@
 				notifications.error(`Failed to delete song: ${(error as Error).message}`);
 				return;
 			}
+		}
+	}
+
+	async function addSongFromProject(project: string): Promise<Song> {
+		// get the filename and remove the extension
+		const name = project
+			.split('/')
+			.pop()
+			?.replace(/\.[^/.]+$/, '');
+		// open the song in a new tab
+		await api.reaper.newTab();
+		await api.script.openProject(project);
+		// get the song length
+		const length = await api.script.getProjectLength();
+		// close the tab
+		await api.reaper.closeTab();
+		const song = await api.songs.add({
+			name: name || project,
+			path: project,
+			length: length
+		});
+		return song;
+	}
+
+	async function handleAddAllClick() {
+		if (!projects || projects.length === 0) {
+			notifications.error('No Reaper projects found to add.');
+			return;
+		}
+
+		const addedSongs: string[] = [];
+		for (const project of unaddedProjects) {
+			try {
+				const song = await addSongFromProject(project);
+				songs[song.id] = song;
+				addedSongs.push(song.name);
+			} catch (error) {
+				console.error(`Failed to add song from project ${project}:`, error);
+				notifications.error(`Failed to add song from project ${project}`);
+			}
+		}
+
+		if (addedSongs.length > 0) {
+			notifications.success(`Added songs: ${addedSongs.join(', ')}`);
 		}
 	}
 
@@ -84,6 +129,7 @@
 {#if projects && projects.length > 0}
 	<div class="action-section">
 		<Button elementType="a" href="#/song/add" color="success">Add Song</Button>
+		<Button elementType="button" disabled={unaddedProjects.length === 0} onclick={handleAddAllClick} color="success">Add All</Button>
 	</div>
 {:else}
 	<p style="color: var(--text-muted);">No Reaper projects found. Please double-check your backing tracks folder in Settings.</p>
