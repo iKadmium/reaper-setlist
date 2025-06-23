@@ -17,10 +17,10 @@
 	let hasExecuted = $state<boolean>(false);
 	let replaceExistingTabs = $state<boolean>(true);
 	let movePlayheadToStart = $state<boolean>(true);
-	let tabs = $state<ReaperTab[]>(data.tabs.tabs);
+	let tabsBeforeLoad = $state<ReaperTab[]>(data.tabs.tabs);
 	let set = $state<Setlist | undefined>(data.set);
 	let songs = $state<Database<Song>>(data.songs);
-	let anyDirty = $derived(tabs.some((tab) => tab.dirty));
+	let anyDirty = $derived(tabsBeforeLoad.some((tab) => tab.dirty));
 	let checkingTabs = $state<boolean>(false);
 	let shouldDisableLoad = $derived(replaceExistingTabs && anyDirty);
 	const errorMessage = data.error;
@@ -155,15 +155,19 @@
 	async function switchToFirstSong(): Promise<boolean> {
 		try {
 			// Calculate how many tabs to skip to get to the first song
-			let tabsToSkip: number;
+			let targetTabIndex: number;
+			const tabs = await api.script.getOpenTabs();
+			const currentTabIndex = tabs.activeIndex;
 
 			if (replaceExistingTabs) {
 				// If we closed all tabs, the first song is at tab 0, so no skipping needed
-				tabsToSkip = 0;
+				targetTabIndex = 0;
 			} else {
 				// If we didn't close tabs, we need to skip the original tabs to get to the first new tab
-				tabsToSkip = data.tabs.tabs.length;
+				targetTabIndex = data.tabs.tabs.length;
 			}
+
+			const tabsToSkip = targetTabIndex - currentTabIndex;
 
 			// If we need to skip tabs, send multiple nextTab commands in a batch
 			if (tabsToSkip > 0) {
@@ -171,6 +175,12 @@
 				const commands = Array(tabsToSkip)
 					.fill(0)
 					.map(() => Commands.nextTab());
+				await api.reaper.executeCommands(commands);
+			} else if (tabsToSkip < 0) {
+				// If we need to go back, we can use previousTab
+				const commands = Array(-tabsToSkip)
+					.fill(0)
+					.map(() => Commands.previousTab());
 				await api.reaper.executeCommands(commands);
 			}
 
@@ -210,7 +220,7 @@
 		checkingTabs = true;
 		try {
 			const response = await api.script.getOpenTabs();
-			tabs = response.tabs;
+			tabsBeforeLoad = response.tabs;
 		} catch (error) {
 			notifications.error(`Failed to refresh tabs: ${(error as Error).message}`);
 		} finally {
@@ -228,6 +238,8 @@
 		}
 
 		if (steps.length === 0) return;
+
+		tabsBeforeLoad = (await api.script.getOpenTabs()).tabs;
 
 		working = true;
 		hasExecuted = true;
@@ -285,13 +297,13 @@
 			<div class="warning-message">
 				<h3>⚠️ Unsaved Changes Detected</h3>
 				<p>
-					You have unsaved changes in {tabs.filter((tab) => tab.dirty).length} tab{tabs.filter((tab) => tab.dirty).length === 1 ? '' : 's'}. Since "Replace
-					existing tabs" is enabled, these changes will be lost when loading the set.
+					You have unsaved changes in {tabsBeforeLoad.filter((tab) => tab.dirty).length} tab{tabsBeforeLoad.filter((tab) => tab.dirty).length === 1 ? '' : 's'}.
+					Since "Replace existing tabs" is enabled, these changes will be lost when loading the set.
 				</p>
 				<div class="dirty-tabs-list">
 					<p><strong>Tabs with unsaved changes:</strong></p>
 					<ul class="dirty-tabs">
-						{#each tabs.filter((tab) => tab.dirty) as dirtyTab (dirtyTab.index)}
+						{#each tabsBeforeLoad.filter((tab) => tab.dirty) as dirtyTab (dirtyTab.index)}
 							<li class="dirty-tab">
 								<span class="tab-name">{dirtyTab.name || 'Untitled'}</span>
 								<span class="tab-index">(Tab {dirtyTab.index + 1})</span>
