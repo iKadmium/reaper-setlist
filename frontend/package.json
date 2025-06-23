@@ -35,7 +35,7 @@
 		"prettier-plugin-svelte": "^3.4.0",
 		"rimraf": "^6.0.1",
 		"svelte": "^5.34.3",
-		"svelte-check": "^4.2.1",
+		"svelte-check": "^4.2.2",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.34.1",
 		"unplugin-icons": "^22.1.0",
