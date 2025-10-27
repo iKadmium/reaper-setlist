@@ -22,7 +22,7 @@
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.37.0",
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.21.5",
+		"@sveltejs/kit": "^2.48.0",
 		"@sveltejs/vite-plugin-svelte": "^5.1.0",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/svelte": "^5.2.8",
