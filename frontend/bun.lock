@@ -5,7 +5,7 @@
     "": {
       "name": "reaper-setlist",
       "dependencies": {
-        "@iconify-json/line-md": "^1.2.13",
+        "@iconify-json/line-md": "^1.2.14",
         "@iconify-json/mdi": "^1.2.3",
       },
       "devDependencies": {
@@ -147,7 +147,7 @@
 
     "@humanwhocodes/retry": ["@humanwhocodes/retry@0.4.2", "", {}, "sha512-xeO57FpIu4p1Ri3Jq/EXq4ClRm86dVF2z/+kvFnyqVYRavTZmaFaUBbWCOuuTh0o/g7DSsk6kc2vrS4Vl5oPOQ=="],
 
-    "@iconify-json/line-md": ["@iconify-json/line-md@1.2.13", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-XFXThXsEQ2Wzzn+ze2T1d+JHkkFvI1AxiVKnOox4qFbdR9EVikckZlUK+/DUsV4zSy6pMQAgXpIk+1xG8qFYPQ=="],
+    "@iconify-json/line-md": ["@iconify-json/line-md@1.2.14", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-ZlgQyMcptcni3wEua+ij9hXEuYmlHKlf38/fZT4Qhds07naE9NeEmE0tqWMHAtkir+r9VRTTz3jXzwXWkLZiCg=="],
 
     "@iconify-json/mdi": ["@iconify-json/mdi@1.2.3", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-O3cLwbDOK7NNDf2ihaQOH5F9JglnulNDFV7WprU2dSoZu3h3cWH//h74uQAB87brHmvFVxIOkuBX2sZSzYhScg=="],
 
